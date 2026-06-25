@@ -1,0 +1,23 @@
+{
+  "source_id": "sz_gxj",
+  "name": "深圳市工信局",
+  "category": "市级",
+  "list_url": "https://gxj.sz.gov.cn/zwgk/xxgkml/zfxxgkml/zfxxgkmlgkml/index.html",
+  "list_selectors": {
+    "item": "ul.news-list li a, .article-list li a, .list-item a",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": ".date, .pub-date, .time"
+  },
+  "detail_selectors": {
+    "title": "h1.article-title, h1.title, .article-content h1, h1",
+    "content": "div.article-content, .article-content, .content, article",
+    "date": ".pub-date, .date, .publish-time"
+  },
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 5,
+  "max_pages": 1,
+  "note": "深圳工信局，httpx 模式；选择器待实际访问后微调"
+}

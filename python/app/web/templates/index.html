@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>政策雷达 · 控制台 (MVP)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"DM Sans"', '"Noto Sans SC"', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+              400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+              800: '#1e40af', 900: '#1e3a8a',
+            },
+            accent: {
+              400: '#fbbf24', 500: '#f59e0b', 600: '#d97706',
+            },
+          },
+          keyframes: {
+            fadeIn: { '0%': { opacity: 0 }, '100%': { opacity: 1 } },
+            slideUp: {
+              '0%': { opacity: 0, transform: 'translateY(8px)' },
+              '100%': { opacity: 1, transform: 'translateY(0)' },
+            },
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.35s ease-out',
+            'slide-up': 'slideUp 0.4s ease-out',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { font-family: 'DM Sans', 'Noto Sans SC', system-ui, sans-serif; }
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen" x-data="app()" x-init="init()" x-cloak>
+
+  <!-- Top Bar -->
+  <header class="sticky top-0 z-20 bg-white/80 backdrop-blur-lg border-b border-gray-200/60">
+    <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold">雷</div>
+        <div>
+          <h1 class="text-lg font-semibold text-gray-900">政策雷达</h1>
+          <p class="text-xs text-gray-500">第一期 MVP · 控制台</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs px-2 py-1 rounded-full"
+              :class="mockOnline ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'">
+          <span class="inline-block w-1.5 h-1.5 rounded-full mr-1"
+                :class="mockOnline ? 'bg-green-500' : 'bg-gray-400'"></span>
+          Mock 微信 <span x-text="mockOnline ? '在线' : '离线'"></span>
+        </span>
+        <span class="text-xs px-2 py-1 rounded-full bg-brand-50 text-brand-700" x-text="`API: ${apiBase}`"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+
+    <!-- 4 按钮操作区 -->
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 animate-slide-up">
+      <button @click="crawlAll()" :disabled="loading"
+              class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md hover:-translate-y-0.5 transition-all text-left disabled:opacity-50">
+        <div class="text-brand-500 mb-2">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </div>
+        <div class="font-medium text-gray-900 text-sm">爬取所有源</div>
+        <div class="text-xs text-gray-500 mt-1" x-text="lastCrawlAt ? `上次: ${lastCrawlAt}` : '点击触发'"></div>
+      </button>
+
+      <button @click="loadPolicies()" :disabled="loading"
+              class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md hover:-translate-y-0.5 transition-all text-left disabled:opacity-50">
+        <div class="text-accent-500 mb-2">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+        </div>
+        <div class="font-medium text-gray-900 text-sm">刷新政策列表</div>
+        <div class="text-xs text-gray-500 mt-1" x-text="`当前 ${policies.length} 条`"></div>
+      </button>
+
+      <button @click="loadPushLogs()" :disabled="loading"
+              class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md hover:-translate-y-0.5 transition-all text-left disabled:opacity-50">
+        <div class="text-green-500 mb-2">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        </div>
+        <div class="font-medium text-gray-900 text-sm">查看推送日志</div>
+        <div class="text-xs text-gray-500 mt-1" x-text="`${pushLogs.length} 条记录`"></div>
+      </button>
+
+      <button @click="checkMockHealth()" :disabled="loading"
+              class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md hover:-translate-y-0.5 transition-all text-left disabled:opacity-50">
+        <div class="text-purple-500 mb-2">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <div class="font-medium text-gray-900 text-sm">检查 Mock 微信</div>
+        <div class="text-xs text-gray-500 mt-1">心跳测试</div>
+      </button>
+    </section>
+
+    <!-- 政策列表 -->
+    <section class="bg-white border border-gray-200 rounded-xl overflow-hidden animate-slide-up">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h2 class="font-semibold text-gray-900">📋 已摘要政策</h2>
+          <p class="text-xs text-gray-500 mt-0.5">点击「推送」把政策发到 Mock 微信</p>
+        </div>
+        <span class="text-xs text-gray-500" x-text="`共 ${policies.length} 条`"></span>
+      </div>
+      <div class="divide-y divide-gray-100">
+        <template x-for="p in policies" :key="p.id">
+          <div class="px-5 py-4 hover:bg-gray-50 transition-colors">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                        :class="badgeColor(p.summary_type)"
+                        x-text="p.summary_type || '其他'"></span>
+                  <span class="text-xs text-gray-400" x-text="p.source_id"></span>
+                </div>
+                <h3 class="font-medium text-gray-900 text-sm mb-1" x-text="p.title"></h3>
+                <p class="text-xs text-gray-600 line-clamp-2" x-text="p.summary_text || '(无摘要)'"></p>
+                <div class="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                  <span x-show="p.amount" class="text-green-600 font-medium">💰 <span x-text="p.amount"></span></span>
+                  <span x-show="p.deadline" class="text-orange-600">⏰ <span x-text="p.deadline"></span></span>
+                </div>
+              </div>
+              <div class="flex flex-col gap-2 shrink-0">
+                <button @click="pushOne(p)" :disabled="loading"
+                        class="text-xs px-3 py-1.5 rounded-lg bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50 transition-colors">
+                  推送
+                </button>
+                <button @click="summarizeOne(p)" :disabled="loading"
+                        class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                  重新摘要
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+        <div x-show="policies.length === 0" class="px-5 py-12 text-center text-gray-400 text-sm">
+          暂无已摘要政策。请先爬取数据并执行摘要。
+        </div>
+      </div>
+    </section>
+
+    <!-- 推送日志 -->
+    <section class="bg-white border border-gray-200 rounded-xl overflow-hidden mt-6 animate-slide-up">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h2 class="font-semibold text-gray-900">📤 推送历史</h2>
+          <p class="text-xs text-gray-500 mt-0.5">最新 20 条</p>
+        </div>
+        <button @click="loadPushLogs()" class="text-xs text-brand-600 hover:underline">刷新</button>
+      </div>
+      <div class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+        <template x-for="log in pushLogs" :key="log.id">
+          <div class="px-5 py-3">
+            <div class="flex items-center gap-2 text-xs mb-1">
+              <span class="font-mono text-gray-500" x-text="log.created_at"></span>
+              <span class="px-2 py-0.5 rounded-full"
+                    :class="log.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                    x-text="log.status"></span>
+              <span class="text-gray-400">policy #<span x-text="log.policy_id"></span></span>
+            </div>
+            <pre class="text-xs text-gray-600 whitespace-pre-wrap font-sans" x-text="log.content"></pre>
+            <p x-show="log.error_msg" class="text-xs text-red-600 mt-1" x-text="log.error_msg"></p>
+          </div>
+        </template>
+        <div x-show="pushLogs.length === 0" class="px-5 py-8 text-center text-gray-400 text-sm">
+          暂无推送记录
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast 提示 -->
+  <div x-show="toast.show" x-transition.opacity
+       class="fixed bottom-6 right-6 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg max-w-sm z-50"
+       x-text="toast.msg"></div>
+
+  <!-- 全屏 loading -->
+  <div x-show="loading" class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center" x-cloak>
+    <div class="bg-white rounded-2xl p-6 shadow-xl flex items-center gap-3">
+      <div class="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+      <span class="text-sm text-gray-700" x-text="loadingText"></span>
+    </div>
+  </div>
+
+  <script>
+    function app() {
+      return {
+        apiBase: window.location.origin,
+        policies: [],
+        pushLogs: [],
+        sources: [],
+        loading: false,
+        loadingText: '处理中...',
+        mockOnline: false,
+        lastCrawlAt: '',
+        toast: { show: false, msg: '', _t: null },
+        init() {
+          this.loadPolicies();
+          this.loadPushLogs();
+          this.checkMockHealth();
+        },
+        showToast(msg, duration = 3000) {
+          this.toast.msg = msg;
+          this.toast.show = true;
+          if (this.toast._t) clearTimeout(this.toast._t);
+          this.toast._t = setTimeout(() => this.toast.show = false, duration);
+        },
+        async withLoading(text, fn) {
+          this.loading = true;
+          this.loadingText = text;
+          try { return await fn(); }
+          catch (e) { this.showToast(`❌ ${e.message || e}`); throw e; }
+          finally { this.loading = false; }
+        },
+        async checkMockHealth() {
+          try {
+            const r = await fetch('http://localhost:9999/');
+            this.mockOnline = r.ok;
+          } catch { this.mockOnline = false; }
+        },
+        async crawlAll() {
+          await this.withLoading('正在爬取所有源...', async () => {
+            const r = await fetch('/api/crawl/all', { method: 'POST' });
+            if (!r.ok) throw new Error(await r.text());
+            const data = await r.json();
+            const total = data.reduce((s, x) => s + (x.new_crawled || 0), 0);
+            const errs = data.reduce((s, x) => s + (x.errors || 0), 0);
+            this.lastCrawlAt = new Date().toLocaleTimeString();
+            this.showToast(`✅ 爬取完成 +${total} 条（${errs} 错误）`);
+            await this.loadPolicies();
+          });
+        },
+        async loadPolicies() {
+          await this.withLoading('加载政策...', async () => {
+            const r = await fetch('/api/policies?limit=50');
+            this.policies = await r.json();
+          });
+        },
+        async summarizeOne(p) {
+          await this.withLoading(`摘要 #${p.id}...`, async () => {
+            const r = await fetch(`/api/policies/${p.id}/summarize`, { method: 'POST' });
+            if (!r.ok) throw new Error(await r.text());
+            this.showToast('✅ 摘要完成');
+            await this.loadPolicies();
+          });
+        },
+        async pushOne(p) {
+          await this.withLoading(`推送 #${p.id} 到微信...`, async () => {
+            const r = await fetch(`/api/policies/${p.id}/push`, { method: 'POST' });
+            if (!r.ok) throw new Error(await r.text());
+            this.showToast('✅ 推送成功，查看下方日志');
+            await this.loadPushLogs();
+          });
+        },
+        async loadPushLogs() {
+          try {
+            const r = await fetch('/api/push-logs?limit=20');
+            this.pushLogs = await r.json();
+          } catch (e) { console.error(e); }
+        },
+        badgeColor(type) {
+          const map = {
+            '补贴': 'bg-green-100 text-green-700',
+            '贷款': 'bg-blue-100 text-blue-700',
+            '税收': 'bg-purple-100 text-purple-700',
+            '人才': 'bg-pink-100 text-pink-700',
+            '产业扶持': 'bg-orange-100 text-orange-700',
+            '知识产权': 'bg-indigo-100 text-indigo-700',
+          };
+          return map[type] || 'bg-gray-100 text-gray-600';
+        },
+      };
+    }
+  </script>
+</body>
+</html>

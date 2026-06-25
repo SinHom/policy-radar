@@ -1,0 +1,26 @@
+# Web 框架
+fastapi
+uvicorn[standard]
+python-multipart
+jinja2
+
+# 配置
+pydantic
+pydantic-settings
+python-dotenv
+
+# 数据库
+sqlalchemy
+alembic
+aiosqlite
+greenlet
+
+# HTTP / 爬虫
+httpx
+beautifulsoup4
+lxml
+playwright
+tenacity
+
+# LLM（MiniMax 兼容 OpenAI 协议）
+openai

@@ -1,0 +1,23 @@
+{
+  "source_id": "gov_cn",
+  "name": "国务院",
+  "category": "国家级",
+  "list_url": "https://www.gov.cn/zhengce/index.htm",
+  "list_selectors": {
+    "item": "div.list list-item a, .news_list .list_item a, ul li a",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": ".date, .time"
+  },
+  "detail_selectors": {
+    "title": "h1#ti, h1.article-title, h1.title, h1",
+    "content": "div#content, div.article-content, .content, article",
+    "date": ".pub-date, .date, .pages_print span"
+  },
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 5,
+  "max_pages": 1,
+  "note": "国务院，httpx 模式；正文常含 PDF 附件（MVP 仅识别 URL 不解析）"
+}
