@@ -31,6 +31,9 @@ class Subscription(Base):
     # realtime / daily / weekly / manual
     push_time: Mapped[str] = mapped_column(String(8), default="08:30", nullable=False)
     webhook_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    webhook_secret: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    # 用于 HMAC 签名 (X-Policy-Radar-Signature: sha256=<hex>)
+    # 接收方用同样密钥验证 body 未被篡改
     platform_hint: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
     # feishu / wecom / generic
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

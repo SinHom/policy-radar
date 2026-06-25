@@ -25,6 +25,14 @@ from python.mcp_server.tools.query import (
     handle_search_policies,
 )
 from python.mcp_server.tools.admin import handle_trigger_crawl
+from python.mcp_server.tools.manage import (
+    handle_delete_subscription,
+    handle_list_subscriptions,
+    handle_pause_subscription,
+    handle_resume_subscription,
+    handle_update_subscription,
+)
+from python.mcp_server.tools.push import handle_push_now
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +164,89 @@ async def list_tools() -> list[Tool]:
                 },
             },
         ),
+        # ----- 订阅管理类 -----
+        Tool(
+            name="list_subscriptions",
+            description="列出所有订阅（含 company_name / enabled / webhook_url）。可选 enabled_only=true 只看启用的。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "enabled_only": {"type": "boolean", "default": False},
+                },
+            },
+        ),
+        Tool(
+            name="update_subscription",
+            description=(
+                "部分更新订阅字段。可改：types / regions / keywords / push_schedule / "
+                "push_time / webhook_url / platform_hint。只传要改的字段即可。"
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "company_id": {"type": "integer"},
+                    "subscription_id": {"type": "integer"},
+                    "types": {"type": "array", "items": {"type": "string"}},
+                    "regions": {"type": "array", "items": {"type": "string"}},
+                    "keywords": {"type": "array", "items": {"type": "string"}},
+                    "push_schedule": {"type": "string"},
+                    "push_time": {"type": "string"},
+                    "webhook_url": {"type": "string"},
+                    "platform_hint": {"type": "string"},
+                },
+            },
+        ),
+        Tool(
+            name="pause_subscription",
+            description="暂停订阅。定时推送会跳过，但 get_matches 仍可查。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "company_id": {"type": "integer"},
+                    "subscription_id": {"type": "integer"},
+                },
+            },
+        ),
+        Tool(
+            name="resume_subscription",
+            description="恢复被暂停的订阅。",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "company_id": {"type": "integer"},
+                    "subscription_id": {"type": "integer"},
+                },
+            },
+        ),
+        Tool(
+            name="delete_subscription",
+            description=(
+                "彻底删除公司 + 订阅 + 匹配记录。级联删除：company → subscription → matches。"
+                "push_logs 不删（独立审计）。"
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "company_id": {"type": "integer"},
+                    "subscription_id": {"type": "integer"},
+                },
+            },
+        ),
+        Tool(
+            name="push_now",
+            description=(
+                "立即把未推送的 matches 推到 subscription.webhook_url（不等定时）。"
+                "match_ids 留空则推该 company 全部未推送 matches；指定则只推指定 ID。"
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "company_id": {"type": "integer", "description": "必填"},
+                    "match_ids": {"type": "array", "items": {"type": "integer"}, "description": "可选"},
+                },
+                "required": ["company_id"],
+            },
+        ),
     ]
 
 
@@ -178,6 +269,18 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             return await handle_get_policy_detail(arguments)
         if name == "trigger_crawl":
             return await handle_trigger_crawl(arguments)
+        if name == "list_subscriptions":
+            return await handle_list_subscriptions(arguments)
+        if name == "update_subscription":
+            return await handle_update_subscription(arguments)
+        if name == "pause_subscription":
+            return await handle_pause_subscription(arguments)
+        if name == "resume_subscription":
+            return await handle_resume_subscription(arguments)
+        if name == "delete_subscription":
+            return await handle_delete_subscription(arguments)
+        if name == "push_now":
+            return await handle_push_now(arguments)
         return [TextContent(type="text", text=json.dumps(
             {"status": "error", "error": f"Unknown tool: {name}"}, ensure_ascii=False
         ))]

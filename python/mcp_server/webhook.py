@@ -5,11 +5,19 @@
 - feishu:   飞书机器人卡片
 - wecom:    企业微信 Markdown
 
-调用方：scheduler.py / query.py
+鉴权：
+- 如果 subscription.webhook_secret 非空，POST 时加 header
+  `X-Policy-Radar-Signature: sha256=<hex(hmac_sha256(secret, json_body))>`
+- 接收方用同样 secret 验证 body 未被篡改
+- 飞书/企微 webhook 本身不能验签（公开 URL），但用户自建中转站能验
+
+调用方：scheduler.py / push.py
 """
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import logging
 from datetime import datetime
@@ -20,6 +28,8 @@ import httpx
 from python.models import Match, Policy, Subscription
 
 logger = logging.getLogger(__name__)
+
+SIGNATURE_HEADER = "X-Policy-Radar-Signature"
 
 # 平台识别
 PLATFORM_GENERIC = "generic"
@@ -140,15 +150,30 @@ async def push_to_webhook(
 
     body = format_payload(platform, company_name, matches_payload)
 
+    # HMAC 签名（如果设了 secret）
+    headers = {}
+    body_bytes = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    if subscription.webhook_secret:
+        sig = hmac.new(
+            subscription.webhook_secret.encode("utf-8"),
+            body_bytes,
+            hashlib.sha256,
+        ).hexdigest()
+        headers[SIGNATURE_HEADER] = f"sha256={sig}"
+
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
-            r = await client.post(subscription.webhook_url, json=body)
+            r = await client.post(
+                subscription.webhook_url,
+                content=body_bytes,  # 用 content 防止 httpx 重新序列化
+                headers={"Content-Type": "application/json", **headers},
+            )
             r.raise_for_status()
             logger.info(
-                "push ok: sub=%d matches=%d platform=%s status=%d",
-                subscription.id, len(matches), platform, r.status_code,
+                "push ok: sub=%d matches=%d platform=%s status=%d signed=%s",
+                subscription.id, len(matches), platform, r.status_code, bool(headers),
             )
-            return {"ok": True, "status_code": r.status_code, "platform": platform}
+            return {"ok": True, "status_code": r.status_code, "platform": platform, "signed": bool(headers)}
     except Exception as e:
         logger.exception("push failed: sub=%d platform=%s err=%s", subscription.id, platform, e)
         return {"ok": False, "error": str(e), "platform": platform}
