@@ -17,11 +17,21 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from python.models import Match, Policy, Subscription
+from python.models import Match, Policy, PushDeadLetter, Subscription
 from python.models.base import get_session
-from python.mcp_server.webhook import push_to_webhook
+from python.mcp_server.webhook import format_payload, _format_match_for_payload, detect_platform, VALID_PLATFORMS, PLATFORM_GENERIC
 
 logger = logging.getLogger(__name__)
+
+
+def _build_payload_snapshot(sub: Subscription, rows: list[tuple[Match, Policy]]) -> dict:
+    """构建 payload 快照（用于入死信）。"""
+    platform = sub.platform_hint or detect_platform(sub.webhook_url or "")
+    if platform not in VALID_PLATFORMS:
+        platform = PLATFORM_GENERIC
+    matches_payload = [_format_match_for_payload(m, pol) for m, pol in rows]
+    company_name = sub.company.name if sub.company else "(unknown)"
+    return format_payload(platform, company_name, matches_payload)
 
 
 async def handle_push_now(arguments: dict) -> list[dict]:
@@ -101,13 +111,42 @@ async def handle_push_now(arguments: dict) -> list[dict]:
                     "message": f"已推送 {len(pushed_ids)} 条匹配到 webhook",
                 }, ensure_ascii=False),
             }]
-        else:
+
+        # 失败：入死信（如果 dead_letter=True）
+        if result.get("dead_letter"):
+            dead = PushDeadLetter(
+                subscription_id=sub.id,
+                webhook_url=sub.webhook_url or "",
+                payload=result.get("payload") or _build_payload_snapshot(sub, rows),
+                headers=result.get("headers") or {},
+                error_msg=result.get("error", "unknown"),
+                last_status_code=result.get("status_code"),
+                attempts=result.get("retries", 0) + 1,
+                retry_count=0,
+                next_retry_at=datetime.utcnow(),  # 下一轮立即重试
+                resolved=False,
+            )
+            session.add(dead)
+            logger.error(
+                "push failed -> dead letter: sub=%d err=%s",
+                sub.id, result.get("error"),
+            )
             return [{
                 "type": "text",
                 "text": json.dumps({
                     "status": "error",
                     "pushed": 0,
                     "error": result.get("error"),
-                    "platform": result.get("platform"),
+                    "dead_letter_id": dead.id if dead.id else None,
+                    "message": "推送失败，已入死信队列，scheduler 将周期重试",
                 }, ensure_ascii=False),
             }]
+        return [{
+            "type": "text",
+            "text": json.dumps({
+                "status": "error",
+                "pushed": 0,
+                "error": result.get("error"),
+                "message": "推送失败（非可重试错误）",
+            }, ensure_ascii=False),
+        }]

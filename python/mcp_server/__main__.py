@@ -94,9 +94,9 @@ async def run_sse(host: str, port: int) -> int:
 
 def main() -> int:
     args = parse_args()
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    from python.app.logging_config import setup_logging
+    setup_logging(
+        level=("DEBUG" if args.verbose else None),
     )
 
     if not args.stdio and not args.sse:

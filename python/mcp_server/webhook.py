@@ -128,15 +128,54 @@ def format_payload(platform: str, company_name: str, matches_payload: list[dict]
     return _format_payload_generic(company_name, matches_payload)
 
 
+async def _do_push(
+    webhook_url: str,
+    body_bytes: bytes,
+    headers: dict,
+    *,
+    timeout: float,
+) -> tuple[bool, int | None, str | None]:
+    """单次 push，返回 (ok, status_code, error_msg)。"""
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.post(
+                webhook_url,
+                content=body_bytes,
+                headers={"Content-Type": "application/json", **headers},
+            )
+            if r.status_code >= 500 or r.status_code == 429:
+                # 5xx/429 视为可重试错误
+                return False, r.status_code, f"server error {r.status_code}"
+            r.raise_for_status()
+            return True, r.status_code, None
+    except httpx.TimeoutException:
+        return False, None, "timeout"
+    except httpx.HTTPStatusError as e:
+        # 4xx 不可重试（客户端问题）
+        return False, e.response.status_code, f"http {e.response.status_code}"
+    except Exception as e:
+        return False, None, f"{type(e).__name__}: {e}"
+
+
+# 重试配置：最多 3 次，指数退避 2/8/30 秒
+RETRY_DELAYS = [2, 8, 30]
+
+
 async def push_to_webhook(
     subscription: Subscription,
     matches: list[tuple[Match, Policy]],
     *,
     timeout: float = 10.0,
+    max_retries: int = 3,
 ) -> dict:
     """把 matches 推送到 subscription.webhook_url。
 
-    返回 {"ok": bool, "status_code": int, "platform": str, "error": Optional[str]}
+    重试策略：失败时指数退避（2/8/30s），最多 3 次。
+    4xx 错误（客户端问题）不重试；5xx/429/timeout 重试。
+    最终失败返回 {"ok": False, "error": ..., "retries": N, "dead_letter": True}，
+    调用方负责入死信表。
+
+    返回 {"ok", "status_code", "platform", "signed", "retries", "error"}
     """
     if not subscription.webhook_url:
         return {"ok": False, "error": "no webhook_url configured"}
@@ -161,19 +200,57 @@ async def push_to_webhook(
         ).hexdigest()
         headers[SIGNATURE_HEADER] = f"sha256={sig}"
 
-    try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            r = await client.post(
-                subscription.webhook_url,
-                content=body_bytes,  # 用 content 防止 httpx 重新序列化
-                headers={"Content-Type": "application/json", **headers},
-            )
-            r.raise_for_status()
+    # 重试循环
+    last_error = None
+    last_status = None
+    for attempt in range(max_retries):
+        ok, status, err = await _do_push(
+            subscription.webhook_url, body_bytes, headers, timeout=timeout
+        )
+        if ok:
             logger.info(
-                "push ok: sub=%d matches=%d platform=%s status=%d signed=%s",
-                subscription.id, len(matches), platform, r.status_code, bool(headers),
+                "push ok: sub=%d matches=%d platform=%s status=%d attempt=%d signed=%s",
+                subscription.id, len(matches), platform, status, attempt + 1, bool(headers),
             )
-            return {"ok": True, "status_code": r.status_code, "platform": platform, "signed": bool(headers)}
-    except Exception as e:
-        logger.exception("push failed: sub=%d platform=%s err=%s", subscription.id, platform, e)
-        return {"ok": False, "error": str(e), "platform": platform}
+            return {
+                "ok": True,
+                "status_code": status,
+                "platform": platform,
+                "signed": bool(headers),
+                "retries": attempt,
+            }
+        last_error = err
+        last_status = status
+
+        # 4xx 不重试（客户端配置错误，重试也没用）
+        if status is not None and 400 <= status < 500 and status != 429:
+            logger.warning(
+                "push failed (4xx, no retry): sub=%d status=%d err=%s",
+                subscription.id, status, err,
+            )
+            break
+
+        # 还有重试机会则 sleep
+        if attempt < max_retries - 1:
+            delay = RETRY_DELAYS[min(attempt, len(RETRY_DELAYS) - 1)]
+            logger.warning(
+                "push failed (will retry in %ds): sub=%d attempt=%d err=%s",
+                delay, subscription.id, attempt + 1, err,
+            )
+            import asyncio
+            await asyncio.sleep(delay)
+        else:
+            logger.error(
+                "push failed (max retries): sub=%d attempts=%d err=%s",
+                subscription.id, attempt + 1, err,
+            )
+
+    return {
+        "ok": False,
+        "error": last_error,
+        "status_code": last_status,
+        "platform": platform,
+        "signed": bool(headers),
+        "retries": max_retries,
+        "dead_letter": True,  # 标志：调用方应入死信
+    }
