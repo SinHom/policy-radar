@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>iLink 职责 vs 我必须自己做的职责</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #f5f7fb;
+  padding: 24px;
+  color: #1a202c;
+  line-height: 1.6;
+}
+h1 { text-align: center; font-size: 24px; margin-bottom: 4px; }
+.subtitle { text-align: center; color: #64748b; margin-bottom: 32px; font-size: 14px; }
+.container { max-width: 1200px; margin: 0 auto; }
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.col {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  border-top: 4px solid;
+}
+.col.ilink { border-top-color: #06b6d4; }
+.col.mine { border-top-color: #8b5cf6; }
+.col h2 { font-size: 17px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.col .tag { font-size: 10px; padding: 2px 8px; border-radius: 99px; color: white; }
+.ilink .tag { background: #06b6d4; }
+.mine .tag { background: #8b5cf6; }
+.col .desc { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+
+ul { list-style: none; }
+li {
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: start;
+  gap: 8px;
+}
+.ilink li { background: #ecfeff; }
+.mine li { background: #f5f3ff; }
+.check { color: #10b981; font-weight: bold; }
+.cross { color: #ef4444; font-weight: bold; }
+.sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+/* 中心架构图 */
+.architecture {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  margin: 24px 0;
+}
+.architecture h2 { text-align: center; margin-bottom: 20px; }
+.arch-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+.box {
+  border: 2px solid;
+  border-radius: 10px;
+  padding: 14px 12px;
+  text-align: center;
+  font-size: 13px;
+  position: relative;
+}
+.box.user { border-color: #f59e0b; background: #fffbeb; }
+.box.ilink { border-color: #06b6d4; background: #ecfeff; }
+.box.mine { border-color: #8b5cf6; background: #f5f3ff; }
+.box.crawler { border-color: #3b82f6; background: #eff6ff; }
+.box.llm { border-color: #ec4899; background: #fdf2f8; }
+.box .title { font-weight: 600; margin-bottom: 4px; }
+.box .sub { font-size: 10px; color: #64748b; }
+.box .bullet { text-align: left; font-size: 11px; margin-top: 6px; line-height: 1.5; }
+.box .bullet::before { content: "• "; color: #94a3b8; }
+
+.layer {
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 16px;
+}
+.layer .layer-title { font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.layer-items { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 99px;
+  padding: 4px 10px;
+  font-size: 11px;
+}
+.chip.mine { background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; }
+.chip.critical { background: #fee2e2; border-color: #fca5a5; color: #991b1b; font-weight: 600; }
+
+/* MVP 进度 */
+.mvp-status {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  margin-top: 24px;
+}
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+th { background: #f1f5f9; font-weight: 600; }
+tr:last-child td { border-bottom: none; }
+.status-ok { color: #10b981; font-weight: 600; }
+.status-pending { color: #f59e0b; font-weight: 600; }
+.status-future { color: #94a3b8; }
+</style>
+</head>
+<body>
+
+<h1>iLink 职责 vs 我必须自己做的职责</h1>
+<p class="subtitle">iLink 是「管道」，不是「管家」</p>
+
+<div class="container">
+
+<!-- 上半部分：两列对比 -->
+<div class="split">
+
+  <div class="col ilink">
+    <h2>🦞 iLink（小龙虾）做这些 <span class="tag">已具备</span></h2>
+    <p class="desc">微信官方协议，只管"消息怎么到微信用户手里"</p>
+    <ul>
+      <li><span class="check">✓</span> <div>个人微信用户能加 bot 好友<div class="sub">扫码登录 → 获得 bot_token</div></div></li>
+      <li><span class="check">✓</span> <div>接收用户发来的消息<div class="sub">长轮询 /getupdates 拉取</div></div></li>
+      <li><span class="check">✓</span> <div>回复用户消息<div class="sub">/sendmessage + context_token</div></div></li>
+      <li><span class="check">✓</span> <div>消息类型支持<div class="sub">文本/图片/文件/链接卡片</div></div></li>
+      <li><span class="check">✓</span> <div>识别用户身份<div class="sub">每条消息带 user_id</div></div></li>
+    </ul>
+  </div>
+
+  <div class="col mine">
+    <h2>🛠️ 我必须自己做的 <span class="tag">全栈自建</span></h2>
+    <p class="desc">用户管理、订阅、策略、匹配、推送编排——iLink 一概不管</p>
+    <ul>
+      <li><span class="cross">✗</span> <div>用户/企业档案管理<div class="sub">哪个微信用户对应哪家企业，资质标签、关注行业</div></div></li>
+      <li><span class="cross">✗</span> <div>订阅配置<div class="sub">关注哪些政策类型、地区、关键词增强</div></div></li>
+      <li><span class="cross">✗</span> <div>匹配规则 + 阈值<div class="sub">多少分推送、高优先级阈值、个性化过滤</div></div></li>
+      <li><span class="cross">✗</span> <div>推送频率 + 时间窗<div class="sub">实时/日报/周报、避开夜间、不要刷屏</div></div></li>
+      <li><span class="cross">✗</span> <div>推送配额/限流<div class="sub">避免触犯微信风控（单用户每天 ≤ N 条）</div></div></li>
+      <li><span class="cross">✗</span> <div>用户行为日志<div class="sub">看了/没看/回复了/咨询了 → 用于优化匹配</div></div></li>
+      <li><span class="cross">✗</span> <div>Web 管理后台<div class="sub">让用户自己改配置、查看历史</div></div></li>
+    </ul>
+  </div>
+
+</div>
+
+<!-- 中间：架构总览 -->
+<div class="architecture">
+  <h2>完整架构图：管道 vs 业务逻辑 分层</h2>
+  <div class="arch-grid">
+    <div class="box user">
+      <div class="title">👤 微信用户</div>
+      <div class="sub">个人微信 · 加 bot 好友</div>
+      <div class="bullet">发"订阅" / "1" / "咨询"</div>
+      <div class="bullet">收日报 / 详情 / 名片</div>
+    </div>
+    <div class="box ilink">
+      <div class="title">🦞 iLink 网关</div>
+      <div class="sub">ilinkai.weixin.qq.com</div>
+      <div class="bullet">只做消息路由</div>
+      <div class="bullet">携带 user_id</div>
+    </div>
+    <div class="box mine">
+      <div class="title">🛠️ 我的服务</div>
+      <div class="sub">FastAPI + DB + LLM</div>
+      <div class="bullet">用户档案 / 订阅 / 匹配</div>
+      <div class="bullet">推送编排 / 风控</div>
+      <div class="bullet">管理后台 API</div>
+    </div>
+    <div class="box crawler">
+      <div class="title">🕷️ 爬虫 + LLM</div>
+      <div class="sub">定时 / 触发</div>
+      <div class="bullet">政府网站 → 政策原文</div>
+      <div class="bullet">MiniMax M3 摘要</div>
+    </div>
+  </div>
+
+  <div style="text-align:center; color:#64748b; font-size:12px; margin-top:12px;">
+    流向：爬虫/LLM → 我的服务（决定给谁推） → iLink（管道） → 微信用户
+  </div>
+
+  <div class="layer">
+    <div class="layer-title">我必须自建的核心模块（按重要性排序）</div>
+    <div class="layer-items">
+      <span class="chip critical">users / companies 表（用户-企业映射）</span>
+      <span class="chip critical">subscriptions（关注行业/地区/类型）</span>
+      <span class="chip critical">match engine（规则预筛 + LLM 打分）</span>
+      <span class="chip critical">push orchestrator（频率/限流/时间窗）</span>
+      <span class="chip mine">admin web（CRUD 配置）</span>
+      <span class="chip mine">event log（推送/查看/咨询 漏斗）</span>
+      <span class="chip mine">wechat 消息路由（解析"1"/"咨询"等命令）</span>
+    </div>
+  </div>
+</div>
+
+<!-- 底部：MVP 现状表 -->
+<div class="mvp-status">
+  <h2 style="text-align:center; margin-bottom:16px;">MVP 现状 vs 完整方案</h2>
+  <table>
+    <thead>
+      <tr><th>模块</th><th>第一期 MVP</th><th>完整 SaaS 需要</th><th>状态</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>爬虫</td>
+        <td>3 个源配置（云上可跑）</td>
+        <td>12+ 源 / 反爬 / 失败告警</td>
+        <td class="status-ok">MVP ✓</td>
+      </tr>
+      <tr>
+        <td>LLM 摘要</td>
+        <td>MiniMax M3 · 单条 + 批量</td>
+        <td>摘要 + 匹配 + 详情解读 三模型协同</td>
+        <td class="status-ok">MVP ✓</td>
+      </tr>
+      <tr>
+        <td><b>用户管理</b></td>
+        <td><b>无（单租户 demo）</b></td>
+        <td>users / companies / 资质 / 标签</td>
+        <td class="status-pending">需第二期</td>
+      </tr>
+      <tr>
+        <td><b>订阅配置</b></td>
+        <td><b>无（硬编码 mock）</b></td>
+        <td>每用户独立：行业/地区/类型/关键词</td>
+        <td class="status-pending">需第二期</td>
+      </tr>
+      <tr>
+        <td><b>匹配引擎</b></td>
+        <td>无（无用户也无匹配）</td>
+        <td>规则预筛 + Qwen 深度匹配 + 个性化</td>
+        <td class="status-pending">需第二期</td>
+      </tr>
+      <tr>
+        <td><b>推送编排</b></td>
+        <td>手动触发 1 条</td>
+        <td>定时 + 频率 + 限流 + 时间窗 + 去重</td>
+        <td class="status-pending">需第二期</td>
+      </tr>
+      <tr>
+        <td>微信通道</td>
+        <td>Mock 微信（无 iLink）</td>
+        <td>iLink 客户端（扫码 + 长轮询）</td>
+        <td class="status-pending">部署后补</td>
+      </tr>
+      <tr>
+        <td>管理后台</td>
+        <td>触发页（demo 风格）</td>
+        <td>Vue 3 SPA · 全功能</td>
+        <td class="status-ok">MVP ✓</td>
+      </tr>
+      <tr>
+        <td>事件日志 / 漏斗</td>
+        <td>push_logs 表</td>
+        <td>推送→查看→咨询 全链路追踪</td>
+        <td class="status-ok">MVP ✓</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div style="margin-top:24px; padding:16px 20px; background:#fffbeb; border-left:4px solid #f59e0b; border-radius:8px; font-size:13px; color:#78350f;">
+  <b>📌 一句话总结：</b> iLink 解决"消息到微信"，我的服务解决"给每个用户推什么、什么时机推、推几次"——后者才是政策雷达<b>真正的产品壁垒</b>，iLink 一行代码也帮不了。
+</div>
+
+</div>
+</body>
+</html>

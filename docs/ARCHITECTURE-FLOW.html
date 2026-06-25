@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>架构对比：现在的 mock 方案 vs 你说的"中转 API" vs 真实 iLink 方案</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #f5f7fb;
+  padding: 24px;
+  color: #1a202c;
+  line-height: 1.6;
+}
+h1 { text-align: center; font-size: 24px; margin-bottom: 8px; }
+.subtitle { text-align: center; color: #64748b; margin-bottom: 32px; font-size: 14px; }
+.container { max-width: 1200px; margin: 0 auto; }
+.cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.col {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  border-top: 4px solid;
+}
+.col.mock { border-top-color: #f59e0b; }
+.col.proxy { border-top-color: #8b5cf6; }
+.col.real { border-top-color: #10b981; }
+.col h2 {
+  font-size: 16px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.col .tag {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  color: white;
+}
+.mock .tag { background: #f59e0b; }
+.proxy .tag { background: #8b5cf6; }
+.real .tag { background: #10b981; }
+.col .desc { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+
+.flow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.node {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  position: relative;
+}
+.node .label { font-weight: 600; color: #1e293b; }
+.node .sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+.node.crawler { border-left: 3px solid #3b82f6; }
+.node.llm { border-left: 3px solid #8b5cf6; }
+.node.proxy { border-left: 3px solid #ef4444; background: #fef2f2; }
+.node.wechat { border-left: 3px solid #10b981; }
+.node.user { border-left: 3px solid #f59e0b; }
+.node.db { border-left: 3px solid #6366f1; }
+
+.arrow {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 18px;
+  line-height: 1;
+  margin: -2px 0;
+}
+.arrow::before { content: "↓"; }
+
+.note {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #78350f;
+}
+.real .note { background: #ecfdf5; border-left-color: #10b981; color: #064e3b; }
+.proxy .note { background: #f5f3ff; border-left-color: #8b5cf6; color: #4c1d95; }
+
+h3 {
+  font-size: 18px;
+  margin: 32px 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e2e8f0;
+}
+table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+th, td { padding: 10px 14px; text-align: left; font-size: 13px; border-bottom: 1px solid #e2e8f0; }
+th { background: #f1f5f9; font-weight: 600; }
+tr:last-child td { border-bottom: none; }
+.highlight { background: #fef3c7; font-weight: 600; }
+
+.qna {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 32px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.qna h3 { margin-top: 0; border: none; }
+.q { color: #2563eb; font-weight: 600; margin-top: 16px; }
+.q::before { content: "Q: "; }
+.a { color: #1e293b; margin-top: 6px; padding-left: 16px; border-left: 3px solid #10b981; }
+.a::before { content: "A: "; font-weight: 600; color: #10b981; }
+</style>
+</head>
+<body>
+<h1>政策雷达 · 三种链路对比</h1>
+<p class="subtitle">现在的 mock 方案 / 你设想的"中转 API" / 真实 iLink 部署后</p>
+
+<div class="container">
+
+<div class="cols">
+  <!-- 列 1: mock -->
+  <div class="col mock">
+    <h2>现在的实现 <span class="tag">MVP</span></h2>
+    <p class="desc">本地 Windows · 链路已通但没接真实微信</p>
+    <div class="flow">
+      <div class="node crawler"><div class="label">① 爬虫</div><div class="sub">httpx / Playwright（云上才跑得通）</div></div>
+      <div class="arrow"></div>
+      <div class="node db"><div class="label">② SQLite</div><div class="sub">policy_sources / policies / push_logs</div></div>
+      <div class="arrow"></div>
+      <div class="node llm"><div class="label">③ MiniMax M3</div><div class="sub">OpenAI 协议 · base_url=api.minimaxi.com</div></div>
+      <div class="arrow"></div>
+      <div class="node proxy"><div class="label">④ mock_wechat.py</div><div class="sub">FastAPI on 9999 · 只 print + 写日志</div></div>
+      <div class="arrow"></div>
+      <div class="node user"><div class="label">⑤ 推送"成功"</div><div class="sub">实际只到 pushed_messages.log</div></div>
+    </div>
+    <div class="note">⚠️ mock 阶段不接真实微信。部署到云后只需把④换成真实 iLink。</div>
+  </div>
+
+  <!-- 列 2: 中转 API -->
+  <div class="col proxy">
+    <h2>你说的"中转 API" <span class="tag">理解</span></h2>
+    <p class="desc">做个 API 服务 + 套个 iLink 客户端</p>
+    <div class="flow">
+      <div class="node crawler"><div class="label">① 你的 API 服务</div><div class="sub">/summarize 接收外部分析请求</div></div>
+      <div class="arrow"></div>
+      <div class="node llm"><div class="label">② LLM 处理</div><div class="sub">MiniMax / Qwen 做转换</div></div>
+      <div class="arrow"></div>
+      <div class="node proxy"><div class="label">③ iLink 客户端</div><div class="sub">登录态在 API 进程里 · 调 sendmessage</div></div>
+      <div class="arrow"></div>
+      <div class="node wechat"><div class="label">④ iLink 网关</div><div class="sub">ilinkai.weixin.qq.com</div></div>
+      <div class="arrow"></div>
+      <div class="node user"><div class="label">⑤ 微信用户</div><div class="sub">收到消息气泡</div></div>
+    </div>
+    <div class="note">💡 这和我现在的方案 = 几乎一样。iLink 客户端必须自己部署（需扫码登录），没法"调用第三方"绕开。</div>
+  </div>
+
+  <!-- 列 3: 真实部署 -->
+  <div class="col real">
+    <h2>真实 iLink 部署 <span class="tag">目标态</span></h2>
+    <p class="desc">云服务器 + 真实爬取 + iLink 扫码</p>
+    <div class="flow">
+      <div class="node crawler"><div class="label">① 真实爬虫</div><div class="sub">深圳工信局 / 广东科技厅 / 国务院</div></div>
+      <div class="arrow"></div>
+      <div class="node db"><div class="label">② PostgreSQL</div><div class="sub">容器化 · volume 持久化</div></div>
+      <div class="arrow"></div>
+      <div class="node llm"><div class="label">③ MiniMax M3</div><div class="sub">定时批量摘要 · Semaphore 限流</div></div>
+      <div class="arrow"></div>
+      <div class="node wechat"><div class="label">④ iLink 客户端</div><div class="sub">扫码登录一次 · 维护 bot_token</div></div>
+      <div class="arrow"></div>
+      <div class="node user"><div class="label">⑤ 真实微信用户</div><div class="sub">收到政策日报</div></div>
+    </div>
+    <div class="note">✅ 这就是我的计划目标态。代码不用重写，把 mock_wechat.py 换成 iLink client 即可。</div>
+  </div>
+</div>
+
+<h3>关键差异表</h3>
+<table>
+  <thead>
+    <tr><th>维度</th><th>现在的 mock</th><th>你说的"中转 API"</th><th>真实 iLink</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>谁来登录微信</td><td>无人（mock）</td><td>你的 API 服务（必）</td><td>你的服务（必）</td></tr>
+    <tr><td>是否能委托第三方</td><td>—</td><td class="highlight">❌ 不能</td><td>❌ 不能</td></tr>
+    <tr><td>是否要"中转"</td><td>否</td><td>是（你 → iLink → 微信）</td><td>是（你 → iLink → 微信）</td></tr>
+    <tr><td>消息传输跳数</td><td>1（你 → mock）</td><td>2（你 → iLink → 微信）</td><td>2（你 → iLink → 微信）</td></tr>
+    <tr><td>是否需要 bot_token</td><td>否</td><td>是（扫码一次，长期）</td><td>是（扫码一次，长期）</td></tr>
+    <tr><td>服务器 IP 要求</td><td>—</td><td>公网可达</td><td>公网可达</td></tr>
+  </tbody>
+</table>
+
+<div class="qna">
+<h3>回答你的问题</h3>
+
+<div class="q">是不是可以弄一个 API，这个 API 带了一个健全小龙虾？</div>
+<div class="a">"API + 小龙虾" 这件事其实就是 <b>在我的服务里集成 iLink 客户端</b>。iLink 是微信官方协议（不是第三方中转服务），它的"客户端"必须自己部署、自己扫码登录、自己维护 bot_token。没有任何 SaaS 能替你做这件事——你看到的"小龙虾机器人"商品，本质都是"别人部署好的客户端，付费调用"。</div>
+
+<div class="q">自己利用这个 API 能收取信息，然后中转推送给微信？</div>
+<div class="a">可以这么做，但和我现在的方案是<b>同一个东西的不同表述</b>。链路是：你的服务（爬虫 + LLM + iLink client）→ 微信。任何方案都要这三件事，少一个都跑不通。所谓"中转"是指消息经过 iLink 网关这一跳（你 → iLink → 微信），但这跳无法省略，因为微信不开放直推 API。</div>
+
+<div class="q">服务器上现在没有部署小龙虾的，是不是有问题？</div>
+<div class="a">对，现在没有。MVP 只跑 mock 是为了先把爬虫/AI/触发页面三件大事跑通。部署到云服务器后需要补：<br>
+&nbsp;&nbsp;• 一次扫码登录 iLink（生成 bot_token 存到 .env）<br>
+&nbsp;&nbsp;• 用 iLink SDK 或原生 HTTP 替换 mock_wechat.py<br>
+&nbsp;&nbsp;• 长轮询 /getupdates 监听用户回复（"咨询"指令 → 发顾问二维码）<br>
+这些都计划在第二期做。代码改动量：<b>替换 mock_wechat.py 为 iLink_client.py（约 100 行）</b>，其他文件不动。</div>
+
+<div class="q">你这个方式不是一样吗？也是要通过内部接口重新把这个信息收取到，然后中转给微信吗？</div>
+<div class="a">准确地说：<b>「中转」这一跳无法省</b>，但「内部接口收取」这个表述有点偏。我的链路是单向的：<br>
+&nbsp;&nbsp;<b>爬虫主动拉</b>（不是"内部接口收取"）→ 存 DB → LLM 摘要 → iLink 直推 → 微信<br>
+没有"别人推给我、我再推给微信"这种"中转"环节。如果你想做"中转 API"（让别人发内容给我，我统一推），那是另一种产品形态（类似 server酱 / PushPlus），但目前的 MVP 场景里不必要——政策源都是固定的几个网站，我直接爬就行。</div>
+</div>
+
+</div>
+</body>
+</html>
