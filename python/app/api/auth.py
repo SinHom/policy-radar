@@ -23,7 +23,7 @@ from python.app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/auth", tags=["auth"])
+router = APIRouter(tags=["auth"])  # 路径前缀由 main.py include_router 时统一加 /api
 
 # 内存 token 存储：{token_hash: {"user": str, "expires_at": float}}
 _TOKENS: dict[str, dict] = {}
@@ -62,7 +62,7 @@ class MeResponse(BaseModel):
     user: str
 
 
-@router.post("/login", response_model=LoginResponse)
+@router.post("/api/auth/login", response_model=LoginResponse)
 async def login(req: LoginRequest) -> LoginResponse:
     """登录：验证 user/pass，返回 token。"""
     settings = get_settings()
@@ -85,7 +85,7 @@ async def login(req: LoginRequest) -> LoginResponse:
     return LoginResponse(token=token, expires_in=_TOKEN_TTL, user=req.username)
 
 
-@router.post("/logout")
+@router.post("/api/auth/logout")
 async def logout(authorization: Optional[str] = Header(None)) -> dict:
     """登出：删除 token。"""
     if not authorization or not authorization.lower().startswith("bearer "):
@@ -96,7 +96,7 @@ async def logout(authorization: Optional[str] = Header(None)) -> dict:
     return {"ok": True}
 
 
-@router.get("/me", response_model=MeResponse)
+@router.get("/api/auth/me", response_model=MeResponse)
 async def me(user: str = Depends(lambda: None)) -> MeResponse:  # 占位
     raise HTTPException(status_code=501, detail="use /verify instead")
 
@@ -117,7 +117,7 @@ async def require_admin(
     return info["user"]
 
 
-@router.get("/verify")
+@router.get("/api/auth/verify")
 async def verify(user: str = Depends(require_admin)) -> dict:
     """verify endpoint（用于前端 axios 拦截器检查 token 是否还有效）。"""
     return {"ok": True, "user": user}
