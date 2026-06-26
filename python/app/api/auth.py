@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+import os
 import secrets
 import time
 from typing import Optional
@@ -27,7 +28,14 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])  # 完整路径前缀在 r
 
 # 内存 token 存储：{token_hash: {"user": str, "expires_at": float}}
 _TOKENS: dict[str, dict] = {}
-_TOKEN_TTL = 86400  # 24 小时
+# TTL：生产 2 小时，开发可放宽。生产前必须改成 7200。
+_TOKEN_TTL = int(os.environ.get("ADMIN_TOKEN_TTL", "7200"))  # 默认 2h
+_MAX_TOKENS_PER_USER = 5  # 同一用户最多 5 个有效 token，防滥用
+# 失败计数（按用户名）— 超过阈值要锁定
+_FAIL_COUNT: dict[str, int] = {}
+_FAIL_LOCKED_UNTIL: dict[str, float] = {}  # {user: ts}
+_FAIL_THRESHOLD = 10  # 同一用户失败 10 次 → 锁定 15 分钟
+_FAIL_LOCK_WINDOW = 15 * 60  # 15 分钟
 
 
 def _hash_token(token: str) -> str:
@@ -70,9 +78,32 @@ async def login(req: LoginRequest) -> LoginResponse:
     user_ok = hmac.compare_digest(req.username, settings.admin_user)
     pass_ok = hmac.compare_digest(req.password, settings.admin_password)
     if not (user_ok and pass_ok):
+        # 记录失败（IP-based 限流在 middleware 层）
+        _FAIL_COUNT[req.username] = _FAIL_COUNT.get(req.username, 0) + 1
+        # 超阈值 → 锁定
+        if _FAIL_COUNT[req.username] >= _FAIL_THRESHOLD:
+            _FAIL_LOCKED_UNTIL[req.username] = time.time() + _FAIL_LOCK_WINDOW
+            logger.warning("admin login LOCKED: user=%s fail_count=%d lock_until=%s",
+                           req.username, _FAIL_COUNT[req.username],
+                           _FAIL_LOCKED_UNTIL[req.username])
+        else:
+            logger.warning("admin login failed: user=%s fail_count=%d",
+                           req.username, _FAIL_COUNT[req.username])
         # 避免用户名枚举，加固定 sleep
         time.sleep(0.5)
         raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    # 成功 → 清失败计数 + 解锁
+    _FAIL_COUNT.pop(req.username, None)
+    _FAIL_LOCKED_UNTIL.pop(req.username, None)
+
+    # 限同用户 token 数（防 token 洪水）
+    user_tokens = [(k, v) for k, v in _TOKENS.items() if v.get("user") == req.username]
+    while len(user_tokens) >= _MAX_TOKENS_PER_USER:
+        # 删最早过期的
+        oldest = min(user_tokens, key=lambda x: x[1]["expires_at"])
+        _TOKENS.pop(oldest[0], None)
+        user_tokens = user_tokens[:-1]
 
     # 生成 token
     token = secrets.token_urlsafe(32)
@@ -81,7 +112,7 @@ async def login(req: LoginRequest) -> LoginResponse:
         "user": req.username,
         "expires_at": expires_at,
     }
-    logger.info("admin login: user=%s", req.username)
+    logger.info("admin login success: user=%s ttl=%d", req.username, _TOKEN_TTL)
     return LoginResponse(token=token, expires_in=_TOKEN_TTL, user=req.username)
 
 
