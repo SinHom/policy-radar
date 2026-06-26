@@ -148,29 +148,36 @@
         <div v-show="currentTab === 'subscriptions'">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-semibold text-gray-900">📋 订阅管理</h2>
-            <button @click="loadSubscriptions" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
+            <div class="flex gap-2">
+              <button @click="openNewSubModal" class="text-sm px-3 py-1.5 rounded-lg bg-brand-500 text-white hover:bg-brand-600">+ 新建订阅</button>
+              <button @click="loadSubscriptions" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
+            </div>
           </div>
           <div v-if="subs.length === 0" class="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-400 text-sm">
-            暂无订阅（通过 MCP 的 start_setup 注册）
+            暂无订阅 · 点上方「+ 新建订阅」或通过 MCP 的 start_setup 创建
           </div>
           <div v-else class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
             <div v-for="s in subs" :key="s.subscription_id" class="px-5 py-4 hover:bg-gray-50">
               <div class="flex items-start justify-between gap-4">
-                <div class="flex-1 min-w-0">
+                <div class="flex-1 min-w-0 cursor-pointer" @click="openEditSub(s)">
                   <div class="flex items-center gap-2 mb-1">
                     <span class="font-medium text-gray-900">{{ s.company_name }}</span>
                     <span :class="s.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'" class="text-xs px-2 py-0.5 rounded-full font-medium">
                       {{ s.enabled ? '启用' : '暂停' }}
                     </span>
                     <span class="text-xs text-gray-400">sub #{{ s.subscription_id }}</span>
+                    <span v-if="s.industry" class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{{ s.industry }}</span>
+                    <span v-if="s.region" class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">{{ s.region }}</span>
                   </div>
                   <div class="text-xs text-gray-500">
-                    关注：{{ (s.types || []).join('、') || '-' }} · 地区：{{ (s.regions || []).join('、') || '-' }} · 频率：{{ s.push_schedule }}
+                    关注：{{ (s.types || []).join('、') || '-' }} · 地区：{{ (s.regions || []).join('、') || '-' }} · 频率：{{ s.push_schedule }} · 时间：{{ s.push_time }}
                   </div>
-                  <div class="text-xs text-gray-400 mt-1 truncate">webhook: {{ s.webhook_url || '(无)' }}</div>
+                  <div class="text-xs text-gray-400 mt-1 truncate">webhook: {{ s.webhook_url || '(无，走 mock)' }}</div>
                   <div class="text-xs text-gray-400">最近推送：{{ s.last_push_at || '从未' }}</div>
                 </div>
                 <div class="flex flex-col gap-1 shrink-0">
+                  <button @click="pushNow(s)" class="text-xs px-2 py-1 rounded bg-brand-500 text-white hover:bg-brand-600">📤 立即推送</button>
+                  <button @click="openEditSub(s)" class="text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50">✏️ 编辑</button>
                   <button v-if="s.enabled" @click="toggleSub(s, false)" class="text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50">暂停</button>
                   <button v-else @click="toggleSub(s, true)" class="text-xs px-2 py-1 rounded bg-green-500 text-white hover:bg-green-600">启用</button>
                   <button @click="deleteSub(s)" class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">删除</button>
@@ -199,6 +206,10 @@
                 <span class="text-xs text-gray-400">#{{ p.id }} · {{ p.source_id }}</span>
                 <span v-if="p.deadline" class="text-xs text-orange-600">⏰ {{ p.deadline }}</span>
                 <span v-if="p.amount" class="text-xs text-green-600">💰 {{ p.amount }}</span>
+                <span class="ml-auto flex gap-1">
+                  <button @click="openEditPolicy(p)" class="text-xs px-2 py-0.5 rounded border border-gray-200 text-gray-600 hover:bg-gray-50">✏️ 编辑</button>
+                  <button @click="deletePolicy(p)" class="text-xs px-2 py-0.5 rounded border border-red-200 text-red-600 hover:bg-red-50">🗑 删除</button>
+                </span>
               </div>
               <h3 class="text-sm font-medium text-gray-900">{{ p.title }}</h3>
               <p class="text-xs text-gray-600 line-clamp-2 mt-1">{{ p.summary || '(无摘要)' }}</p>
@@ -249,6 +260,189 @@
   <!-- Toast -->
   <div v-if="toast.show" class="fixed bottom-6 right-6 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg max-w-sm z-50">
     {{ toast.msg }}
+  </div>
+
+  <!-- ===== 订阅/公司编辑 Modal ===== -->
+  <div v-if="subModal.show" class="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" @click.self="subModal.show = false">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-900">
+          {{ subModal.isNew ? '➕ 新建订阅' : '✏️ 编辑订阅 #' + subModal.data.subscription_id }}
+        </h3>
+        <button @click="subModal.show = false" class="text-gray-400 hover:text-gray-600 text-xl">×</button>
+      </div>
+      <div class="p-6 space-y-5">
+        <!-- 公司信息 -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-700 mb-3">🏢 公司信息</h4>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-gray-600">公司名称 *</label>
+              <input v-model="subModal.data.company_name" required
+                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div>
+              <label class="text-xs text-gray-600">行业</label>
+              <input v-model="subModal.data.industry" placeholder="信息技术 / 人工智能 / ..."
+                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div>
+              <label class="text-xs text-gray-600">地区</label>
+              <input v-model="subModal.data.region" placeholder="深圳市 / 广东省 / ..."
+                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div>
+              <label class="text-xs text-gray-600">规模</label>
+              <input v-model="subModal.data.scale" placeholder="小微 / 中型 / 大型"
+                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs text-gray-600">标签（逗号分隔）</label>
+              <input v-model="subModal.tagsText" placeholder="高新, 专精特新, 科技型中小企业"
+                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 订阅设置 -->
+        <div v-if="!subModal.isNew">
+          <h4 class="text-sm font-semibold text-gray-700 mb-3">⚙️ 订阅设置</h4>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-gray-600">推送频率</label>
+              <select v-model="subModal.data.push_schedule"
+                      class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                <option value="realtime">实时</option>
+                <option value="daily">每日</option>
+                <option value="weekly">每周</option>
+                <option value="manual">手动</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-gray-600">推送时间</label>
+              <input v-model="subModal.data.push_time" placeholder="08:30"
+                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs text-gray-600">Webhook URL（留空走 mock）</label>
+              <input v-model="subModal.data.webhook_url" placeholder="https://example.com/webhook"
+                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs text-gray-600">关注政策类型（逗号分隔）</label>
+              <input v-model="subModal.typesText" placeholder="补贴, 贷款, 税收, 人才"
+                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs text-gray-600">关注地区（逗号分隔）</label>
+              <input v-model="subModal.regionsText" placeholder="深圳, 广东, 北京"
+                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs text-gray-600">关键词（逗号分隔，可选）</label>
+              <input v-model="subModal.keywordsText" placeholder="专精特新, 高新技术"
+                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 新建时的订阅设置 -->
+        <div v-else>
+          <h4 class="text-sm font-semibold text-gray-700 mb-3">⚙️ 订阅设置（新建时）</h4>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-gray-600">推送频率</label>
+              <select v-model="subModal.data.push_schedule"
+                      class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                <option value="realtime">实时</option>
+                <option value="daily">每日</option>
+                <option value="weekly">每周</option>
+                <option value="manual">手动</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-gray-600">推送时间</label>
+              <input v-model="subModal.data.push_time" placeholder="08:30"
+                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs text-gray-600">Webhook URL（留空走 mock）</label>
+              <input v-model="subModal.data.webhook_url" placeholder="https://example.com/webhook"
+                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs text-gray-600">关注政策类型（逗号分隔）</label>
+              <input v-model="subModal.typesText" placeholder="补贴, 贷款, 税收"
+                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+            <div class="col-span-2">
+              <label class="text-xs text-gray-600">关注地区（逗号分隔）</label>
+              <input v-model="subModal.regionsText" placeholder="深圳, 广东"
+                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+        <button @click="subModal.show = false" class="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">取消</button>
+        <button @click="saveSubModal" :disabled="subModal.saving" class="px-4 py-2 text-sm rounded-lg bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50">
+          {{ subModal.saving ? '保存中...' : '保存' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 政策编辑 Modal ===== -->
+  <div v-if="policyModal.show" class="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" @click.self="policyModal.show = false">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-900">✏️ 编辑政策 #{{ policyModal.data.id }}</h3>
+        <button @click="policyModal.show = false" class="text-gray-400 hover:text-gray-600 text-xl">×</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="text-xs text-gray-600">标题</label>
+          <div class="mt-1 text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">{{ policyModal.data.title }}</div>
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">政策类型</label>
+          <select v-model="policyModal.data.summary_type"
+                  class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <option value="">（未分类）</option>
+            <option value="补贴">补贴</option>
+            <option value="贷款">贷款</option>
+            <option value="税收">税收</option>
+            <option value="人才">人才</option>
+            <option value="产业扶持">产业扶持</option>
+            <option value="资质认定">资质认定</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-gray-600">摘要（运营可修正 AI 摘要）</label>
+          <textarea v-model="policyModal.data.summary" rows="5"
+                    class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-600">金额（如：最高 500 万）</label>
+            <input v-model="policyModal.data.amount"
+                   class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-600">截止日期（YYYY-MM-DD）</label>
+            <input v-model="policyModal.data.deadline" placeholder="2026-12-31"
+                   class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+        <button @click="policyModal.show = false" class="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">取消</button>
+        <button @click="savePolicyModal" :disabled="policyModal.saving" class="px-4 py-2 text-sm rounded-lg bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50">
+          {{ policyModal.saving ? '保存中...' : '保存' }}
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Loading -->
@@ -412,6 +606,159 @@
           showToast('✅ 爬取已触发（后台执行）');
         }
 
+        // ===== 订阅/公司 Modal =====
+        const subModal = reactive({
+          show: false,
+          isNew: false,
+          saving: false,
+          data: {},
+          tagsText: '',
+          typesText: '',
+          regionsText: '',
+          keywordsText: '',
+        });
+
+        function openEditSub(s) {
+          subModal.isNew = false;
+          subModal.data = { ...s };
+          subModal.tagsText = (s.industry ? '' : '') + (s.company_name ? '' : '');  // tags 在 company 不在 sub
+          subModal.tagsText = '';  // company.tags 不在 sub 响应里，需要从 /api/companies 拉
+          subModal.typesText = (s.types || []).join(', ');
+          subModal.regionsText = (s.regions || []).join(', ');
+          subModal.keywordsText = (s.keywords || []).join(', ');
+          subModal.show = true;
+          // 拉 company 详情填 tags
+          api.get(`/api/companies`).then(r => {
+            const c = r.data.find(c => c.id === s.company_id);
+            if (c) {
+              subModal.data.industry = c.industry || '';
+              subModal.data.region = c.region || '';
+              subModal.data.scale = c.scale || '';
+              subModal.tagsText = (c.tags || []).join(', ');
+            }
+          }).catch(() => {});
+        }
+
+        function openNewSubModal() {
+          subModal.isNew = true;
+          subModal.data = {
+            company_name: '',
+            industry: '',
+            region: '',
+            scale: '',
+            webhook_url: '',
+            push_schedule: 'daily',
+            push_time: '08:30',
+            types: [],
+            regions: [],
+            keywords: [],
+          };
+          subModal.tagsText = '';
+          subModal.typesText = '';
+          subModal.regionsText = '';
+          subModal.keywordsText = '';
+          subModal.show = true;
+        }
+
+        async function saveSubModal() {
+          if (!subModal.data.company_name) { showToast('❌ 公司名必填'); return; }
+          subModal.saving = true;
+          try {
+            const tags = subModal.tagsText.split(',').map(s => s.trim()).filter(Boolean);
+            const types = subModal.typesText.split(',').map(s => s.trim()).filter(Boolean);
+            const regions = subModal.regionsText.split(',').map(s => s.trim()).filter(Boolean);
+            const keywords = subModal.keywordsText.split(',').map(s => s.trim()).filter(Boolean);
+
+            if (subModal.isNew) {
+              // 新建公司+订阅
+              await api.post('/api/companies', {
+                name: subModal.data.company_name,
+                industry: subModal.data.industry || null,
+                region: subModal.data.region || null,
+                scale: subModal.data.scale || null,
+                tags,
+                push_schedule: subModal.data.push_schedule,
+                push_time: subModal.data.push_time,
+                webhook_url: subModal.data.webhook_url || null,
+                types, regions, keywords: keywords.length ? keywords : null,
+              });
+              showToast('✅ 已新建订阅');
+            } else {
+              // 改 company
+              await api.patch(`/api/companies/${subModal.data.company_id}`, {
+                name: subModal.data.company_name,
+                industry: subModal.data.industry || null,
+                region: subModal.data.region || null,
+                scale: subModal.data.scale || null,
+                tags,
+              });
+              // 改 subscription
+              await api.patch(`/api/subscriptions/${subModal.data.subscription_id}`, {
+                push_schedule: subModal.data.push_schedule,
+                push_time: subModal.data.push_time,
+                webhook_url: subModal.data.webhook_url || null,
+                types, regions, keywords: keywords.length ? keywords : null,
+              });
+              showToast('✅ 已保存');
+            }
+            subModal.show = false;
+            await loadSubscriptions();
+          } catch (e) {
+            showToast('❌ 保存失败: ' + (e.response?.data?.detail || e.message));
+          } finally {
+            subModal.saving = false;
+          }
+        }
+
+        async function pushNow(s) {
+          await withLoading('推送中...', async () => {
+            const r = await api.post(`/api/subscriptions/${s.subscription_id}/push`);
+            showToast(`✅ 已推到 ${r.data.channel}: ${r.data.policy_title.slice(0, 30)}...`);
+            await loadSubscriptions();
+            await loadPushLogs();
+          });
+        }
+
+        // ===== 政策 Modal =====
+        const policyModal = reactive({
+          show: false,
+          saving: false,
+          data: {},
+        });
+
+        function openEditPolicy(p) {
+          policyModal.data = { ...p };
+          policyModal.show = true;
+        }
+
+        async function savePolicyModal() {
+          policyModal.saving = true;
+          try {
+            await api.patch(`/api/policies/${policyModal.data.id}`, {
+              summary_type: policyModal.data.summary_type || null,
+              summary_text: policyModal.data.summary || null,
+              amount: policyModal.data.amount || null,
+              deadline: policyModal.data.deadline || null,
+            });
+            showToast('✅ 已保存');
+            policyModal.show = false;
+            await loadPolicies();
+          } catch (e) {
+            showToast('❌ 保存失败: ' + (e.response?.data?.detail || e.message));
+          } finally {
+            policyModal.saving = false;
+          }
+        }
+
+        async function deletePolicy(p) {
+          if (!confirm(`确定删除政策 #${p.id}「${p.title.slice(0, 30)}...」？\n（会级联删 push_logs + matches）`)) return;
+          await withLoading('删除中...', async () => {
+            await api.delete(`/api/policies/${p.id}`);
+            showToast('✅ 已删除');
+            await loadPolicies();
+          });
+        }
+
         function badgeColor(type) {
           const m = {
             '补贴': 'bg-green-100 text-green-700',
@@ -440,6 +787,8 @@
           serverOnline, statCards,
           loadHealth, loadAll, loadFunnel, loadCompanies, loadSubs, loadPolicies, loadSources, loadPushLogs,
           toggleSub, deleteSub, triggerCrawl, badgeColor,
+          subModal, openEditSub, openNewSubModal, saveSubModal, pushNow,
+          policyModal, openEditPolicy, savePolicyModal, deletePolicy,
         };
       },
     }).mount('#app');
