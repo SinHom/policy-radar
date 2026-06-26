@@ -33,6 +33,7 @@
 </head>
 <body class="bg-gray-50 min-h-screen">
 
+  <div id="app">
   <!-- ===== 登录页 ===== -->
   <div v-if="!authed" class="min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md">
@@ -453,6 +454,7 @@
       <span class="text-sm">{{ loadingText }}</span>
     </div>
   </div>
+  </div> <!-- /#app -->
 
   <!-- Vue 3 UMD (从 window.Vue 解构) -->
   <script>
