@@ -68,8 +68,11 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_AUTH_ANONYMOUS_ENABLED=true
+      # 自动加载 datasources/*.yaml 和 dashboards/
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
     volumes:
-      - ./monitoring/grafana-datasource.yml:/etc/grafana/provisioning/datasources/prometheus.yml:ro
+      # datasources 整个目录挂载（包含 prometheus.yml）
+      - ./monitoring/datasources:/etc/grafana/provisioning/datasources:ro
       - ./monitoring/grafana-dashboard.json:/var/lib/grafana/dashboards/policy-radar.json:ro
     depends_on:
       - prometheus
