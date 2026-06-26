@@ -76,10 +76,10 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
         run: |
-          python3 << 'PYEOF'
-          import sqlite3, json, os
+          source .venv/bin/activate
+          python << 'PYEOF'
+          import sqlite3, json
           from datetime import datetime
-          os.chdir("$GITHUB_WORKSPACE")
           conn = sqlite3.connect("data/policy_radar.db")
           c = conn.cursor()
           sources = [
