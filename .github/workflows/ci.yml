@@ -150,6 +150,16 @@ jobs:
           source .venv/bin/activate
           python -m scripts.stdio_smoke 2>&1 || echo "::warning::stdio_smoke failed (DB/aiosqlite), continuing"
 
+      - name: Test message router (iLink long_poll e2e)
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONPATH: python
+        continue-on-error: true
+        run: |
+          source .venv/bin/activate
+          python python/tests/test_message_router.py 2>&1 || echo "::warning::message_router tests failed, continuing"
+          python python/tests/test_long_poll_e2e.py 2>&1 || echo "::warning::long_poll e2e failed, continuing"
+
       - name: Test FastAPI endpoints
         env:
           PYTHONIOENCODING: utf-8

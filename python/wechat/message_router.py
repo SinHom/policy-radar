@@ -37,7 +37,10 @@ async def fetch_new_messages(cursor: str = "", long_poll_timeout: int = 30) -> d
     from python.wechat.ilink_client import get_client
     client = get_client()
     try:
-        return await client.get_updates(cursor=cursor, long_poll_timeout=long_poll_timeout)
+        result = await client.get_updates(cursor=cursor, long_poll_timeout=long_poll_timeout)
+        logger.debug("get_updates returned: %d msgs, cursor=%s",
+                     len(result.get("messages", [])), result.get("cursor"))
+        return result
     except Exception as e:
         logger.error("iLink get_updates failed: %s", e)
         return {"messages": [], "cursor": cursor}
@@ -201,12 +204,18 @@ async def handle_command(text: str, context_token: str) -> str:
 
 # === 主循环 ===
 
-async def long_poll_loop(cursor: str = "", poll_interval: int = 5):
-    """主循环：长轮询 iLink，处理消息，回复。"""
-    logger.info("iLink message router started, cursor=%s", cursor)
+async def long_poll_loop(cursor: str = "", poll_interval: int = 5, long_poll_timeout: int = 30):
+    """主循环：长轮询 iLink，处理消息，回复。
+
+    Args:
+        cursor: iLink 游标
+        poll_interval: 无新消息时 sleep 时间（秒）
+        long_poll_timeout: 每次 long_poll 请求等待时间（秒），测试时可设小值
+    """
+    logger.info("iLink message router started, cursor=%s, timeout=%ds", cursor, long_poll_timeout)
     while True:
         try:
-            resp = await fetch_new_messages(cursor=cursor, long_poll_timeout=30)
+            resp = await fetch_new_messages(cursor=cursor, long_poll_timeout=long_poll_timeout)
             msgs = resp.get("messages", [])
             new_cursor = resp.get("cursor", cursor)
             if msgs:

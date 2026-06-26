@@ -34,6 +34,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 TOKEN_FILE = PROJECT_ROOT / "data" / "ilink_token.json"
 
 
+def get_ilink_base_url() -> str:
+    """支持 env var 覆盖（测试用 mock server）。"""
+    return os.environ.get("ILINK_BASE_URL", ILINK_BASE)
+
+
 class ILinkError(Exception):
     """iLink API 错误。"""
 
@@ -41,9 +46,9 @@ class ILinkError(Exception):
 class ILinkClient:
     """iLink 协议客户端。"""
 
-    def __init__(self, bot_token: Optional[str] = None, base_url: str = ILINK_BASE):
+    def __init__(self, bot_token: Optional[str] = None, base_url: Optional[str] = None):
         self.bot_token = bot_token
-        self.base_url = base_url
+        self.base_url = base_url or get_ilink_base_url()
         self._client = httpx.AsyncClient(timeout=30.0)
 
     def set_token(self, token: str) -> None:
