@@ -45,6 +45,18 @@ def create_app() -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+    # === 安全中间件（顺序很重要：先外后内） ===
+    from python.app.middleware import (
+        SafeErrorMiddleware, SecurityHeadersMiddleware,
+        BodySizeLimitMiddleware, RateLimitMiddleware,
+    )
+    # 最后加的最先执行（middleware stack 是 LIFO）
+    # 实际请求流：SafeError → SecurityHeaders → BodySize → RateLimit → route
+    app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(BodySizeLimitMiddleware, max_bytes=1 * 1024 * 1024)  # 1MB
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(SafeErrorMiddleware)
+
     app.include_router(api_router, prefix="/api", tags=["api"])
     # auth_router 自身已带 prefix="/api/auth"，不要重复加
     app.include_router(auth_router, tags=["auth"])

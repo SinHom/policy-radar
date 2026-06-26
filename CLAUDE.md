@@ -95,6 +95,23 @@ alembic revision --autogenerate -m "msg"
 
 不遵守会让 token 浪费 5-10 倍，本项目大，必须严格执行。
 
+## 🔒 安全规范（强制规则）
+
+**每次开发前必读：[docs/SECURITY.md](docs/SECURITY.md) + [SECURITY-CHECKLIST.md](docs/SECURITY-CHECKLIST.md)**
+
+10 维度：鉴权/网络/输入/密钥/限流/日志/依赖/数据/运维/API。
+
+**代码层底线（缺一不可）：**
+- 所有 `/api/*` 写操作必须鉴权
+- API key 不写代码/commit，存 DB
+- 响应里 API key 脱敏（前 4 + ... + 后 4）
+- 日志不打印完整 key / 密码
+- 错误信息不泄露内部细节
+- SQL 用 ORM，不拼字符串
+- 外部输入全过 Pydantic
+
+**发布前必查清单**（15 维 ~80 项）— 见 SECURITY-CHECKLIST.md。
+
 ## 安全红线
 
 - 绝不能 commit `.env`（含真实 API Key）
