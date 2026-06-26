@@ -75,7 +75,7 @@ jobs:
           python -m scripts.seed_sources
           python -m scripts.seed_policies
 
-      - name: Test: HMAC signature
+      - name: Test HMAC signature
         env:
           PYTHONIOENCODING: utf-8
           PYTHONPATH: python
@@ -83,7 +83,7 @@ jobs:
           source .venv/bin/activate
           python -m scripts.verify_hmac
 
-      - name: Test: mcp_e2e (业务流, optional LLM)
+      - name: Test mcp_e2e (optional LLM)
         env:
           PYTHONIOENCODING: utf-8
           PYTHONPATH: python
@@ -102,7 +102,7 @@ jobs:
             python -m scripts.mcp_e2e 2>&1 | tail -10
           fi
 
-      - name: Test: stdio smoke (协议层)
+      - name: Test stdio smoke (protocol layer)
         env:
           PYTHONIOENCODING: utf-8
           PYTHONPATH: python
@@ -110,7 +110,7 @@ jobs:
           source .venv/bin/activate
           python -m scripts.stdio_smoke
 
-      - name: Test: FastAPI endpoints
+      - name: Test FastAPI endpoints
         env:
           PYTHONIOENCODING: utf-8
           PYTHONPATH: python
