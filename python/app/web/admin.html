@@ -7,6 +7,8 @@
   <!-- 本地化 CDN 资源（解决国内访问 unpkg/jsdelivr 不稳定） -->
   <script src="/static/vendor/tailwind.js"></script>
   <script src="/static/vendor/axios.min.js"></script>
+  <!-- Vue 3 UMD 版（window.Vue 全局变量，不依赖 ESM module） -->
+  <script src="/static/vendor/vue.global.prod.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -452,9 +454,9 @@
     </div>
   </div>
 
-  <!-- Vue 3 ESM (含模板编译器) -->
-  <script type="module">
-    import { createApp, ref, computed, onMounted, reactive } from '/static/vendor/vue.esm-browser.prod.js';
+  <!-- Vue 3 UMD (从 window.Vue 解构) -->
+  <script>
+    const { createApp, ref, computed, onMounted, reactive } = Vue;
 
     // === axios + token 拦截器 ===
     const TOKEN_KEY = 'policy_radar_token';
