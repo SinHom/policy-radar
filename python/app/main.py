@@ -41,7 +41,8 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     app.include_router(api_router, prefix="/api", tags=["api"])
-    app.include_router(auth_router, prefix="/api", tags=["auth"])
+    # auth_router 自身已带 prefix="/api/auth"，不要重复加
+    app.include_router(auth_router, tags=["auth"])
     app.include_router(health_router, tags=["ops"])
     app.include_router(dashboard_router, prefix="/api", tags=["dashboard"])
     app.include_router(web_router, tags=["web"])
