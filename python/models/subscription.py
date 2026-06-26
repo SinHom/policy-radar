@@ -36,6 +36,18 @@ class Subscription(Base):
     # 接收方用同样密钥验证 body 未被篡改
     platform_hint: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
     # feishu / wecom / generic
+
+    # === 推送渠道（多通道抽象） ===
+    push_channel: Mapped[str] = mapped_column(String(16), default="mock", nullable=False)
+    # mock / wechat / feishu / wecom / email / webhook
+    push_config: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=dict)
+    # 渠道特定配置：
+    # feishu:  {"webhook_url":"...","secret":"..."}（secret 可选，开启签名校验时必填）
+    # wecom:   {"webhook_url":"..."}
+    # webhook: {"webhook_url":"...","secret":"..."}（自定义 webhook，HMAC 签名）
+    # email:   {"to":"a@x.com,b@y.com","smtp_host":"..."}
+    # wechat:  {"bot_token":"...","chat_id":"..."}（未来 iLink）
+
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     last_push_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)

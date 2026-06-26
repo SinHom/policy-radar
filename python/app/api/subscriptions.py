@@ -11,7 +11,6 @@
 
 from __future__ import annotations
 
-import httpx
 from datetime import datetime
 from typing import Optional
 
@@ -41,6 +40,9 @@ class SubscriptionUpdate(BaseModel):
     regions: Optional[list[str]] = None
     keywords: Optional[list[str]] = None
     enabled: Optional[bool] = None
+    # === 多通道推送 ===
+    push_channel: Optional[str] = None  # mock / wechat / feishu / wecom / email / webhook
+    push_config: Optional[dict] = None  # 渠道特定配置（见 push 模块）
 
 
 @router.get("")
@@ -72,6 +74,8 @@ async def list_subscriptions(_user: str = Depends(require_admin)) -> dict:
                 "push_schedule": s.push_schedule,
                 "push_time": s.push_time,
                 "platform_hint": s.platform_hint,
+                "push_channel": s.push_channel,
+                "push_config": s.push_config or {},
                 "enabled": bool(s.enabled),
                 "last_push_at": s.last_push_at.isoformat() if s.last_push_at else None,
                 "created_at": s.created_at.isoformat() if s.created_at else None,
@@ -106,6 +110,12 @@ async def update_subscription(
             sub.keywords = body.keywords
         if body.enabled is not None:
             sub.enabled = body.enabled
+        if body.push_channel is not None:
+            if body.push_channel not in ("mock", "wechat", "feishu", "wecom", "email", "webhook"):
+                raise HTTPException(status_code=400, detail=f"invalid push_channel: {body.push_channel}")
+            sub.push_channel = body.push_channel
+        if body.push_config is not None:
+            sub.push_config = body.push_config
         await session.commit()
     return {"ok": True, "subscription_id": subscription_id}
 
@@ -160,71 +170,59 @@ async def manual_push(subscription_id: int, _user: str = Depends(require_admin))
             raise HTTPException(status_code=400, detail="no summarized policy available")
 
         content = format_push_message(pol)
-        target = f"sub-{subscription_id}"
+        target_company_id = sub.company_id
+        target_company_name = sub.company.name if sub.company else None
 
-    # 决定推送到哪：webhook_url 优先，否则 mock
-    target_url = sub.webhook_url
-    if target_url:
-        # 推外部 webhook
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                r = await client.post(
-                    target_url,
-                    json={
-                        "subscription_id": subscription_id,
-                        "policy_id": pol.id,
-                        "title": pol.title,
-                        "content": content,
-                    },
-                    headers={"X-Policy-Radar-Source": "manual-push"},
-                )
-                r.raise_for_status()
-        except Exception as e:
-            async with get_session() as session:
-                session.add(PushLog(
-                    policy_id=pol.id,
-                    target=target,
-                    content=content,
-                    status="failed",
-                    error_msg=str(e)[:200],
-                ))
-                await session.commit()
-            raise HTTPException(status_code=502, detail=f"webhook push failed: {e}")
+    # 构造推送内容 + 调分发器
+    from python.app.push.dispatcher import PushContent, dispatch
+    push_content = PushContent(
+        policy_id=pol.id,
+        title=pol.title,
+        summary=pol.summary_text or "",
+        summary_type=pol.summary_type,
+        amount=pol.amount,
+        deadline=pol.deadline.isoformat() if pol.deadline else None,
+        url=pol.url if pol.url and pol.url.startswith("http") else None,
+        source_id=pol.source_id,
+        company_id=target_company_id,
+        company_name=target_company_name,
+    )
+
+    # 决定通道：subscription.push_channel 优先；空则根据历史字段回退
+    channel = sub.push_channel or "mock"
+    # 兼容旧的 webhook_url：如果 push_channel 是 mock 但 webhook_url 有值，认为是 webhook
+    if channel == "mock" and sub.webhook_url and not (sub.push_config or {}).get("webhook_url"):
+        channel = "webhook"
+        config = {"webhook_url": sub.webhook_url, "secret": sub.webhook_secret}
     else:
-        # 走 mock
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                r = await client.post(
-                    f"{settings.mock_wechat_url}/sendmessage",
-                    json={
-                        "context_token": target,
-                        "message": {"message_type": 1, "content": content},
-                    },
-                )
-                r.raise_for_status()
-        except Exception as e:
-            raise HTTPException(status_code=502, detail=f"mock push failed: {e}")
+        config = sub.push_config or {}
+
+    result = await dispatch(push_content, channel, config)
 
     # 写日志 + 更新 last_push_at
     async with get_session() as session:
-        sub = await session.get(Subscription, subscription_id)
+        sub2 = await session.get(Subscription, subscription_id)
         session.add(PushLog(
             policy_id=pol.id,
-            target=target,
+            target=result.target,
             content=content,
-            status="success",
+            status="success" if result.ok else "failed",
+            error_msg=result.error or "",
         ))
-        if sub:
-            sub.last_push_at = datetime.utcnow()
+        if sub2 and result.ok:
+            sub2.last_push_at = datetime.utcnow()
         await session.commit()
+
+    if not result.ok:
+        raise HTTPException(status_code=502, detail=f"{channel} push failed: {result.error}")
 
     return {
         "ok": True,
         "subscription_id": subscription_id,
         "policy_id": pol.id,
         "policy_title": pol.title,
-        "target": target,
-        "channel": "webhook" if target_url else "mock",
+        "target": result.target,
+        "channel": channel,
     }
 
 
@@ -238,3 +236,41 @@ async def delete_subscription(subscription_id: int, _user: str = Depends(require
         await session.delete(sub)
         await session.commit()
     return {"ok": True, "subscription_id": subscription_id, "deleted": True}
+
+
+# ===== 渠道测试 =====
+
+@router.post("/test-push")
+async def test_push_channel(
+    channel: str,
+    config: dict,
+    _user: str = Depends(require_admin),
+) -> dict:
+    """测推送渠道是否可用。发一条「测试消息」到指定渠道。
+
+    用法：
+    POST /api/subscriptions/test-push?channel=feishu
+    body: {"webhook_url":"...","secret":"..."}
+
+    返回：{"ok":true, "channel":"feishu", "target":"...", "error":null}
+    """
+    from python.app.push.dispatcher import PushContent, dispatch
+    test_content = PushContent(
+        policy_id=0,
+        title="✅ 政策雷达 · 渠道连通测试",
+        summary="这是一条来自政策雷达的测试消息。如果您看到这条消息，说明渠道配置正确。",
+        summary_type="测试",
+        amount=None,
+        deadline=None,
+        url="http://43.155.161.54:8000/admin",
+        source_id="system",
+        company_id=0,
+        company_name="测试接收方",
+    )
+    result = await dispatch(test_content, channel, config)
+    return {
+        "ok": result.ok,
+        "channel": result.channel,
+        "target": result.target,
+        "error": result.error,
+    }

@@ -45,6 +45,9 @@ class CompanyCreate(BaseModel):
     types: list[str] = []
     regions: list[str] = []
     keywords: Optional[list[str]] = None
+    # === 多通道推送 ===
+    push_channel: str = "mock"  # mock / wechat / feishu / wecom / email / webhook
+    push_config: dict = {}
 
 
 class CompanyOut(BaseModel):
@@ -136,7 +139,7 @@ async def create_company(
         await session.flush()  # 拿到 c.id
 
         # 同时建订阅
-        if body.push_schedule or body.webhook_url or body.types or body.regions:
+        if body.push_schedule or body.webhook_url or body.types or body.regions or body.push_channel != "mock":
             sub = Subscription(
                 company_id=c.id,
                 push_schedule=body.push_schedule,
@@ -145,6 +148,8 @@ async def create_company(
                 types=body.types or [],
                 regions=body.regions or [],
                 keywords=body.keywords,
+                push_channel=body.push_channel,
+                push_config=body.push_config or {},
                 enabled=True,
             )
             session.add(sub)
