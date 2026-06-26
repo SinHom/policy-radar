@@ -1,0 +1,23 @@
+{
+  "source_id": "prov_gd_tax",
+  "name": "广东省税务局",
+  "category": "省级",
+  "list_url": "http://guangdong.chinatax.gov.cn/dssfg/zcfg/",
+  "list_selectors": {
+    "item": "ul.list-con li a, .list-con li a, .list-news li a",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span.date, .date"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, h1.title",
+    "content": "div.article-content, .content, article",
+    "date": "span.date, .date"
+  },
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 5,
+  "max_pages": 1,
+  "notes": "广东省税务局"
+}

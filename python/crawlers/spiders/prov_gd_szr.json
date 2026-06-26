@@ -1,0 +1,23 @@
+{
+  "source_id": "prov_gd_szr",
+  "name": "广东省人社厅",
+  "category": "省级",
+  "list_url": "http://hrss.gd.gov.cn/zwgk/zyzc/",
+  "list_selectors": {
+    "item": "ul.list_con li a, .list_con li a, .list-news li a",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span.date, .date"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title",
+    "content": "div.article-content, .content, article",
+    "date": "span.date, .date"
+  },
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 5,
+  "max_pages": 1,
+  "notes": "广东省人社厅"
+}

@@ -1,0 +1,23 @@
+{
+  "source_id": "prov_gd_kjt",
+  "name": "广东省科技厅",
+  "category": "省级",
+  "list_url": "https://gdinfo.gd.gov.cn/zklyxxgkml/bmwj/zyzc/index.html",
+  "list_selectors": {
+    "item": "li.zwgk_list a, ul.zwgk-list li a, .list-item a",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span.date, .date"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, h1.title",
+    "content": "div.article-content, .content, article, div#content",
+    "date": ".pub-date, .date, span.date"
+  },
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 5,
+  "max_pages": 1,
+  "notes": "广东科技厅；JS 渲染，Playwright"
+}

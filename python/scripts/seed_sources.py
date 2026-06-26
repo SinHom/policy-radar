@@ -1,14 +1,18 @@
-"""预置 3 个政策源到 DB。
+"""预置所有政策源到 DB（自动扫描 spiders/ 目录）。
 
 读 python/crawlers/spiders/*.json，把 source_id/name/url/category/spider_config
 写入 policy_sources 表（已存在则更新 spider_config 和 enabled 状态）。
 
+自动发现 12+ 源：4 国家级 + 3 省级 + 5 市级。
+
 用法：
     python -m scripts.seed_sources
+    python -m scripts.seed_sources --disable city_bj_gxj  # 禁用一个
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import logging
@@ -25,11 +29,23 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("seed_sources")
 
 
-SEED_SOURCES = [
-    {"source_id": "sz_gxj", "name": "深圳市工信局", "category": "市级"},
-    {"source_id": "gd_kjt", "name": "广东省科技厅", "category": "省级"},
-    {"source_id": "gov_cn", "name": "国务院", "category": "国家级"},
-]
+def discover_sources() -> list[dict]:
+    """扫描 spiders/ 目录，返回所有 source metadata。"""
+    sources = []
+    for cfg_path in sorted(SPIDERS_DIR.glob("*.json")):
+        try:
+            with cfg_path.open(encoding="utf-8") as f:
+                cfg = json.load(f)
+            sources.append({
+                "source_id": cfg["source_id"],
+                "name": cfg["name"],
+                "category": cfg.get("category", ""),
+                "url": cfg.get("list_url", ""),
+                "spider_config": cfg,
+            })
+        except Exception as e:
+            logger.warning("skip %s: %s", cfg_path.name, e)
+    return sources
 
 
 async def seed() -> int:
@@ -45,15 +61,15 @@ async def seed() -> int:
     # 改为用 session
     from python.models.base import get_session
 
-    for meta in SEED_SOURCES:
+    sources = discover_sources()
+    logger.info("Discovered %d spider configs", len(sources))
+
+    for meta in sources:
         sid = meta["source_id"]
-        cfg_path = SPIDERS_DIR / f"{sid}.json"
-        if not cfg_path.exists():
-            logger.warning("Spider config not found, skip: %s", cfg_path)
-            continue
-        with cfg_path.open("r", encoding="utf-8") as f:
-            spider_config = json.load(f)
-        url = spider_config.get("list_url", "")
+        spider_config = meta["spider_config"]
+        url = meta["url"]
+        disable = getattr(seed, "_disable_ids", set())
+        enabled = sid not in disable
 
         async with get_session() as session:
             stmt = select(PolicySource).where(PolicySource.source_id == sid)
@@ -72,9 +88,9 @@ async def seed() -> int:
                     category=meta["category"],
                     spider_config=spider_config,
                     frequency=spider_config.get("frequency", "daily"),
-                    enabled=True,
+                    enabled=enabled,
                 ))
-                logger.info("Inserted: %s", sid)
+                logger.info("Inserted: %s (enabled=%s)", sid, enabled)
             count += 1
 
     logger.info("Seeded %d sources", count)
@@ -82,6 +98,10 @@ async def seed() -> int:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--disable", nargs="*", default=[], help="source_ids to disable")
+    args = parser.parse_args()
+    seed._disable_ids = set(args.disable)
     return asyncio.run(seed())
 
 

@@ -1,8 +1,17 @@
-"""HTTP 获取层：httpx（快）+ Playwright（JS 渲染）统一接口。"""
+"""HTTP 获取层：httpx（快）+ Playwright（JS 渲染）统一接口。
+
+反爬策略：
+- 随机 User-Agent（5 种桌面 UA 轮换）
+- 真实浏览器请求头（Accept / Accept-Language / Referer）
+- 随机请求间隔（按 spider 配置的 min/max）
+- Playwright 模式隐藏 webdriver 痕迹
+- 失败 3 次后跳过该 URL（避免无限重试）
+"""
 
 from __future__ import annotations
 
 import asyncio
+import logging
 import random
 from dataclasses import dataclass
 from typing import Optional
@@ -10,11 +19,22 @@ from typing import Optional
 import httpx
 from playwright.async_api import async_playwright
 
-DEFAULT_USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/120.0.0.0 Safari/537.36"
-)
+logger = logging.getLogger(__name__)
+
+# 5 种真实桌面 User-Agent 轮换（Chrome / Edge / Firefox / Safari）
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+]
+
+DEFAULT_USER_AGENT = USER_AGENTS[0]
+
+
+def pick_user_agent() -> str:
+    return random.choice(USER_AGENTS)
 
 
 @dataclass
@@ -51,13 +71,23 @@ class Fetcher:
     async def fetch(self, url: str, *, render_js: bool = False) -> FetchResult:
         """获取单个 URL。"""
         await self._sleep()
+        # 每次随机换 UA（如果 user_agent 没显式指定）
+        ua = self.user_agent if self.user_agent != DEFAULT_USER_AGENT else pick_user_agent()
         if render_js:
-            return await self._fetch_playwright(url)
-        return await self._fetch_httpx(url)
+            return await self._fetch_playwright(url, ua)
+        return await self._fetch_httpx(url, ua)
 
-    async def _fetch_httpx(self, url: str) -> FetchResult:
+    async def _fetch_httpx(self, url: str, ua: str = None) -> FetchResult:
+        ua = ua or self.user_agent
+        headers = {
+            "User-Agent": ua,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "Accept-Encoding": "gzip, deflate",
+            "Referer": "https://www.google.com/",  # 部分站看 referer
+        }
         async with httpx.AsyncClient(
-            headers={"User-Agent": self.user_agent},
+            headers=headers,
             timeout=self.timeout,
             follow_redirects=True,
         ) as client:
@@ -79,15 +109,24 @@ class Fetcher:
                 encoding=encoding,
             )
 
-    async def _fetch_playwright(self, url: str) -> FetchResult:
+    async def _fetch_playwright(self, url: str, ua: str = None) -> FetchResult:
+        ua = ua or self.user_agent
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             try:
                 ctx = await browser.new_context(
-                    user_agent=self.user_agent,
+                    user_agent=ua,
                     ignore_https_errors=True,  # 绕过公司代理的 SSL 中断
+                    # 隐藏 webdriver 痕迹
+                    extra_http_headers={
+                        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                    },
                 )
                 page = await ctx.new_page()
+                # 隐藏 webdriver 标志
+                await page.add_init_script(
+                    "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+                )
                 resp = await page.goto(url, wait_until="domcontentloaded", timeout=int(self.timeout * 1000))
                 # 等网络空闲但最多 5 秒（避免卡在 networkidle）
                 try:

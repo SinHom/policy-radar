@@ -70,11 +70,15 @@ async def crawl_source(
     logger.info("[%s] Fetching list: %s", source_id, list_url)
     try:
         list_page = await fetcher.fetch(list_url, render_js=render_js)
+        from python.crawlers.alerts import record_success
+        record_success(source_id)
     except Exception as e:
         msg = f"List page fetch failed: {e}"
         logger.exception(msg)
         result.errors += 1
         result.error_messages.append(msg)
+        from python.crawlers.alerts import record_failure
+        record_failure(source_id, str(e))
         return result
 
     soup = parse_html(list_page.html)

@@ -1,0 +1,23 @@
+{
+  "source_id": "national_most",
+  "name": "科技部",
+  "category": "国家级",
+  "list_url": "https://www.most.gov.cn/index.html",
+  "list_selectors": {
+    "item": ".list-news li a, ul.news-list li a, .article-list li a",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span.date, .date"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title",
+    "content": "div.article-content, .TRS_Editor, .content",
+    "date": "span.date, .date"
+  },
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "科技部"
+}
