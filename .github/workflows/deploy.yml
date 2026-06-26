@@ -10,15 +10,13 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Setup SSH key
+      - name: Setup SSH key (base64 decoded)
         run: |
           mkdir -p ~/.ssh
-          # 把 Secret 写成文件（注意：Secret 必须包含完整 PEM 包括首尾两行）
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          # SSH_PRIVATE_KEY_B64 存 base64 编码的 private key，避免换行问题
+          echo "${{ secrets.SSH_PRIVATE_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          # 加服务器 host fingerprint
           ssh-keyscan -p 22 -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
-          # 快速测试连接
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
               root@${{ secrets.SERVER_HOST }} 'echo "SSH OK"'
 
@@ -28,23 +26,14 @@ jobs:
               root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
           set -e
           cd /opt/policy-radar
-
-          echo "=== git pull ==="
           git pull origin main
-
-          echo "=== docker compose up ==="
           docker compose up -d --build
-
-          echo "=== wait startup ==="
           sleep 10
-
-          echo "=== health check ==="
           curl -sf http://127.0.0.1:8000/health | python3 -c "
           import json, sys
           d = json.load(sys.stdin)
           print('health:', d['status'])
-          if d['status'] != 'ok':
-              sys.exit(1)
+          sys.exit(0 if d['status'] == 'ok' else 1)
           "
-          echo "=== deploy done ==="
+          echo "deploy done"
           ENDSSH
