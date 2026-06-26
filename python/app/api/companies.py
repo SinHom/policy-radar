@@ -62,30 +62,34 @@ class CompanyOut(BaseModel):
     created_at: Optional[str] = None
 
 
-@router.get("", response_model=list[CompanyOut])
-async def list_companies(_user: str = Depends(require_admin)) -> list[CompanyOut]:
+@router.get("")
+async def list_companies(_user: str = Depends(require_admin)) -> list[dict]:
     """列出所有公司 + 订阅信息。"""
     async with get_session() as session:
+        # 用 selectinload 预加载 subscription，避免懒加载触发 greenlet 错误
+        from sqlalchemy.orm import selectinload
         companies = (
-            await session.execute(select(Company).order_by(Company.id.desc()))
+            await session.execute(
+                select(Company).options(selectinload(Company.subscription)).order_by(Company.id.desc())
+            )
         ).scalars().all()
         out = []
         for c in companies:
             sub = c.subscription
-            out.append(CompanyOut(
-                id=c.id,
-                name=c.name,
-                industry=c.industry,
-                region=c.region,
-                scale=c.scale,
-                tags=c.tags or [],
-                has_subscription=sub is not None,
-                push_schedule=sub.push_schedule if sub else None,
-                push_time=sub.push_time if sub else None,
-                enabled=sub.enabled if sub else None,
-                last_push_at=sub.last_push_at.isoformat() if sub and sub.last_push_at else None,
-                created_at=c.created_at.isoformat() if c.created_at else None,
-            ))
+            out.append({
+                "id": c.id,
+                "name": c.name,
+                "industry": c.industry,
+                "region": c.region,
+                "scale": c.scale,
+                "tags": c.tags or [],
+                "has_subscription": sub is not None,
+                "push_schedule": sub.push_schedule if sub else None,
+                "push_time": sub.push_time if sub else None,
+                "enabled": sub.enabled if sub else None,
+                "last_push_at": sub.last_push_at.isoformat() if sub and sub.last_push_at else None,
+                "created_at": c.created_at.isoformat() if c.created_at else None,
+            })
     return out
 
 
