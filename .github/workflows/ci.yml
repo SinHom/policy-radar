@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Cache apt
+        id: cache-apt
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-apt-${{ hashFiles('docs/**') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
+      - name: Install system deps (Playwright)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 \
+            libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 \
+            libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 \
+            libasound2 libatspi2.0-0
+
+      - name: Setup Miniconda for PyO3 ABI3 forward compat
+        run: |
+          wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/mc.sh
+          bash /tmp/mc.sh -b -p $HOME/miniconda3
+          echo "$HOME/miniconda3/bin" >> $GITHUB_PATH
+        shell: bash
+
+      - name: Create venv with Python 3.12
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          python -V
+
+      - name: Install Python deps (PyPI mirror)
+        run: |
+          source .venv/bin/activate
+          pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
+          # PyO3 0.22 不支持 3.14；CI 用 3.12 不需要 ABI3 hack
+          pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Lint (compile check)
+        run: |
+          source .venv/bin/activate
+          python -m compileall -q python/
+          echo "compileall OK"
+
+      - name: Init DB + seed
+        run: |
+          source .venv/bin/activate
+          export PYTHONIOENCODING=utf-8
+          export PYTHONPATH=python
+          rm -f data/policy_radar.db
+          alembic upgrade head
+          python -m scripts.seed_sources
+          python -m scripts.seed_policies
+
+      - name: Test: HMAC signature
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONPATH: python
+        run: |
+          source .venv/bin/activate
+          python -m scripts.verify_hmac
+
+      - name: Test: mcp_e2e (业务流)
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONPATH: python
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+        run: |
+          source .venv/bin/activate
+          rm -f data/policy_radar.db
+          alembic upgrade head 2>&1 | tail -2
+          python -m scripts.mcp_e2e
+
+      - name: Test: stdio smoke (协议层)
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONPATH: python
+        run: |
+          source .venv/bin/activate
+          python -m scripts.stdio_smoke
+
+      - name: Test: FastAPI endpoints
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONPATH: python
+        run: |
+          source .venv/bin/activate
+          # 后台启 uvicorn
+          uvicorn python.app.main:app --host 127.0.0.1 --port 8001 --log-level warning &
+          UVICORN_PID=$!
+          sleep 4
+          curl -sf http://127.0.0.1:8001/health > /dev/null && echo "  /health OK" || (echo "  /health FAIL"; kill $UVICORN_PID; exit 1)
+          curl -sf http://127.0.0.1:8001/metrics > /dev/null && echo "  /metrics OK" || (echo "  /metrics FAIL"; kill $UVICORN_PID; exit 1)
+          curl -sf http://127.0.0.1:8001/version > /dev/null && echo "  /version OK" || (echo "  /version FAIL"; kill $UVICORN_PID; exit 1)
+          curl -sf http://127.0.0.1:8001/api/dashboard/funnel > /dev/null && echo "  /api/dashboard/funnel OK" || (echo "  funnel FAIL"; kill $UVICORN_PID; exit 1)
+          kill $UVICORN_PID
+          echo "All FastAPI endpoints OK"
