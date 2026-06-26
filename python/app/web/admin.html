@@ -389,9 +389,9 @@
         async function loadPushLogs() { pushLogs.value = (await api.get('/api/push-logs', { params: { limit: 50 } })).data; }
 
         async function toggleSub(s, enable) {
-          const tool = enable ? 'resume_subscription' : 'pause_subscription';
+          const path = enable ? `${s.subscription_id}/resume` : `${s.subscription_id}/pause`;
           await withLoading((enable ? '启用' : '暂停') + '订阅...', async () => {
-            await api.post(`/${tool}`, null, { params: { company_id: s.company_id } });
+            await api.post(`/api/subscriptions/${path}`);
             showToast('✅ 已' + (enable ? '启用' : '暂停'));
             await loadSubs();
           });
@@ -400,7 +400,7 @@
         async function deleteSub(s) {
           if (!confirm(`确定删除「${s.company_name}」及其所有数据？`)) return;
           await withLoading('删除订阅...', async () => {
-            await api.post('/delete_subscription', null, { params: { company_id: s.company_id } });
+            await api.delete(`/api/subscriptions/${s.subscription_id}`);
             showToast('✅ 已删除');
             await loadSubs();
           });
