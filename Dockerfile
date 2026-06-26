@@ -16,7 +16,8 @@ ENV PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1
 ENV PYTHONUTF8=1
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
+# 用 PyPI 默认源（清华源没 mcp 1.28 的 binary wheel，编译会失败）
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Playwright Chromium
 RUN playwright install chromium
