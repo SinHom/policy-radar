@@ -56,6 +56,9 @@ def create_app() -> FastAPI:
     app.include_router(health_router, tags=["ops"])
     app.include_router(dashboard_router, prefix="/api", tags=["dashboard"])
     app.include_router(web_router, tags=["web"])
+    # 静态资源（Vue/axios/Tailwind）
+    from python.app.web.routes import static_app
+    app.mount("/static", static_app, name="static")
     return app
 
 
