@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>政策雷达 · 管理后台 (Vue 3)</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/vue@3.4.0/dist/vue.global.prod.js"></script>
+<!-- Vue 3 ESM browser build (含模板编译器，支持 v-if/v-for/{{}}) -->
+<script type="module" src="https://unpkg.com/vue@3.4.0/dist/vue.esm-browser.prod.js"></script>
+<!-- 注意：vue.global.prod.js 是 runtime-only，无模板编译器，会导致页面空白！ -->
 <script src="https://cdn.jsdelivr.net/npm/axios@1.7.7/dist/axios.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 <script>
@@ -200,7 +202,7 @@
   </div>
 </div>
 
-<script>
+<script type="module">
   const { createApp, ref, computed, onMounted } = Vue;
 
   createApp({
