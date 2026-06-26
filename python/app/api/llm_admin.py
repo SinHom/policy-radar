@@ -24,7 +24,7 @@ from python.models.base import get_session
 from python.models.llm_usage_log import LLMUsageLog
 from python.models.system_config import SystemConfig
 
-router = APIRouter(tags=["llm-admin"])
+router = APIRouter(prefix="/api", tags=["llm-admin"])
 
 
 # ===== 统计 =====
