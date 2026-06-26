@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     mock_wechat_url: str = "http://localhost:9999"
     mock_wechat_port: int = 9999
 
+    # Admin 鉴权（管理后台登录用）
+    admin_user: str = "admin"
+    admin_password: str = "policy-radar-2026"  # 改 .env 可自定义
+    # 简易 token 存储（重启后失效；生产用 JWT）
+    admin_token_secret: str = "change-me-in-production"
+
     # Crawler
     crawler_request_interval_min: float = 3.0
     crawler_request_interval_max: float = 5.0

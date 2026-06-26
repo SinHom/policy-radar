@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from python.app.api.routes import router as api_router
 from python.app.api.health import router as health_router
 from python.app.api.dashboard import router as dashboard_router
+from python.app.api.auth import router as auth_router
 from python.app.config import get_settings
 from python.app.logging_config import setup_logging
 from python.app.web.routes import router as web_router
@@ -40,6 +41,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     app.include_router(api_router, prefix="/api", tags=["api"])
+    app.include_router(auth_router, prefix="/api", tags=["auth"])
     app.include_router(health_router, tags=["ops"])
     app.include_router(dashboard_router, prefix="/api", tags=["dashboard"])
     app.include_router(web_router, tags=["web"])
