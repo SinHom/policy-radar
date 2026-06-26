@@ -48,10 +48,9 @@ jobs:
       - name: Install Python deps (PyPI mirror)
         run: |
           source .venv/bin/activate
-          pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
-          # PyO3 0.22 不支持 3.14；CI 用 3.12 不需要 ABI3 hack
-          pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
-          # playwright 不在 CI 跑（测试都不爬虫）
+          # GitHub Actions 在国外，直连 PyPI 比清华源快得多
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Lint (compile check)
         run: |
