@@ -34,5 +34,11 @@ async def admin() -> HTMLResponse:
     return HTMLResponse(content=html)
 
 
+@router.get("/min", response_class=HTMLResponse)
+async def min_test() -> HTMLResponse:
+    """最小 Vue 测试页（排查白屏用）。"""
+    return HTMLResponse(content=(WEB_DIR / "min.html").read_text(encoding="utf-8"))
+
+
 # 静态资源（Vue/axios/Tailwind 本地化）：/static/vendor/xxx.js
 static_app = StaticFiles(directory=str(STATIC_DIR))
