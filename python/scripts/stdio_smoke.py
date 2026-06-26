@@ -28,13 +28,18 @@ SERVER_ARGS = ["-m", "mcp_server", "--stdio", "--no-scheduler"]
 
 
 async def main() -> int:
+    # 强制子进程 stdout 为 UTF-8（Windows 默认 GBK 会让 mcp client 读崩溃）
+    import os as _os
+    sub_env = {
+        "PYTHONPATH": "python",
+        "PATH": sys.executable + "/../.." + ":" + _os.environ.get("PATH", ""),
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONUTF8": "1",
+    }
     server_params = StdioServerParameters(
         command=SERVER_CMD,
         args=SERVER_ARGS,
-        env={
-            "PYTHONPATH": "python",
-            "PATH": sys.executable + "/../.." + ":" + __import__("os").environ.get("PATH", ""),
-        },
+        env=sub_env,
         cwd=str(PROJECT_ROOT),
     )
 

@@ -1,136 +1,192 @@
-# 政策雷达 (Policy Radar)
+# 政策雷达 (Policy Radar) · MCP Server
 
-> 第一期 MVP：政策采集 → AI 摘要 → 推送
+> **v0.2.0** · 13 个 MCP Tools · 7 张表 · 17 API 端点
+> 让任何 AI 工具（Claude / Cursor / 飞书 / 企微 / 小龙虾）通过 MCP 协议接入政策雷达
 
-将 Demo 中的政策雷达从静态原型变为可运行系统。MVP 范围：**5 条 mock 政策 + LLM 摘要 + Mock 微信推送**。完整 4 期方案见 `C:\Users\Fangyi\.claude\plans\groovy-swinging-rain.md`。
+---
 
-## ⚠️ 重要说明（第一期 MVP）
+## 核心能力
 
-由于本地公司网络 + 政府网站反爬，**第一期 MVP 用 mock 政策验证端到端链路**。爬虫代码已就绪（`python/crawlers/`），部署到云服务器（无代理拦截）后即可启用真实爬取。
+- 🕷️ **政策爬虫**：3 个源（深圳工信局 / 广东科技厅 / 国务院），Playwright + httpx
+- 🤖 **AI 摘要**：MiniMax M3，自动提取政策类型/截止/金额/条件/关键词
+- 🎯 **匹配引擎**：规则预筛（类型+地区+关键词）+ 可选 LLM 深度评分
+- 🔔 **推送通道**：Webhook 推送（飞书/企微/通用 JSON），HMAC-SHA256 签名
+- 🛠️ **MCP Server**：13 个 Tool，stdio（给 Claude Desktop）+ SSE（给远程 AI 工具）
+- 📊 **管理后台**：Vue 3 SPA（5 tab：Dashboard/Subscriptions/Policies/Sources/Logs）
+- 🔁 **抗失败**：3 次指数退避重试 + 死信表 + scheduler 周期重发
+- 📈 **可观测性**：JSON 结构化日志 + Prometheus 指标 + 健康检查
 
-## 本地开发（Windows 4 步）
+---
+
+## 快速开始
 
 ```bash
-# 1. 激活虚拟环境
-cd "C:\Users\Fangyi\OneDrive\文档\Claude\政策收集总结\policy-radar"
+cd "C:\Users\\Fangyi\\OneDrive\\文档\\Claude\\政策收集总结\\policy-radar"
+python -m venv .venv
 source .venv/Scripts/activate
+pip install -r requirements.txt
+playwright install chromium
 
-# 2. 启 mock 微信（终端 1）
-python -m mock
-
-# 3. 启 FastAPI（终端 2）
-uvicorn python.app.main:app --reload --port 8000
-
-# 4. 浏览器打开
-start http://localhost:8000
-```
-
-页面提供 4 个按钮：**爬取 / 刷新 / 推送日志 / Mock 心跳**，列表展示已摘要政策，点「推送」即发到 Mock 微信。
-
-## 一键端到端测试
-
-```bash
-# 清库重建后跑全链路
-rm -f data/policy_radar.db data/pushed_messages.log
+cp .env.example .env  # 填 MINIMAX_API_KEY
 alembic upgrade head
-python -m scripts.e2e
+python -m scripts.seed_sources
+python -m scripts.seed_policies
+
+# 启 3 个进程（3 个终端）
+python -m mock                            # 终端 1: Mock 微信
+uvicorn python.app.main:app --port 8000   # 终端 2: FastAPI 管理后台
+python -m mcp_server --sse --port 3001    # 终端 3: MCP Server
+
+# 浏览器
+start http://localhost:8000               # 触发页
+start http://localhost:8000/admin         # Vue 3 管理后台
 ```
 
-预期输出：
-```
-e2e PASS
-  sources:    3
-  policies:   5
-  summarized: 5/5
-  push:       OK
-  elapsed:    ~70s
-```
+---
 
-## 云服务器部署（3 步）
+## 13 个 MCP Tools
 
-```bash
-# 1. 装 Docker（Ubuntu 22.04）
-curl -fsSL https://get.docker.com | sh
+### 注册（3）
+- `start_setup` / `complete_setup` / `confirm_setup` — 多轮引导订阅
 
-# 2. clone + 配置
-git clone <repo> policy-radar && cd policy-radar
-cp .env.example .env && nano .env  # 填 MINIMAX_API_KEY
+### 查询（3）
+- `search_policies` — 关键词+类型+地区搜索
+- `get_matches` — 获取企业匹配政策
+- `get_policy_detail` — 单条详情
 
-# 3. 启动
-docker compose build && docker compose up -d
-```
+### 订阅管理（5）
+- `list_subscriptions` / `update_subscription` — 列出/修改
+- `pause_subscription` / `resume_subscription` — 暂停/恢复
+- `delete_subscription` — 级联删除
 
-详见 `docs/DEPLOY.md`。
+### 操作（2）
+- `trigger_crawl` — 手动爬取
+- `push_now` — 立即推送
 
-## 目录结构
+详见 `docs/superpowers/specs/2026-06-25-mcp-server-design.md`
 
-```
-policy-radar/
-├── python/
-│   ├── app/          FastAPI 业务层（main / api / web）
-│   ├── ai/           LLM 层（MiniMax M3 客户端 + 摘要）
-│   ├── crawlers/     爬虫引擎（fetcher / parser / engine / spiders/*.json）
-│   ├── models/       SQLAlchemy 模型（policy_sources / policies / push_logs）
-│   ├── mock/         Mock 微信 iLink 服务
-│   └── scripts/      seed_sources / seed_policies / e2e
-├── data/             运行时（SQLite、推送日志，不入 git）
-├── docs/             DEPLOY.md 等
-├── alembic/          数据库迁移
-├── Dockerfile
-├── docker-compose.yml
-├── .env.example      环境变量模板
-├── CLAUDE.md         项目说明（给 Claude 读）
-└── requirements.txt
-```
-
-## 关键命令
-
-| 命令 | 说明 |
-|------|------|
-| `python -m mock` | 启 Mock 微信（端口 9999） |
-| `uvicorn python.app.main:app --reload` | 启 FastAPI（端口 8000） |
-| `python -m crawlers --source sz_gxj` | 跑单个爬虫源 |
-| `python -m crawlers --all` | 跑所有 enabled 爬虫源 |
-| `python -m ai --limit 5` | 摘要 5 条未摘要政策 |
-| `python -m ai --health-check` | 验证 LLM API 可用 |
-| `python -m scripts.seed_sources` | 预置 3 个政策源 |
-| `python -m scripts.seed_policies` | 预置 5 条 mock 政策 |
-| `python -m scripts.e2e` | 端到端测试 |
-| `alembic upgrade head` | 应用数据库迁移 |
-| `alembic revision --autogenerate -m "msg"` | 生成新迁移 |
+---
 
 ## API 端点
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/` | 触发页（demo 风格） |
-| GET | `/api/sources` | 列出政策源 |
-| POST | `/api/crawl/all` | 爬取所有源 |
-| POST | `/api/crawl/{source_id}` | 爬取单个源 |
-| GET | `/api/policies?limit=50` | 列出已摘要政策 |
-| POST | `/api/policies/{id}/summarize` | 摘要单条 |
-| POST | `/api/policies/{id}/push` | 推送到 Mock 微信 |
-| GET | `/api/push-logs?limit=30` | 推送历史 |
+| 路径 | 说明 |
+|------|------|
+| `/` | 触发页（Alpine.js MVP） |
+| `/admin` | Vue 3 管理后台 |
+| `/health` | 健康检查 + 统计 |
+| `/metrics` | Prometheus 指标 |
+| `/version` | 服务版本 |
+| `/api/sources` | 政策源列表 |
+| `/api/crawl/all` | 爬取所有源 |
+| `/api/policies` | 政策列表 |
+| `/api/policies/{id}/summarize` | 摘要 |
+| `/api/policies/{id}/push` | 推送 |
+| `/api/push-logs` | 推送历史 |
+| `/api/dashboard/funnel` | 漏斗统计 |
+| `/api/dashboard/companies` | 企业汇总 |
+| `/api/push-history` | 推送历史查询 |
 
-## FAQ
+---
 
-**Q: 为什么 mock 政策而不是真实爬取？**
-A: 本地公司网络代理拦截政府网站 SSL，3 个源全部不可达。爬虫代码已就绪，部署到云服务器后即可启用。
+## 数据库表（7 张）
 
-**Q: MiniMax M3 是什么？**
-A: MiniMax 自研的中文 LLM（`https://api.minimaxi.com/v1`），兼容 OpenAI ChatCompletion 协议，base_url 用 `https://api.minimaxi.com/v1`（注意不是 `platform.minimaxi.com`）。
+| 表 | 说明 |
+|---|------|
+| `policy_sources` | 政策源配置 |
+| `policies` | 原始政策 + AI 摘要 |
+| `push_logs` | 推送记录 |
+| `companies` | 企业档案 |
+| `subscriptions` | 订阅规则（含 webhook + secret） |
+| `matches` | 匹配结果 |
+| `push_dead_letters` | 死信（重试失败入队） |
 
-**Q: 推送到真实微信怎么切？**
-A: 把 `MOCK_WECHAT_URL` 改为真实 iLink 网关地址，把 `mock_wechat.py` 删掉，FastAPI 的 `/api/policies/{id}/push` 端点不变。
+---
 
-**Q: 跑 e2e 报 "summarized 0/5"？**
-A: 之前已经摘要过了。清库重建：`rm data/policy_radar.db && alembic upgrade head && python -m scripts.e2e`。
+## Claude Desktop 配置
+
+`%APPDATA%\\Claude\\claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "policy-radar": {
+      "command": "python",
+      "args": ["-m", "mcp_server", "--stdio"],
+      "cwd": "C:\\\\Users\\\\Fangyi\\\\OneDrive\\\\文档\\\\Claude\\\\政策收集总结\\\\policy-radar",
+      "env": {
+        "PYTHONPATH": "python",
+        "PYTHONIOENCODING": "utf-8",
+        "MINIMAX_API_KEY": "sk-xxx"
+      }
+    }
+  }
+}
+```
+
+---
+
+## 端到端测试
+
+```bash
+# 业务流（mcp_e2e）
+rm -f data/policy_radar.db
+alembic upgrade head
+python -m scripts.mcp_e2e
+# → 4 matches / 4 pushed / webhook received
+
+# 协议层（stdio_smoke）
+python -m scripts.stdio_smoke
+# → 13 tools registered, 10 tested
+
+# Webhook HMAC 签名
+python -m scripts.verify_hmac
+# → signature match = True
+
+# 运营端点
+uvicorn python.app.main:app --port 8000 &
+curl http://localhost:8000/health
+curl http://localhost:8000/metrics
+curl http://localhost:8000/api/dashboard/funnel
+```
+
+---
+
+## Webhook HMAC 签名
+
+```python
+import hmac, hashlib
+expected = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+# 接收方 header: X-Policy-Radar-Signature: sha256=...
+```
+
+---
+
+## 部署
+
+详见 `docs/DEPLOY.md`：Ubuntu 22.04 + Docker Compose，3 个 service。
+
+---
 
 ## 成本
 
 | 项目 | 费用 |
 |------|------|
 | 云服务器 2C4G | ~¥60/月 |
-| MiniMax API | ~¥15/月（日均 50 条摘要 + 少量匹配） |
+| MiniMax API | ~¥15/月 |
 | 域名 | ~¥5/月 |
 | **合计** | **~¥80/月** |
+
+---
+
+## 项目结构
+
+```
+python/
+├── app/            FastAPI 业务层（main / api / web / logging_config）
+├── ai/             LLM 层（MiniMax M3 客户端 + 摘要）
+├── crawlers/       爬虫引擎
+├── mcp_server/     MCP Server（13 Tool + matcher + scheduler + webhook）
+├── models/         SQLAlchemy ORM（7 张表）
+├── mock/           iLink mock
+├── wechat/         真实 iLink 适配器
+└── scripts/        seed_* / e2e / stdio_smoke / verify_hmac
+```

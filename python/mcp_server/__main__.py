@@ -5,11 +5,25 @@
     python -m mcp_server --sse --port 3001  # 给远程 AI 工具
 
 启动时自动：
-    1. 初始化 DB session
-    2. 启动 APScheduler 后台
+    1. 强制 stdout/stderr 为 UTF-8（Windows GBK 会导致 stdio 协议层失败）
+    2. 初始化 DB session
+    3. 启动 APScheduler 后台
 """
 
 from __future__ import annotations
+
+import os
+import sys
+
+# Windows console 默认 GBK，stdio 协议层会失败。强制 UTF-8。
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+os.environ.setdefault("PYTHONUTF8", "1")
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 import argparse
 import asyncio

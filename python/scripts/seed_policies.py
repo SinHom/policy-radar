@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import select
 
@@ -33,6 +33,18 @@ POLICIES = [
         "url": "mock://sz_gxj/2026-001",
         "title": "深圳市关于支持专精特新中小企业发展的若干措施",
         "published_at": date(2026, 6, 15),
+        "summary_type": "产业扶持",
+        "summary_text": "对深圳市专精特新中小企业提供认定奖励、研发支持、贷款贴息和人才补贴等综合扶持。",
+        "summary_data": {
+            "title": "深圳专精特新扶持",
+            "type": "产业扶持",
+            "summary": "认定奖励最高50万+研发支持+贷款贴息+人才补贴",
+            "target_enterprise": "深圳市专精特新中小企业",
+            "amount": "最高500万",
+            "deadline": "2026-07-31",
+            "conditions": ["深圳注册独立法人", "符合工信部专精特新标准", "信用良好", "营收1000万以上"],
+            "keywords": ["专精特新", "中小企业", "小巨人", "认定奖励", "研发支持", "贷款贴息", "人才补贴", "深圳市"]
+        },
         "raw_content": """深圳市工业和信息化局关于支持专精特新中小企业发展的若干措施
 
 为深入贯彻党中央、国务院关于促进中小企业专精特新发展的决策部署，加快培育一批具有创新能力的专精特新中小企业，结合我市实际，制定如下措施。
@@ -73,6 +85,18 @@ POLICIES = [
         "url": "mock://sz_gxj/2026-002",
         "title": "深圳市科技型中小企业创新贷款贴息实施细则",
         "published_at": date(2026, 6, 18),
+        "summary_type": "贷款",
+        "summary_text": "为深圳科技型中小企业提供创新贷款贴息，单户最高100万贴息。",
+        "summary_data": {
+            "title": "深圳科创贷贴息",
+            "type": "贷款",
+            "summary": "科技型中小企业创新贷款贴息，单户最高贴息100万",
+            "target_enterprise": "深圳科技型中小企业",
+            "amount": "单户最高贴息100万（贷款额度最高500万）",
+            "deadline": "2026-08-15",
+            "conditions": ["通过科技型中小企业评价入库", "上年度营收不超过2亿元", "研发费用占营收≥5%"],
+            "keywords": ["科技型中小企业", "创新贷", "贷款贴息", "深圳", "研发费用"]
+        },
         "raw_content": """深圳市科技型中小企业创新贷款贴息实施细则
 
 为缓解科技型中小企业融资难融资贵问题，根据《深圳市科技计划项目管理办法》，
@@ -109,6 +133,18 @@ POLICIES = [
         "url": "mock://gd_kjt/2026-001",
         "title": "广东省高新技术企业税收优惠申报指南",
         "published_at": date(2026, 6, 20),
+        "summary_type": "税收",
+        "summary_text": "广东省高新技术企业适用15%企业所得税优惠税率，并享受研发费用加计扣除。",
+        "summary_data": {
+            "title": "广东高企税收优惠",
+            "type": "税收",
+            "summary": "高企适用15%企业所得税，研发费用加计扣除",
+            "target_enterprise": "广东省高新技术企业",
+            "amount": "节税约年营收的10%（税率从25%降至15%）",
+            "deadline": "2026-09-30",
+            "conditions": ["广东注册1年以上", "拥有核心自主知识产权", "科技人员≥10%", "研发费用≥3%"],
+            "keywords": ["高新技术企业", "税收优惠", "15%税率", "加计扣除", "广东"]
+        },
         "raw_content": """广东省高新技术企业税收优惠申报指南（2026 年版）
 
 根据《中华人民共和国企业所得税法》及实施条例、《高新技术企业认定管理办法》，
@@ -146,6 +182,18 @@ POLICIES = [
         "url": "mock://gd_kjt/2026-002",
         "title": "广东省瞪羚企业认定与扶持办法",
         "published_at": date(2026, 6, 22),
+        "summary_type": "产业扶持",
+        "summary_text": "对广东瞪羚企业提供资金奖励、贷款支持、研发补贴等综合扶持。",
+        "summary_data": {
+            "title": "广东瞪羚企业扶持",
+            "type": "产业扶持",
+            "summary": "瞪羚企业认定+资金奖励30万+贷款支持+研发补贴",
+            "target_enterprise": "广东瞪羚企业（高成长中小企业）",
+            "amount": "奖励30万+贷款最高1000万+研发补贴最高200万",
+            "deadline": "2026-08-30",
+            "conditions": ["广东注册", "有效期内高企或科技型中小企业", "营收1000万-5亿", "近三年复合增长率≥20%", "研发投入≥5%"],
+            "keywords": ["瞪羚企业", "高成长", "资金奖励", "贷款", "广东", "研发补贴"]
+        },
         "raw_content": """广东省瞪羚企业认定与扶持办法
 
 为支持高成长中小企业跨越发展，培育一批瞪羚企业、独角兽企业，
@@ -187,6 +235,18 @@ POLICIES = [
         "url": "mock://gov_cn/2026-001",
         "title": "国务院关于深化新一轮财税体制改革的意见",
         "published_at": date(2026, 6, 10),
+        "summary_type": "其他",
+        "summary_text": "深化预算、税收及中央与地方财政关系改革，建立现代财政制度。",
+        "summary_data": {
+            "title": "国家财税体制改革",
+            "type": "其他",
+            "summary": "建立现代预算制度+完善税收制度+调整央地财政关系",
+            "target_enterprise": "全国各级政府和企业",
+            "amount": None,
+            "deadline": "2026-12-31",
+            "conditions": ["全国范围"],
+            "keywords": ["财税体制改革", "现代预算制度", "增值税", "消费税", "个人所得税", "地方税体系", "转移支付", "中央与地方财政关系"]
+        },
         "raw_content": """国务院关于深化新一轮财税体制改革的意见
 
 财税体制改革是经济体制改革的重要组成部分。为深入贯彻党的二十大精神，
@@ -261,6 +321,11 @@ async def seed() -> int:
                 title=p["title"],
                 raw_content=p["raw_content"],
                 published_at=p["published_at"],
+                summary_type=p.get("summary_type"),
+                summary_text=p.get("summary_text"),
+                summary_data=p.get("summary_data"),
+                summary_model="pre-baked (no LLM)",
+                summarized_at=datetime.utcnow() if p.get("summary_text") else None,
             ))
             count += 1
             logger.info("Inserted: %s", p["title"][:50])
