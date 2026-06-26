@@ -1,8 +1,9 @@
-"""wechat 子包入口。"""
+"""wechat 子包入口：默认跑 message_router。"""
 
 import sys
 
-from python.wechat.ilink_login import main
+from python.wechat.message_router import main
+
 
 if __name__ == "__main__":
     sys.exit(main())
