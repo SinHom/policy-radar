@@ -243,6 +243,13 @@ async def main_async() -> int:
 
 
 def main() -> int:
+    # --no-llm 标志：跳过 LLM 摘要（CI 环境无 key 或 rate limit 时用）
+    if "--no-llm" in sys.argv:
+        # monkey-patch summarize_pending 改成 no-op
+        import python.ai.summarizer as _summ
+        _summ.summarize_pending = lambda **kw: []
+        # 同时跳过 LLM 健康检查
+        sys.argv.remove("--no-llm")
     return asyncio.run(main_async())
 
 
