@@ -23,7 +23,8 @@ from python.app.api.auth import require_admin
 from python.app.api.routes import format_push_message
 from python.app.config import get_settings
 from python.models.base import get_session
-from python.models.policy import Policy, PushLog
+from python.models.policy import Policy
+from python.models.push_log import PushLog
 from python.models.subscription import Subscription
 
 router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
