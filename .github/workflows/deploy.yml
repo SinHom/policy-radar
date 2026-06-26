@@ -1,0 +1,42 @@
+name: Deploy to 1Panel
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: SSH deploy to server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            set -e
+            cd /opt/policy-radar
+
+            echo "=== git pull ==="
+            git pull origin main
+
+            echo "=== docker compose up (rebuild if needed) ==="
+            docker compose up -d --build
+
+            echo "=== wait 10s for startup ==="
+            sleep 10
+
+            echo "=== health check ==="
+            curl -sf http://127.0.0.1:8000/health | python3 -c "
+            import json, sys
+            d = json.load(sys.stdin)
+            print(f'status={d[\"status\"]} policies={d[\"stats\"][\"policies_total\"]}')
+            if d['status'] != 'ok':
+                sys.exit(1)
+            "
+
+            echo "=== deploy OK ==="
