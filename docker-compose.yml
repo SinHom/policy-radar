@@ -61,8 +61,9 @@ services:
   grafana:
     image: grafana/grafana:11.2.0
     container_name: policy-radar-grafana
+    # 1Panel 用 3000 端口（Portainer/其他容器），改 3030
     ports:
-      - "3000:3000"
+      - "3030:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
