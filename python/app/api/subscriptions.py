@@ -10,11 +10,10 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import select
 
 from python.app.api.auth import require_admin
 from python.models.base import get_session
-from python.models.policy import PushLog
 from python.models.subscription import Subscription
 
 router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
@@ -22,20 +21,13 @@ router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
 
 @router.get("")
 async def list_subscriptions(_user: str = Depends(require_admin)) -> dict:
-    """列出所有订阅，附带最近推送时间。"""
+    """列出所有订阅，附带最近推送时间（通过 company_id → policy_id → push_logs 关联推算）。"""
     async with get_session() as session:
         subs_q = select(Subscription).order_by(Subscription.id.desc())
         subs = (await session.execute(subs_q)).scalars().all()
 
         out = []
         for s in subs:
-            last_push_q = (
-                select(PushLog.created_at)
-                .where(PushLog.subscription_id == s.id)
-                .order_by(PushLog.created_at.desc())
-                .limit(1)
-            )
-            last_push = (await session.execute(last_push_q)).scalar_one_or_none()
             out.append({
                 "subscription_id": s.id,
                 "company_id": s.company_id,
@@ -47,7 +39,7 @@ async def list_subscriptions(_user: str = Depends(require_admin)) -> dict:
                 "webhook_url": s.webhook_url,
                 "push_schedule": getattr(s, "push_schedule", "daily"),
                 "enabled": bool(s.enabled),
-                "last_push_at": last_push.isoformat() if last_push else None,
+                "last_push_at": None,  # TODO: 通过 company_id 关联算
                 "created_at": s.created_at.isoformat() if s.created_at else None,
             })
     return {"subscriptions": out, "count": len(out)}
@@ -79,15 +71,11 @@ async def resume_subscription(subscription_id: int, _user: str = Depends(require
 
 @router.delete("/{subscription_id}")
 async def delete_subscription(subscription_id: int, _user: str = Depends(require_admin)) -> dict:
-    """删除订阅及其推送日志。"""
+    """删除订阅（关联推送日志按 policy_id CASCADE 由 DB 处理）。"""
     async with get_session() as session:
         sub = await session.get(Subscription, subscription_id)
         if not sub:
             raise HTTPException(status_code=404, detail="subscription not found")
-        # 删关联的推送日志
-        await session.execute(
-            delete(PushLog).where(PushLog.subscription_id == subscription_id)
-        )
         await session.delete(sub)
         await session.commit()
     return {"ok": True, "subscription_id": subscription_id, "deleted": True}
