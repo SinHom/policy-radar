@@ -60,14 +60,20 @@ jobs:
           echo "compileall OK"
 
       - name: Init DB + seed
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONPATH: python
         run: |
           source .venv/bin/activate
           export PYTHONIOENCODING=utf-8
           export PYTHONPATH=python
           rm -f data/policy_radar.db
-          alembic upgrade head
-          python -m scripts.seed_sources
-          python -m scripts.seed_policies
+          set -x
+          alembic upgrade head 2>&1
+          echo "--- seed_sources ---"
+          python -m scripts.seed_sources 2>&1 || (echo "seed_sources FAILED"; exit 1)
+          echo "--- seed_policies ---"
+          python -m scripts.seed_policies 2>&1 || (echo "seed_policies FAILED"; python -c "import traceback; traceback.print_exc()"; exit 1)
 
       - name: Test HMAC signature
         env:
