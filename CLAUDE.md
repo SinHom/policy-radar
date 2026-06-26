@@ -84,6 +84,17 @@ alembic upgrade head
 alembic revision --autogenerate -m "msg"
 ```
 
+## ⚠️ Token 消耗优化（强制规则）
+
+**每次操作前必读：[docs/TOKEN-OPTIMIZATION.md](docs/TOKEN-OPTIMIZATION.md)**
+
+核心 3 条：
+1. **屏蔽 SSH banner** — 远程服务器 `touch ~/.hushlogin` 一次
+2. **Edit 不用 Read+Edit** — grep 定位直接改
+3. **输出最小化** — `tail -N` + `grep -vE` 过滤 + `-o /dev/null`
+
+不遵守会让 token 浪费 5-10 倍，本项目大，必须严格执行。
+
 ## 安全红线
 
 - 绝不能 commit `.env`（含真实 API Key）
