@@ -1,195 +1,253 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>政策雷达 · 管理后台 (Vue 3)</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<!-- Vue 3 ESM browser build (含模板编译器，支持 v-if/v-for/{{}}) -->
-<!-- 直接 import 完整 URL，不需要 importmap (兼容更多浏览器) -->
-<!-- 注意：vue.global.prod.js 是 runtime-only，无模板编译器，会导致页面空白！ -->
-<script src="https://cdn.jsdelivr.net/npm/axios@1.7.7/dist/axios.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        fontFamily: { sans: ['"DM Sans"', '"Noto Sans SC"', 'system-ui', 'sans-serif'] },
-        colors: {
-          brand: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
-            400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
-            800: '#1e40af', 900: '#1e3a8a' },
-          accent: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' },
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>政策雷达 · 管理后台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue 3 ESM browser build (含模板编译器) -->
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.7.7/dist/axios.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"DM Sans"', '"Noto Sans SC"', 'system-ui', 'sans-serif'] },
+          colors: {
+            brand: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+              400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+              800: '#1e40af', 900: '#1e3a8a' },
+            accent: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' },
+          },
         },
       },
-    },
-  };
-</script>
-<style>
-  body { font-family: 'DM Sans', 'Noto Sans SC', system-ui, sans-serif; }
-  [v-cloak] { display: none; }
-  .tab-active { @apply bg-brand-50 text-brand-700 border-brand-500; }
-  .badge { @apply text-xs px-2 py-0.5 rounded-full font-medium; }
-</style>
+    };
+  </script>
+  <style>
+    body { font-family: 'DM Sans', 'Noto Sans SC', system-ui, sans-serif; }
+    [v-cloak] { display: none; }
+    .tab-active { @apply bg-brand-50 text-brand-700 border-brand-500; }
+    .badge { @apply text-xs px-2 py-0.5 rounded-full font-medium; }
+  </style>
 </head>
 <body class="bg-gray-50 min-h-screen" v-cloak>
-<div id="app">
-  <!-- Top Bar -->
-  <header class="sticky top-0 z-20 bg-white/80 backdrop-blur-lg border-b border-gray-200/60">
-    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold">雷</div>
+
+  <!-- ===== 登录页 ===== -->
+  <div v-if="!authed" class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+      <div class="text-center mb-8">
+        <div class="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 items-center justify-center text-white text-2xl font-bold mb-4">雷</div>
+        <h1 class="text-2xl font-semibold text-gray-900">政策雷达</h1>
+        <p class="text-sm text-gray-500 mt-1">管理后台 · 请登录</p>
+      </div>
+      <form @submit.prevent="doLogin" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
         <div>
-          <h1 class="text-lg font-semibold text-gray-900">政策雷达</h1>
-          <p class="text-xs text-gray-500">管理后台 · Vue 3</p>
+          <label class="text-xs font-medium text-gray-700">用户名</label>
+          <input v-model="loginForm.username" type="text" required
+                 class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
         </div>
-      </div>
-      <div class="flex items-center gap-2 text-xs">
-        <span class="px-2 py-1 rounded-full bg-green-100 text-green-700">
-          <span class="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mr-1"></span>在线
-        </span>
-        <span class="text-gray-500">v0.2.0</span>
-      </div>
+        <div>
+          <label class="text-xs font-medium text-gray-700">密码</label>
+          <input v-model="loginForm.password" type="password" required
+                 class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+        </div>
+        <div v-if="loginError" class="text-xs text-red-600 bg-red-50 px-3 py-2 rounded">
+          {{ loginError }}
+        </div>
+        <button type="submit" :disabled="logging"
+                class="w-full bg-brand-500 hover:bg-brand-600 text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">
+          {{ logging ? '登录中...' : '登 录' }}
+        </button>
+        <p class="text-xs text-gray-400 text-center pt-2 border-t border-gray-100">
+          默认账号 admin / policy-radar-2026（可在 .env 修改）
+        </p>
+      </form>
     </div>
-  </header>
+  </div>
 
-  <div class="max-w-7xl mx-auto px-6 py-6 flex gap-6">
-    <!-- Sidebar -->
-    <nav class="w-48 shrink-0">
-      <ul class="space-y-1 sticky top-20">
-        <li v-for="t in tabs" :key="t.key">
-          <button @click="currentTab = t.key"
-                  :class="currentTab === t.key ? 'bg-brand-50 text-brand-700 border-l-2 border-brand-500' : 'text-gray-600 hover:bg-gray-100'"
-                  class="w-full text-left px-4 py-2.5 rounded-r-lg text-sm font-medium transition-colors">
-            <span class="mr-2">{{ t.icon }}</span>{{ t.label }}
-          </button>
-        </li>
-      </ul>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="flex-1 min-w-0">
-
-      <!-- Dashboard -->
-      <div v-show="currentTab === 'dashboard'">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">📊 概览</h2>
-        <div v-if="health" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div v-for="(v, k) in statCards" :key="k" class="bg-white border border-gray-200 rounded-xl p-4">
-            <div class="text-xs text-gray-500">{{ v.label }}</div>
-            <div class="text-2xl font-semibold mt-1" :class="v.color">{{ v.value }}</div>
+  <!-- ===== 后台主界面（已登录） ===== -->
+  <div v-else>
+    <!-- Top Bar -->
+    <header class="sticky top-0 z-20 bg-white/80 backdrop-blur-lg border-b border-gray-200/60">
+      <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold">雷</div>
+          <div>
+            <h1 class="text-lg font-semibold text-gray-900">政策雷达</h1>
+            <p class="text-xs text-gray-500">管理后台 · 登录用户: {{ currentUser }}</p>
           </div>
         </div>
-        <div v-if="health" class="bg-white border border-gray-200 rounded-xl p-4">
-          <h3 class="text-sm font-semibold text-gray-900 mb-3">服务状态</h3>
-          <pre class="text-xs bg-gray-50 p-3 rounded">{{ JSON.stringify(health, null, 2) }}</pre>
+        <div class="flex items-center gap-2 text-xs">
+          <span :class="serverOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-1 rounded-full">
+            <span :class="serverOnline ? 'bg-green-500' : 'bg-red-500'" class="inline-block w-1.5 h-1.5 rounded-full mr-1"></span>
+            服务 {{ serverOnline ? '在线' : '离线' }}
+          </span>
+          <span class="text-gray-500 hidden sm:inline">v0.2.0</span>
+          <button @click="doLogout" class="ml-2 px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">登出</button>
         </div>
       </div>
+    </header>
 
-      <!-- Subscriptions -->
-      <div v-show="currentTab === 'subscriptions'">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-semibold text-gray-900">📋 订阅管理</h2>
-          <button @click="loadSubscriptions" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
-        </div>
-        <div v-if="subs.length === 0" class="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-400 text-sm">
-          暂无订阅（通过 MCP 的 start_setup 注册）
-        </div>
-        <div v-else class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
-          <div v-for="s in subs" :key="s.subscription_id" class="px-5 py-4 hover:bg-gray-50">
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex-1">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="font-medium text-gray-900">{{ s.company_name }}</span>
-                  <span :class="s.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'" class="badge">
-                    {{ s.enabled ? '启用' : '暂停' }}
-                  </span>
-                  <span class="text-xs text-gray-400">sub #{{ s.subscription_id }}</span>
-                </div>
-                <div class="text-xs text-gray-500">
-                  关注：{{ s.types.join('、') || '-' }} · 地区：{{ s.regions.join('、') || '-' }} · 频率：{{ s.push_schedule }}
-                </div>
-                <div class="text-xs text-gray-400 mt-1 truncate">webhook: {{ s.webhook_url || '(无)' }}</div>
-                <div class="text-xs text-gray-400">最近推送：{{ s.last_push_at || '从未' }}</div>
-              </div>
-              <div class="flex flex-col gap-1 shrink-0">
-                <button v-if="s.enabled" @click="toggleSub(s, false)" class="text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50">暂停</button>
-                <button v-else @click="toggleSub(s, true)" class="text-xs px-2 py-1 rounded bg-green-500 text-white hover:bg-green-600">启用</button>
-                <button @click="deleteSub(s)" class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">删除</button>
+    <div class="max-w-7xl mx-auto px-6 py-6 flex gap-6">
+      <!-- Sidebar -->
+      <nav class="w-48 shrink-0">
+        <ul class="space-y-1 sticky top-20">
+          <li v-for="t in tabs" :key="t.key">
+            <button @click="currentTab = t.key"
+                    :class="currentTab === t.key ? 'bg-brand-50 text-brand-700 border-l-2 border-brand-500' : 'text-gray-600 hover:bg-gray-100'"
+                    class="w-full text-left px-4 py-2.5 rounded-r-lg text-sm font-medium transition-colors">
+              <span class="mr-2">{{ t.icon }}</span>{{ t.label }}
+            </button>
+          </li>
+        </ul>
+      </nav>
+
+      <main class="flex-1 min-w-0">
+        <!-- Dashboard -->
+        <div v-show="currentTab === 'dashboard'">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">📊 概览</h2>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div v-for="(v, k) in statCards" :key="k" class="bg-white border border-gray-200 rounded-xl p-4">
+              <div class="text-xs text-gray-500">{{ v.label }}</div>
+              <div class="text-2xl font-semibold mt-1" :class="v.color">{{ v.value }}</div>
+            </div>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-xl p-4 mb-6">
+            <h3 class="text-sm font-semibold text-gray-900 mb-3">漏斗（推送 → 触达 → 咨询）</h3>
+            <div v-if="funnel" class="flex items-end gap-4 h-32">
+              <div v-for="(stage, i) in funnel.funnel" :key="stage.stage" class="flex-1 flex flex-col items-center">
+                <div class="text-xs text-gray-500 mb-1">{{ stage.stage }}</div>
+                <div class="w-full rounded-t-md transition-all"
+                     :class="i === 0 ? 'bg-brand-500' : i === 1 ? 'bg-brand-400' : 'bg-accent-500'"
+                     :style="{ height: (stage.count / Math.max(funnel.funnel[0].count, 1) * 100) + '%' }"></div>
+                <div class="text-lg font-semibold mt-2">{{ stage.count }}</div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Policies -->
-      <div v-show="currentTab === 'policies'">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-semibold text-gray-900">📜 政策库</h2>
-          <div class="flex gap-2">
-            <input v-model="policyQuery" @keyup.enter="loadPolicies" placeholder="搜索关键词..."
-                   class="text-sm px-3 py-1.5 border border-gray-200 rounded-lg" />
-            <button @click="loadPolicies" class="text-sm px-3 py-1.5 rounded-lg bg-brand-500 text-white hover:bg-brand-600">搜索</button>
-            <button @click="triggerCrawl" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">爬取</button>
+          <div v-if="companies?.length" class="bg-white border border-gray-200 rounded-xl p-4">
+            <h3 class="text-sm font-semibold text-gray-900 mb-3">企业概览</h3>
+            <table class="w-full text-sm">
+              <thead class="text-xs text-gray-500">
+                <tr><th class="text-left py-2">企业</th><th class="text-center">行业</th><th class="text-center">地区</th><th class="text-center">订阅</th><th class="text-center">匹配</th><th class="text-center">推送</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="c in companies" :key="c.company_id" class="border-t border-gray-100">
+                  <td class="py-2 font-medium">{{ c.name }}</td>
+                  <td class="text-center">{{ c.industry || '-' }}</td>
+                  <td class="text-center">{{ c.region || '-' }}</td>
+                  <td class="text-center">{{ c.subscriptions }}</td>
+                  <td class="text-center">{{ c.matches }}</td>
+                  <td class="text-center">{{ c.pushed }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
-        <div class="text-xs text-gray-500 mb-2">共 {{ policies.length }} 条</div>
-        <div class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
-          <div v-for="p in policies" :key="p.id" class="px-5 py-3 hover:bg-gray-50">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="badge" :class="badgeColor(p.type)">{{ p.type || '其他' }}</span>
-              <span class="text-xs text-gray-400">#{{ p.id }} · {{ p.source_id }}</span>
-              <span v-if="p.deadline" class="text-xs text-orange-600">⏰ {{ p.deadline }}</span>
-              <span v-if="p.amount" class="text-xs text-green-600">💰 {{ p.amount }}</span>
+
+        <!-- Subscriptions -->
+        <div v-show="currentTab === 'subscriptions'">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-900">📋 订阅管理</h2>
+            <button @click="loadSubscriptions" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
+          </div>
+          <div v-if="subs.length === 0" class="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-400 text-sm">
+            暂无订阅（通过 MCP 的 start_setup 注册）
+          </div>
+          <div v-else class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
+            <div v-for="s in subs" :key="s.subscription_id" class="px-5 py-4 hover:bg-gray-50">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-medium text-gray-900">{{ s.company_name }}</span>
+                    <span :class="s.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'" class="text-xs px-2 py-0.5 rounded-full font-medium">
+                      {{ s.enabled ? '启用' : '暂停' }}
+                    </span>
+                    <span class="text-xs text-gray-400">sub #{{ s.subscription_id }}</span>
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    关注：{{ (s.types || []).join('、') || '-' }} · 地区：{{ (s.regions || []).join('、') || '-' }} · 频率：{{ s.push_schedule }}
+                  </div>
+                  <div class="text-xs text-gray-400 mt-1 truncate">webhook: {{ s.webhook_url || '(无)' }}</div>
+                  <div class="text-xs text-gray-400">最近推送：{{ s.last_push_at || '从未' }}</div>
+                </div>
+                <div class="flex flex-col gap-1 shrink-0">
+                  <button v-if="s.enabled" @click="toggleSub(s, false)" class="text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50">暂停</button>
+                  <button v-else @click="toggleSub(s, true)" class="text-xs px-2 py-1 rounded bg-green-500 text-white hover:bg-green-600">启用</button>
+                  <button @click="deleteSub(s)" class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">删除</button>
+                </div>
+              </div>
             </div>
-            <h3 class="text-sm font-medium text-gray-900">{{ p.title }}</h3>
-            <p class="text-xs text-gray-600 line-clamp-2 mt-1">{{ p.summary || '(无摘要)' }}</p>
           </div>
         </div>
-      </div>
 
-      <!-- Sources -->
-      <div v-show="currentTab === 'sources'">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-semibold text-gray-900">🕷️ 政策源</h2>
-          <button @click="loadSources" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
-        </div>
-        <div class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
-          <div v-for="s in sources" :key="s.id" class="px-5 py-3 flex items-center justify-between">
-            <div>
-              <div class="font-medium text-gray-900 text-sm">{{ s.name }}</div>
-              <div class="text-xs text-gray-500">{{ s.category }} · {{ s.source_id }}</div>
+        <!-- Policies -->
+        <div v-show="currentTab === 'policies'">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-900">📜 政策库</h2>
+            <div class="flex gap-2">
+              <input v-model="policyQuery" @keyup.enter="loadPolicies" placeholder="搜索关键词..."
+                     class="text-sm px-3 py-1.5 border border-gray-200 rounded-lg" />
+              <button @click="loadPolicies" class="text-sm px-3 py-1.5 rounded-lg bg-brand-500 text-white hover:bg-brand-600">搜索</button>
+              <button @click="triggerCrawl" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">爬取</button>
             </div>
-            <span :class="s.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'" class="badge">
-              {{ s.enabled ? '启用' : '停用' }}
-            </span>
           </div>
-        </div>
-      </div>
-
-      <!-- Push Logs -->
-      <div v-show="currentTab === 'push-logs'">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-semibold text-gray-900">📤 推送历史</h2>
-          <button @click="loadPushLogs" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
-        </div>
-        <div class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
-          <div v-for="log in pushLogs" :key="log.id" class="px-5 py-3">
-            <div class="flex items-center gap-2 text-xs mb-1">
-              <span class="font-mono text-gray-500">{{ log.created_at }}</span>
-              <span :class="log.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="badge">{{ log.status }}</span>
-              <span class="text-gray-400">policy #{{ log.policy_id }}</span>
+          <div class="text-xs text-gray-500 mb-2">共 {{ policies.length }} 条</div>
+          <div class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
+            <div v-for="p in policies" :key="p.id" class="px-5 py-3 hover:bg-gray-50">
+              <div class="flex items-center gap-2 mb-1">
+                <span :class="badgeColor(p.summary_type)" class="text-xs px-2 py-0.5 rounded-full font-medium">{{ p.summary_type || '其他' }}</span>
+                <span class="text-xs text-gray-400">#{{ p.id }} · {{ p.source_id }}</span>
+                <span v-if="p.deadline" class="text-xs text-orange-600">⏰ {{ p.deadline }}</span>
+                <span v-if="p.amount" class="text-xs text-green-600">💰 {{ p.amount }}</span>
+              </div>
+              <h3 class="text-sm font-medium text-gray-900">{{ p.title }}</h3>
+              <p class="text-xs text-gray-600 line-clamp-2 mt-1">{{ p.summary || '(无摘要)' }}</p>
             </div>
-            <pre class="text-xs text-gray-600 whitespace-pre-wrap font-sans">{{ log.content }}</pre>
           </div>
         </div>
-      </div>
 
-    </main>
+        <!-- Sources -->
+        <div v-show="currentTab === 'sources'">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-900">🕷️ 政策源</h2>
+            <button @click="loadSources" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
+            <div v-for="s in sources" :key="s.id" class="px-5 py-3 flex items-center justify-between">
+              <div>
+                <div class="font-medium text-gray-900 text-sm">{{ s.name }}</div>
+                <div class="text-xs text-gray-500">{{ s.category }} · {{ s.source_id }}</div>
+              </div>
+              <span :class="s.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'" class="text-xs px-2 py-0.5 rounded-full font-medium">
+                {{ s.enabled ? '启用' : '停用' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Push Logs -->
+        <div v-show="currentTab === 'push-logs'">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-900">📤 推送历史</h2>
+            <button @click="loadPushLogs" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
+            <div v-for="log in pushLogs" :key="log.id" class="px-5 py-3">
+              <div class="flex items-center gap-2 text-xs mb-1">
+                <span class="font-mono text-gray-500">{{ log.created_at }}</span>
+                <span :class="log.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-0.5 rounded-full font-medium">{{ log.status }}</span>
+                <span class="text-gray-400">policy #{{ log.policy_id }}</span>
+              </div>
+              <pre class="text-xs text-gray-600 whitespace-pre-wrap font-sans">{{ log.content }}</pre>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
   </div>
 
   <!-- Toast -->
-  <div v-if="toast.show"
-       class="fixed bottom-6 right-6 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg max-w-sm z-50">
+  <div v-if="toast.show" class="fixed bottom-6 right-6 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg max-w-sm z-50">
     {{ toast.msg }}
   </div>
 
@@ -200,142 +258,191 @@
       <span class="text-sm">{{ loadingText }}</span>
     </div>
   </div>
-</div>
 
-<script type="module">
-  import { createApp, ref, computed, onMounted } from 'https://unpkg.com/vue@3.4.0/dist/vue.esm-browser.prod.js';
+  <!-- Vue 3 ESM (含模板编译器) -->
+  <script type="module">
+    import { createApp, ref, computed, onMounted, reactive } from 'https://unpkg.com/vue@3.4.0/dist/vue.esm-browser.prod.js';
 
-  createApp({
-    setup() {
-      const api = axios.create({ baseURL: '/api' });
-
-      const tabs = [
-        { key: 'dashboard',     label: '概览',       icon: '📊' },
-        { key: 'subscriptions', label: '订阅',       icon: '📋' },
-        { key: 'policies',      label: '政策库',     icon: '📜' },
-        { key: 'sources',       label: '政策源',     icon: '🕷️' },
-        { key: 'push-logs',     label: '推送历史',   icon: '📤' },
-      ];
-      const currentTab = ref('dashboard');
-
-      // state
-      const health = ref(null);
-      const subs = ref([]);
-      const policies = ref([]);
-      const sources = ref([]);
-      const pushLogs = ref([]);
-      const policyQuery = ref('');
-      const loading = ref(false);
-      const loadingText = ref('处理中...');
-      const toast = ref({ show: false, msg: '', _t: null });
-
-      // 统计卡片
-      const statCards = computed(() => {
-        if (!health.value) return {};
-        const s = health.value.stats || {};
-        return {
-          policies: { label: '政策总数',   value: s.policies_total || 0,        color: 'text-gray-900' },
-          summarized: { label: '已摘要',   value: s.policies_summarized || 0,   color: 'text-green-600' },
-          companies: { label: '企业',      value: s.companies || 0,             color: 'text-brand-600' },
-          subs: { label: '启用订阅',   value: s.subscriptions_enabled || 0,   color: 'text-accent-600' },
-        };
-      });
-
-      function showToast(msg, ms = 2500) {
-        toast.value = { show: true, msg, _t: null };
-        if (toast.value._t) clearTimeout(toast.value._t);
-        toast.value._t = setTimeout(() => toast.value.show = false, ms);
+    // === axios + token 拦截器 ===
+    const TOKEN_KEY = 'policy_radar_token';
+    const USER_KEY = 'policy_radar_user';
+    const api = axios.create({ baseURL: '' });  // 同源
+    api.interceptors.request.use((cfg) => {
+      const tok = localStorage.getItem(TOKEN_KEY);
+      if (tok) cfg.headers.Authorization = `Bearer ${tok}`;
+      return cfg;
+    });
+    api.interceptors.response.use(
+      (r) => r,
+      (err) => {
+        if (err.response && err.response.status === 401) {
+          // token 失效 → 清掉 + 跳 login（authed=false 触发 v-if）
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_KEY);
+          location.reload();
+        }
+        return Promise.reject(err);
       }
+    );
 
-      async function withLoading(text, fn) {
-        loading.value = true;
-        loadingText.value = text;
-        try { return await fn(); }
-        catch (e) { showToast('❌ ' + (e.response?.data?.detail || e.message)); throw e; }
-        finally { loading.value = false; }
-      }
+    createApp({
+      setup() {
+        // ===== Auth =====
+        const authed = ref(!!localStorage.getItem(TOKEN_KEY));
+        const currentUser = ref(localStorage.getItem(USER_KEY) || '');
+        const loginForm = reactive({ username: '', password: '' });
+        const loginError = ref('');
+        const logging = ref(false);
 
-      // data loaders
-      async function loadHealth() {
-        const r = await axios.get('/health');
-        health.value = r.data;
-      }
-      async function loadSubscriptions() {
-        await withLoading('加载订阅...', async () => {
-          const r = await api.get('/subscriptions');
-          subs.value = r.data.subscriptions || [];
+        async function doLogin() {
+          loginError.value = '';
+          logging.value = true;
+          try {
+            const r = await axios.post('/api/auth/login', {
+              username: loginForm.username,
+              password: loginForm.password,
+            });
+            localStorage.setItem(TOKEN_KEY, r.data.token);
+            localStorage.setItem(USER_KEY, r.data.user);
+            currentUser.value = r.data.user;
+            authed.value = true;
+            // 登录后自动加载数据
+            await loadHealth();
+            await loadAll();
+          } catch (e) {
+            loginError.value = e.response?.data?.detail || '登录失败';
+          } finally {
+            logging.value = false;
+          }
+        }
+
+        async function doLogout() {
+          try { await api.post('/api/auth/logout'); } catch (e) {}
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_KEY);
+          authed.value = false;
+          currentUser.value = '';
+          loginForm.username = ''; loginForm.password = '';
+        }
+
+        // ===== 状态 =====
+        const tabs = [
+          { key: 'dashboard',     label: '概览',     icon: '📊' },
+          { key: 'subscriptions', label: '订阅',     icon: '📋' },
+          { key: 'policies',      label: '政策库',   icon: '📜' },
+          { key: 'sources',       label: '政策源',   icon: '🕷️' },
+          { key: 'push-logs',     label: '推送历史', icon: '📤' },
+        ];
+        const currentTab = ref('dashboard');
+        const health = ref(null);
+        const funnel = ref(null);
+        const companies = ref(null);
+        const subs = ref([]);
+        const policies = ref([]);
+        const sources = ref([]);
+        const pushLogs = ref([]);
+        const policyQuery = ref('');
+        const toast = ref({ show: false, msg: '' });
+        const loading = ref(false);
+        const loadingText = ref('处理中...');
+
+        const serverOnline = computed(() => health.value?.status === 'ok');
+        const statCards = computed(() => {
+          if (!funnel.value) return {};
+          const s = funnel.value.stats || {};
+          return {
+            push: { label: '推送成功', value: s.push_success || 0, color: 'text-green-600' },
+            reached: { label: '触达',   value: s.reached || 0,      color: 'text-brand-600' },
+            companies: { label: '企业', value: companies.value?.count || 0, color: 'text-accent-600' },
+            rate: { label: '成功率', value: ((s.push_success_rate || 0) * 100).toFixed(0) + '%', color: 'text-gray-900' },
+          };
         });
-      }
-      async function loadPolicies() {
-        await withLoading('搜索政策...', async () => {
-          const r = await api.get('/policies', {
-            params: { query: policyQuery.value, limit: 50, summarized_only: false }
-          });
+
+        function showToast(msg, ms = 2500) {
+          toast.value = { show: true, msg };
+          setTimeout(() => toast.value.show = false, ms);
+        }
+
+        async function withLoading(text, fn) {
+          loading.value = true;
+          loadingText.value = text;
+          try { return await fn(); }
+          catch (e) { showToast('❌ ' + (e.response?.data?.detail || e.message)); throw e; }
+          finally { loading.value = false; }
+        }
+
+        // ===== 数据加载 =====
+        async function loadHealth() {
+          try { health.value = (await axios.get('/health')).data; } catch {}
+        }
+        async function loadAll() {
+          await Promise.all([loadFunnel(), loadCompanies(), loadSubs(), loadPolicies(), loadSources(), loadPushLogs()]);
+        }
+        async function loadFunnel() { funnel.value = (await api.get('/api/dashboard/funnel')).data; }
+        async function loadCompanies() { companies.value = (await api.get('/api/dashboard/companies')).data; }
+        async function loadSubs() { subs.value = (await api.get('/api/subscriptions')).data.subscriptions || []; }
+        async function loadPolicies() {
+          const r = await api.get('/api/policies', { params: { query: policyQuery.value, limit: 50, summarized_only: false } });
           policies.value = r.data;
-        });
-      }
-      async function loadSources() {
-        await withLoading('加载政策源...', async () => {
-          const r = await api.get('/sources');
-          sources.value = r.data;
-        });
-      }
-      async function loadPushLogs() {
-        try {
-          const r = await api.get('/push-logs', { params: { limit: 50 } });
-          pushLogs.value = r.data;
-        } catch (e) { console.error(e); }
-      }
-      async function triggerCrawl() {
-        await withLoading('触发爬取...', async () => {
+        }
+        async function loadSources() { sources.value = (await api.get('/api/sources')).data; }
+        async function loadPushLogs() { pushLogs.value = (await api.get('/api/push-logs', { params: { limit: 50 } })).data; }
+
+        async function toggleSub(s, enable) {
+          const tool = enable ? 'resume_subscription' : 'pause_subscription';
+          await withLoading((enable ? '启用' : '暂停') + '订阅...', async () => {
+            await api.post(`/${tool}`, null, { params: { company_id: s.company_id } });
+            showToast('✅ 已' + (enable ? '启用' : '暂停'));
+            await loadSubs();
+          });
+        }
+
+        async function deleteSub(s) {
+          if (!confirm(`确定删除「${s.company_name}」及其所有数据？`)) return;
+          await withLoading('删除订阅...', async () => {
+            await api.post('/delete_subscription', null, { params: { company_id: s.company_id } });
+            showToast('✅ 已删除');
+            await loadSubs();
+          });
+        }
+
+        async function triggerCrawl() {
+          showToast('⏳ 爬取中...');
           await api.post('/crawl/all');
           showToast('✅ 爬取已触发（后台执行）');
-        });
-      }
-      async function toggleSub(s, enable) {
-        const tool = enable ? 'resume_subscription' : 'pause_subscription';
-        await withLoading((enable ? '启用' : '暂停') + '订阅...', async () => {
-          await api.post('/' + tool, null, { params: { company_id: s.company_id } });
-          showToast('✅ 已' + (enable ? '启用' : '暂停'));
-          await loadSubscriptions();
-        });
-      }
-      async function deleteSub(s) {
-        if (!confirm(`确定删除「${s.company_name}」及其所有数据？`)) return;
-        await withLoading('删除订阅...', async () => {
-          await api.post('/delete_subscription', null, { params: { company_id: s.company_id } });
-          showToast('✅ 已删除');
-          await loadSubscriptions();
-        });
-      }
+        }
 
-      function badgeColor(type) {
-        const map = {
-          '补贴': 'bg-green-100 text-green-700',
-          '贷款': 'bg-blue-100 text-blue-700',
-          '税收': 'bg-purple-100 text-purple-700',
-          '人才': 'bg-pink-100 text-pink-700',
-          '产业扶持': 'bg-orange-100 text-orange-700',
+        function badgeColor(type) {
+          const m = {
+            '补贴': 'bg-green-100 text-green-700',
+            '贷款': 'bg-blue-100 text-blue-700',
+            '税收': 'bg-purple-100 text-purple-700',
+            '人才': 'bg-pink-100 text-pink-700',
+            '产业扶持': 'bg-orange-100 text-orange-700',
+          };
+          return m[type] || 'bg-gray-100 text-gray-600';
+        }
+
+        onMounted(async () => {
+          if (!authed.value) return;
+          await loadHealth();
+          await loadAll();
+          // 每 30s 健康检查
+          setInterval(loadHealth, 30000);
+        });
+
+        return {
+          authed, currentUser, loginForm, loginError, logging,
+          doLogin, doLogout,
+          tabs, currentTab,
+          health, funnel, companies, subs, policies, sources, pushLogs,
+          policyQuery, loading, loadingText, toast,
+          serverOnline, statCards,
+          loadHealth, loadAll, loadFunnel, loadCompanies, loadSubs, loadPolicies, loadSources, loadPushLogs,
+          toggleSub, deleteSub, triggerCrawl, badgeColor,
         };
-        return map[type] || 'bg-gray-100 text-gray-600';
-      }
-
-      onMounted(async () => {
-        await loadHealth();
-        await loadSubscriptions();
-        await loadPolicies();
-        await loadSources();
-        await loadPushLogs();
-      });
-
-      return {
-        tabs, currentTab, health, subs, policies, sources, pushLogs,
-        policyQuery, loading, loadingText, toast, statCards,
-        loadHealth, loadSubscriptions, loadPolicies, loadSources, loadPushLogs,
-        triggerCrawl, toggleSub, deleteSub, badgeColor,
-      };
-    },
-  }).mount('#app');
-</script>
+      },
+    }).mount('#app');
+  </script>
 </body>
 </html>
