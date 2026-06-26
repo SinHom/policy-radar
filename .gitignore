@@ -52,3 +52,4 @@ temp/
 *.tmp
 *.bak
 ci_jobs.json
+data/ilink_token.json
