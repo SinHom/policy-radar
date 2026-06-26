@@ -1,0 +1,61 @@
+{
+  "title": "Policy Radar Overview",
+  "uid": "policy-radar",
+  "schemaVersion": 30,
+  "version": 1,
+  "refresh": "30s",
+  "time": {"from": "now-6h", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Policies Total",
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+      "targets": [{"expr": "policy_radar_policies_total", "refId": "A"}],
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}}}
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Companies",
+      "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+      "targets": [{"expr": "policy_radar_companies_total", "refId": "A"}]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Active Subscriptions",
+      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+      "targets": [{"expr": "policy_radar_subscriptions_enabled", "refId": "A"}]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Matches Total",
+      "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+      "targets": [{"expr": "policy_radar_matches_total", "refId": "A"}]
+    },
+    {
+      "id": 5,
+      "type": "graph",
+      "title": "Push Success Rate (24h)",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "targets": [{"expr": "policy_radar_push_success_rate_24h", "refId": "A"}],
+      "yaxes": [{"format": "percentunit", "min": 0, "max": 1}]
+    },
+    {
+      "id": 6,
+      "type": "graph",
+      "title": "Dead Letters (Unresolved)",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "targets": [{"expr": "policy_radar_dead_letters_unresolved", "refId": "A"}]
+    },
+    {
+      "id": 7,
+      "type": "graph",
+      "title": "Policies Crawled (7d)",
+      "gridPos": {"x": 0, "y": 12, "w": 24, "h": 8},
+      "targets": [{"expr": "policy_radar_policies_crawled_7d", "refId": "A"}]
+    }
+  ]
+}

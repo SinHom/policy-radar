@@ -1,0 +1,17 @@
+# Prometheus 配置：scrape FastAPI /metrics 端点
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: policy-radar-app
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['app:8000']
+        labels:
+          service: 'policy-radar'
+          env: 'production'
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']

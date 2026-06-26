@@ -44,4 +44,34 @@ services:
       - ./data:/app/data
     restart: unless-stopped
 
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: policy-radar-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: policy-radar-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    volumes:
+      - ./monitoring/grafana-datasource.yml:/etc/grafana/provisioning/datasources/prometheus.yml:ro
+      - ./monitoring/grafana-dashboard.json:/var/lib/grafana/dashboards/policy-radar.json:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 volumes: {}
