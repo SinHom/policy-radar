@@ -10,33 +10,41 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: SSH deploy to server
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          script: |
-            set -e
-            cd /opt/policy-radar
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          # 把 Secret 写成文件（注意：Secret 必须包含完整 PEM 包括首尾两行）
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # 加服务器 host fingerprint
+          ssh-keyscan -p 22 -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          # 快速测试连接
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+              root@${{ secrets.SERVER_HOST }} 'echo "SSH OK"'
 
-            echo "=== git pull ==="
-            git pull origin main
+      - name: Deploy
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+              root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+          set -e
+          cd /opt/policy-radar
 
-            echo "=== docker compose up (rebuild if needed) ==="
-            docker compose up -d --build
+          echo "=== git pull ==="
+          git pull origin main
 
-            echo "=== wait 10s for startup ==="
-            sleep 10
+          echo "=== docker compose up ==="
+          docker compose up -d --build
 
-            echo "=== health check ==="
-            curl -sf http://127.0.0.1:8000/health | python3 -c "
-            import json, sys
-            d = json.load(sys.stdin)
-            print(f'status={d[\"status\"]} policies={d[\"stats\"][\"policies_total\"]}')
-            if d['status'] != 'ok':
-                sys.exit(1)
-            "
+          echo "=== wait startup ==="
+          sleep 10
 
-            echo "=== deploy OK ==="
+          echo "=== health check ==="
+          curl -sf http://127.0.0.1:8000/health | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          print('health:', d['status'])
+          if d['status'] != 'ok':
+              sys.exit(1)
+          "
+          echo "=== deploy done ==="
+          ENDSSH
