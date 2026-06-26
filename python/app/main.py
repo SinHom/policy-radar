@@ -13,6 +13,7 @@ from python.app.api.dashboard import router as dashboard_router
 from python.app.api.auth import router as auth_router
 from python.app.api.companies import router as companies_router
 from python.app.api.policies_admin import router as policies_admin_router
+from python.app.api.sources_admin import router as sources_admin_router
 from python.app.api.subscriptions import router as subs_router
 from python.app.config import get_settings
 from python.app.logging_config import setup_logging
@@ -53,6 +54,8 @@ def create_app() -> FastAPI:
     # policies_admin_router 自身已带 prefix="/api/policies"
     # 注意：会跟 api_router 里的 /api/policies 冲突（不同方法/不同路径），FastAPI 会按更具体的优先
     app.include_router(policies_admin_router, tags=["policies-admin"])
+    # sources_admin_router 自身已带 prefix="/api/sources"
+    app.include_router(sources_admin_router, tags=["sources-admin"])
     app.include_router(health_router, tags=["ops"])
     app.include_router(dashboard_router, prefix="/api", tags=["dashboard"])
     app.include_router(web_router, tags=["web"])
