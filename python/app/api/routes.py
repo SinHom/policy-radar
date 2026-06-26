@@ -212,10 +212,13 @@ async def push_policy(policy_id: int, target: str = "mock-ctx-default"):
 
 
 @router.get("/push-logs", response_model=list[PushLogOut])
-async def list_push_logs(limit: int = 30):
-    """列推送日志。"""
+async def list_push_logs(limit: int = 30, target: str = None):
+    """列推送日志。可按 target 过滤（'sub-{id}' = 单订阅，'mock-ctx-default' = mock）。"""
     async with get_session() as session:
-        stmt = select(PushLog).order_by(desc(PushLog.id)).limit(limit)
+        stmt = select(PushLog).order_by(desc(PushLog.id))
+        if target:
+            stmt = stmt.where(PushLog.target == target)
+        stmt = stmt.limit(limit)
         rows = (await session.execute(stmt)).scalars().all()
         return [
             PushLogOut(

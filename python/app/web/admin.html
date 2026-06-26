@@ -146,6 +146,50 @@
           </div>
         </div>
 
+        <!-- Companies (MCP 用户) -->
+        <div v-show="currentTab === 'companies'">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-900">🏢 MCP 用户（公司）</h2>
+            <div class="flex gap-2">
+              <button @click="openNewSubModal" class="text-sm px-3 py-1.5 rounded-lg bg-brand-500 text-white hover:bg-brand-600">+ 新建用户</button>
+              <button @click="loadCompanies" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
+            </div>
+          </div>
+          <div class="text-xs text-gray-500 mb-2">共 {{ (companies?.count ?? companies?.length ?? 0) }} 个公司 · {{ (companies?.filter?.(c => c.has_subscription) || []).length || 0 }} 个有订阅</div>
+          <div v-if="!companies || companies.length === 0" class="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-400 text-sm">
+            暂无公司 · 点上方「+ 新建用户」添加
+          </div>
+          <div v-else class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
+            <div v-for="c in companies" :key="c.id" class="px-5 py-3 hover:bg-gray-50">
+              <div class="flex items-center justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-sm font-bold">{{ c.name[0] }}</div>
+                    <span class="font-medium text-gray-900 text-sm">{{ c.name }}</span>
+                    <span v-if="c.has_subscription" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">已订阅</span>
+                    <span v-else class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未订阅</span>
+                    <span class="text-xs text-gray-400">company #{{ c.id }}</span>
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    行业：{{ c.industry || '-' }} · 地区：{{ c.region || '-' }} · 规模：{{ c.scale || '-' }}
+                  </div>
+                  <div v-if="c.tags && c.tags.length" class="text-xs text-gray-500 mt-1">
+                    标签：<span v-for="t in c.tags" :key="t" class="inline-block bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs mr-1">{{ t }}</span>
+                  </div>
+                  <div v-if="c.has_subscription" class="text-xs text-gray-400 mt-1">
+                    推送：{{ c.push_schedule }} · {{ c.push_time }} · 上次：{{ c.last_push_at || '从未' }}
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1 shrink-0">
+                  <button v-if="c.has_subscription" @click="pushSubscriptionByCompany(c)" class="text-xs px-2 py-1 rounded bg-brand-500 text-white hover:bg-brand-600">📤 推送</button>
+                  <button @click="openEditCompany(c)" class="text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50">✏️ 编辑</button>
+                  <button @click="deleteCompany(c)" class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">删除</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Subscriptions -->
         <div v-show="currentTab === 'subscriptions'">
           <div class="flex items-center justify-between mb-4">
@@ -223,17 +267,37 @@
         <div v-show="currentTab === 'sources'">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-semibold text-gray-900">🕷️ 政策源</h2>
-            <button @click="loadSources" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
+            <div class="flex gap-2">
+              <button @click="triggerCrawl" class="text-sm px-3 py-1.5 rounded-lg bg-brand-500 text-white hover:bg-brand-600">🚀 全部爬取</button>
+              <button @click="loadSources" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
+            </div>
           </div>
+          <div class="text-xs text-gray-500 mb-2">共 {{ sources.length }} 个源</div>
           <div class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
-            <div v-for="s in sources" :key="s.id" class="px-5 py-3 flex items-center justify-between">
-              <div>
-                <div class="font-medium text-gray-900 text-sm">{{ s.name }}</div>
-                <div class="text-xs text-gray-500">{{ s.category }} · {{ s.source_id }}</div>
+            <div v-for="s in sources" :key="s.id" class="px-5 py-3">
+              <div class="flex items-center justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-medium text-gray-900 text-sm">{{ s.name }}</span>
+                    <span class="text-xs text-gray-400">{{ s.source_id }}</span>
+                    <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{{ s.category || '其他' }}</span>
+                    <span :class="s.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'" class="text-xs px-2 py-0.5 rounded-full font-medium">
+                      {{ s.enabled ? '启用' : '停用' }}
+                    </span>
+                    <span v-if="s.last_status === 'failed'" class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">爬取失败</span>
+                    <span v-else-if="s.last_status === 'ok'" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">爬取成功</span>
+                  </div>
+                  <div class="text-xs text-gray-500 truncate">{{ s.url || '(无 URL)' }}</div>
+                  <div class="text-xs text-gray-400 mt-1">频率：{{ s.frequency }} · 最后爬取：{{ s.last_crawl_at || '从未' }}</div>
+                </div>
+                <div class="flex flex-col gap-1 shrink-0">
+                  <button @click="crawlOne(s)" class="text-xs px-2 py-1 rounded bg-brand-500 text-white hover:bg-brand-600">🚀 爬取</button>
+                  <button @click="toggleSource(s)" :class="s.enabled ? 'text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50' : 'text-xs px-2 py-1 rounded bg-green-500 text-white hover:bg-green-600'">
+                    {{ s.enabled ? '停用' : '启用' }}
+                  </button>
+                  <button @click="deleteSource(s)" class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">删除</button>
+                </div>
               </div>
-              <span :class="s.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'" class="text-xs px-2 py-0.5 rounded-full font-medium">
-                {{ s.enabled ? '启用' : '停用' }}
-              </span>
             </div>
           </div>
         </div>
@@ -458,18 +522,7 @@
 
   <!-- Vue 3 UMD (从 window.Vue 解构) -->
   <script>
-    // 调试输出
-    const _dbg = document.createElement('div');
-    _dbg.id = '_dbg';
-    _dbg.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:yellow;color:black;padding:4px;font:12px monospace;white-space:pre;';
-    document.body.appendChild(_dbg);
-    function _log(msg) { _dbg.textContent += msg + ' | '; }
-    _log('1.Vue=' + typeof Vue);
-    _log('2.axios=' + typeof axios);
-
-    try {
     const { createApp, ref, computed, onMounted, reactive } = Vue;
-    _log('3.createApp=' + typeof createApp);
 
     // === axios + token 拦截器 ===
     const TOKEN_KEY = 'policy_radar_token';
@@ -536,6 +589,7 @@
         // ===== 状态 =====
         const tabs = [
           { key: 'dashboard',     label: '概览',     icon: '📊' },
+          { key: 'companies',     label: 'MCP 用户', icon: '🏢' },
           { key: 'subscriptions', label: '订阅',     icon: '📋' },
           { key: 'policies',      label: '政策库',   icon: '📜' },
           { key: 'sources',       label: '政策源',   icon: '🕷️' },
@@ -587,7 +641,7 @@
           await Promise.all([loadFunnel(), loadCompanies(), loadSubs(), loadPolicies(), loadSources(), loadPushLogs()]);
         }
         async function loadFunnel() { funnel.value = (await api.get('/api/dashboard/funnel')).data; }
-        async function loadCompanies() { companies.value = (await api.get('/api/dashboard/companies')).data; }
+        async function loadCompanies() { companies.value = (await api.get('/api/companies')).data; }
         async function loadSubs() { subs.value = (await api.get('/api/subscriptions')).data.subscriptions || []; }
         async function loadPolicies() {
           const r = await api.get('/api/policies', { params: { query: policyQuery.value, limit: 50, summarized_only: false } });
@@ -615,9 +669,112 @@
         }
 
         async function triggerCrawl() {
-          showToast('⏳ 爬取中...');
-          await api.post('/crawl/all');
-          showToast('✅ 爬取已触发（后台执行）');
+          showToast('⏳ 爬取所有源中...');
+          await withLoading('爬取所有源...', async () => {
+            const r = await api.post('/crawl/all');
+            const total = r.data.reduce((sum, x) => sum + (x.new_crawled || 0), 0);
+            showToast(`✅ 全部爬取完成，新增 ${total} 条`);
+            await loadSources();
+          });
+        }
+
+        async function crawlOne(s) {
+          await withLoading(`爬取「${s.name}」...`, async () => {
+            const r = await api.post(`/crawl/${s.source_id}`);
+            showToast(`✅ ${s.name}：列表 ${r.data.total_listed} / 新增 ${r.data.new_crawled}`);
+            await loadSources();
+          });
+        }
+
+        async function toggleSource(s) {
+          try {
+            await api.patch(`/api/sources/${s.id}`, { enabled: !s.enabled });
+            showToast(`✅ 已${!s.enabled ? '启用' : '停用'}「${s.name}」`);
+            await loadSources();
+          } catch (e) {
+            showToast('❌ 失败: ' + (e.response?.data?.detail || e.message));
+          }
+        }
+
+        async function deleteSource(s) {
+          if (!confirm(`确定删除「${s.name}」？\n会级联删除其所有政策 + 推送日志`)) return;
+          await withLoading('删除中...', async () => {
+            await api.delete(`/api/sources/${s.id}`);
+            showToast('✅ 已删除');
+            await loadSources();
+          });
+        }
+
+        async function loadCompanies2() {
+          try {
+            const r = await api.get('/api/companies');
+            companies.value = r.data;
+          } catch (e) {
+            showToast('❌ 加载公司失败: ' + (e.response?.data?.detail || e.message));
+          }
+        }
+
+        function openEditCompany(c) {
+          // 复用订阅 modal，传 subscription 或 company 模式
+          subModal.isNew = false;
+          subModal.data = {
+            subscription_id: null,
+            company_id: c.id,
+            company_name: c.name,
+            industry: c.industry || '',
+            region: c.region || '',
+            scale: c.scale || '',
+            webhook_url: c.webhook_url || '',
+            push_schedule: c.push_schedule || 'daily',
+            push_time: c.push_time || '08:30',
+            types: [], regions: [], keywords: [],
+            enabled: c.enabled,
+          };
+          subModal.tagsText = (c.tags || []).join(', ');
+          subModal.typesText = '';
+          subModal.regionsText = '';
+          subModal.keywordsText = '';
+          subModal.show = true;
+          // 如果有订阅，拉详情
+          if (c.has_subscription) {
+            api.get('/api/subscriptions').then(r => {
+              const sub = r.data.subscriptions.find(s => s.company_id === c.id);
+              if (sub) {
+                subModal.data.subscription_id = sub.subscription_id;
+                subModal.data.webhook_url = sub.webhook_url || '';
+                subModal.data.push_schedule = sub.push_schedule;
+                subModal.data.push_time = sub.push_time;
+                subModal.data.enabled = sub.enabled;
+                subModal.typesText = (sub.types || []).join(', ');
+                subModal.regionsText = (sub.regions || []).join(', ');
+                subModal.keywordsText = (sub.keywords || []).join(', ');
+              }
+            });
+          }
+        }
+
+        async function deleteCompany(c) {
+          if (!confirm(`确定删除「${c.name}」及其所有订阅/数据？`)) return;
+          await withLoading('删除中...', async () => {
+            // 先删订阅（如果有）
+            if (c.has_subscription) {
+              const r = await api.get('/api/subscriptions');
+              const sub = r.data.subscriptions.find(s => s.company_id === c.id);
+              if (sub) await api.delete(`/api/subscriptions/${sub.subscription_id}`);
+            }
+            // 删公司（级联删剩下的）
+            // 注：Company 暂时没有 DELETE API，需要直接 PATCH 改名 + delete via subscription
+            showToast('⚠️ 请通过订阅 tab 删除');
+          });
+        }
+
+        async function pushSubscriptionByCompany(c) {
+          // 通过 company 找 subscription，再 push
+          const r = await api.get('/api/subscriptions');
+          const sub = r.data.subscriptions.find(s => s.company_id === c.id);
+          if (!sub) { showToast('❌ 该公司无订阅'); return; }
+          await pushNow(sub);
+          await loadCompanies();
         }
 
         // ===== 订阅/公司 Modal =====
@@ -803,14 +960,11 @@
           toggleSub, deleteSub, triggerCrawl, badgeColor,
           subModal, openEditSub, openNewSubModal, saveSubModal, pushNow,
           policyModal, openEditPolicy, savePolicyModal, deletePolicy,
+          openEditCompany, deleteCompany, pushSubscriptionByCompany,
+          crawlOne, toggleSource, deleteSource,
         };
       },
     }).mount('#app');
-    _log('7.mounted');
-    } catch (e) {
-      _log('❌ ' + e.message);
-      console.error('admin.js error:', e);
-    }
   </script>
 </body>
 </html>
