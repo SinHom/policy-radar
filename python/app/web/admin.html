@@ -456,7 +456,18 @@
 
   <!-- Vue 3 UMD (从 window.Vue 解构) -->
   <script>
+    // 调试输出
+    const _dbg = document.createElement('div');
+    _dbg.id = '_dbg';
+    _dbg.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:yellow;color:black;padding:4px;font:12px monospace;white-space:pre;';
+    document.body.appendChild(_dbg);
+    function _log(msg) { _dbg.textContent += msg + ' | '; }
+    _log('1.Vue=' + typeof Vue);
+    _log('2.axios=' + typeof axios);
+
+    try {
     const { createApp, ref, computed, onMounted, reactive } = Vue;
+    _log('3.createApp=' + typeof createApp);
 
     // === axios + token 拦截器 ===
     const TOKEN_KEY = 'policy_radar_token';
@@ -793,6 +804,11 @@
         };
       },
     }).mount('#app');
+    _log('7.mounted');
+    } catch (e) {
+      _log('❌ ' + e.message);
+      console.error('admin.js error:', e);
+    }
   </script>
 </body>
 </html>
