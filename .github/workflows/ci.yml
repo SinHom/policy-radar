@@ -29,13 +29,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-apt-
 
-      - name: Install system deps (Playwright)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 \
-            libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 \
-            libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 \
-            libasound2 libatspi2.0-0
+      # 注：CI 不需要 Playwright（所有测试不爬虫）。
+      # 生产部署用 Dockerfile 装系统依赖；CI 跳过这步。
 
       - name: Setup Miniconda for PyO3 ABI3 forward compat
         run: |
@@ -56,8 +51,7 @@ jobs:
           pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
           # PyO3 0.22 不支持 3.14；CI 用 3.12 不需要 ABI3 hack
           pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
-          playwright install chromium
-          playwright install-deps chromium
+          # playwright 不在 CI 跑（测试都不爬虫）
 
       - name: Lint (compile check)
         run: |
