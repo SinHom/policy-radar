@@ -18,11 +18,13 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from python.app.api.auth import require_admin
 from python.app.api.routes import format_push_message
 from python.app.config import get_settings
 from python.models.base import get_session
+from python.models.company import Company
 from python.models.policy import Policy
 from python.models.push_log import PushLog
 from python.models.subscription import Subscription
@@ -45,21 +47,24 @@ class SubscriptionUpdate(BaseModel):
 async def list_subscriptions(_user: str = Depends(require_admin)) -> dict:
     """列出所有订阅，附带最近推送时间。"""
     async with get_session() as session:
-        subs_q = select(Subscription).order_by(Subscription.id.desc())
+        # 用 selectinload 预加载 company，避免 greenlet 错
+        subs_q = (
+            select(Subscription)
+            .options(selectinload(Subscription.company))
+            .order_by(Subscription.id.desc())
+        )
         subs = (await session.execute(subs_q)).scalars().all()
 
         out = []
         for s in subs:
-            # 通过 subscription_id 直接查 push_logs（最近一次）
-            # 注：PushLog 没有 subscription_id 字段，只能查 company → policy → push_logs
-            # 简化处理：先放过，用公司级时间
-            company_name = s.company.name if s.company else f"company#{s.company_id}"
+            company = s.company
+            company_name = company.name if company else f"company#{s.company_id}"
             out.append({
                 "subscription_id": s.id,
                 "company_id": s.company_id,
                 "company_name": company_name,
-                "industry": s.company.industry if s.company else None,
-                "region": s.company.region if s.company else None,
+                "industry": company.industry if company else None,
+                "region": company.region if company else None,
                 "types": s.types or [],
                 "regions": s.regions or [],
                 "keywords": s.keywords or [],
