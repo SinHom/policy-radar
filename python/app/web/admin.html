@@ -161,7 +161,7 @@
           </div>
           <div v-else class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
             <div v-for="c in companies" :key="c.id" class="px-5 py-3 hover:bg-gray-50">
-              <div class="flex items-center justify-between gap-4">
+              <div class="flex items-center justify-between gap-4 cursor-pointer" @click="toggleCompanyDetail(c)">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 mb-1">
                     <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-sm font-bold">{{ c.name[0] }}</div>
@@ -169,6 +169,9 @@
                     <span v-if="c.has_subscription" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">已订阅</span>
                     <span v-else class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未订阅</span>
                     <span class="text-xs text-gray-400">company #{{ c.id }}</span>
+                    <span class="text-xs text-gray-400">📅 注册：{{ c.created_at ? c.created_at.slice(0,10) : '-' }}</span>
+                    <span v-if="expandedCompany === c.id" class="text-xs text-gray-400">▼</span>
+                    <span v-else class="text-xs text-gray-400">▶</span>
                   </div>
                   <div class="text-xs text-gray-500">
                     行业：{{ c.industry || '-' }} · 地区：{{ c.region || '-' }} · 规模：{{ c.scale || '-' }}
@@ -181,9 +184,27 @@
                   </div>
                 </div>
                 <div class="flex flex-col gap-1 shrink-0">
-                  <button v-if="c.has_subscription" @click="pushSubscriptionByCompany(c)" class="text-xs px-2 py-1 rounded bg-brand-500 text-white hover:bg-brand-600">📤 推送</button>
-                  <button @click="openEditCompany(c)" class="text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50">✏️ 编辑</button>
-                  <button @click="deleteCompany(c)" class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">删除</button>
+                  <button v-if="c.has_subscription" @click.stop="pushSubscriptionByCompany(c)" class="text-xs px-2 py-1 rounded bg-brand-500 text-white hover:bg-brand-600">📤 推送</button>
+                  <button @click.stop="openEditCompany(c)" class="text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50">✏️ 编辑</button>
+                  <button @click.stop="deleteCompany(c)" class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">删除</button>
+                </div>
+              </div>
+              <!-- 展开的详情：推送记录 -->
+              <div v-if="expandedCompany === c.id" class="mt-3 pl-10 border-t border-gray-100 pt-3">
+                <div class="text-xs text-gray-500 mb-2">📤 推送记录（最近 10 条）</div>
+                <div v-if="companyPushLogs[c.id] === undefined" class="text-xs text-gray-400">加载中...</div>
+                <div v-else-if="!companyPushLogs[c.id] || companyPushLogs[c.id].length === 0" class="text-xs text-gray-400">暂无推送记录</div>
+                <div v-else class="space-y-2">
+                  <div v-for="log in companyPushLogs[c.id]" :key="log.id" class="bg-gray-50 rounded p-2 text-xs">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="font-mono text-gray-500">{{ log.created_at ? log.created_at.slice(0,19) : '' }}</span>
+                      <span :class="log.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-1.5 py-0.5 rounded">{{ log.status }}</span>
+                      <span class="text-gray-500">policy #{{ log.policy_id }}</span>
+                      <span class="text-gray-400">→ {{ log.target }}</span>
+                    </div>
+                    <pre class="text-gray-600 whitespace-pre-wrap font-sans text-xs overflow-hidden" style="max-height: 4em;">{{ log.content }}</pre>
+                    <div v-if="log.error_msg" class="text-red-600 mt-1">⚠️ {{ log.error_msg }}</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -760,6 +781,9 @@
         const sourceFilter = reactive({ tag: '', region: '', category: '' });
         // 推送记录筛选
         const pushFilter = reactive({ target: '' });
+        // 公司展开状态 + 推送记录
+        const expandedCompany = ref(null);
+        const companyPushLogs = reactive({});
         const loadingText = ref('处理中...');
 
         const serverOnline = computed(() => health.value?.status === 'ok');
@@ -997,6 +1021,26 @@
           await loadCompanies();
         }
 
+        async function toggleCompanyDetail(c) {
+          if (expandedCompany.value === c.id) {
+            expandedCompany.value = null;
+            return;
+          }
+          expandedCompany.value = c.id;
+          // 加载推送记录：通过 subscription 找 target='sub-{id}'
+          companyPushLogs[c.id] = undefined;
+          try {
+            const r = await api.get('/api/subscriptions');
+            const sub = r.data.subscriptions.find(s => s.company_id === c.id);
+            if (!sub) { companyPushLogs[c.id] = []; return; }
+            const target = `sub-${sub.subscription_id}`;
+            const logs = await api.get('/api/push-logs', { params: { target, limit: 10 } });
+            companyPushLogs[c.id] = logs.data;
+          } catch (e) {
+            companyPushLogs[c.id] = [];
+          }
+        }
+
         // ===== 订阅/公司 Modal =====
         const subModal = reactive({
           show: false,
@@ -1184,9 +1228,11 @@
           policyModal, openEditPolicy, savePolicyModal, deletePolicy,
           openEditCompany, deleteCompany, pushSubscriptionByCompany,
           crawlOne, toggleSource, deleteSource, setSourceFilter,
+          toggleCompanyDetail,
           llmConfig, llmUsage, llmUsageDays, llmUsageBy, llmTestResult,
           loadLLMConfig, saveLLMConfig, testLLMConfig, loadLLMUsage,
           sourceFilter, pushFilter,
+          expandedCompany, companyPushLogs,
         };
       },
     }).mount('#app');
