@@ -68,23 +68,35 @@ class PushLogOut(BaseModel):
 # === 端点 ===
 
 @router.get("/sources")
-async def list_sources():
-    """列出所有政策源。"""
+async def list_sources(tag: str = None, region: str = None, category: str = None):
+    """列出政策源。支持按 tag/region/category 筛选（任一为空则不过滤）。"""
     async with get_session() as session:
         stmt = select(PolicySource).order_by(PolicySource.id)
         rows = (await session.execute(stmt)).scalars().all()
-        return [
-            {
+        out = []
+        for s in rows:
+            tags = s.tags or []
+            if tag and tag not in tags and tag not in (s.category or ""):
+                continue
+            if region and region != s.region:
+                continue
+            if category and category != s.category:
+                continue
+            out.append({
                 "id": s.id,
                 "source_id": s.source_id,
                 "name": s.name,
+                "url": s.url,
                 "category": s.category,
+                "region": s.region,
+                "department": s.department,
+                "tags": tags,
+                "frequency": s.frequency,
                 "enabled": s.enabled,
                 "last_crawl_at": s.last_crawl_at.isoformat() if s.last_crawl_at else None,
                 "last_status": s.last_status,
-            }
-            for s in rows
-        ]
+            })
+        return out
 
 
 @router.post("/crawl/all", response_model=list[CrawlResultOut])

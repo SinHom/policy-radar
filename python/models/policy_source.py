@@ -25,6 +25,9 @@ class PolicySource(Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     category: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)  # 国家级/省级/市级
+    region: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)  # 北京/广东/深圳
+    department: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)  # 发改委/工信局/科技局
+    tags: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)  # 多个标签，如 ["国家级","发改","AI"]
     spider_config: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     frequency: Mapped[str] = mapped_column(String(16), default="daily", nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

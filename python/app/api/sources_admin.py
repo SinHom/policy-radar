@@ -26,8 +26,11 @@ class SourceUpdate(BaseModel):
     name: Optional[str] = None
     url: Optional[str] = None
     category: Optional[str] = None
+    region: Optional[str] = None
+    department: Optional[str] = None
+    tags: Optional[list[str]] = None
     spider_config: Optional[dict] = None
-    frequency: Optional[str] = None  # realtime / daily / weekly
+    frequency: Optional[str] = None
     enabled: Optional[bool] = None
 
 
@@ -37,6 +40,9 @@ class SourceCreate(BaseModel):
     name: str
     url: Optional[str] = None
     category: Optional[str] = None
+    region: Optional[str] = None
+    department: Optional[str] = None
+    tags: list[str] = []
     spider_config: dict = {}
     frequency: str = "daily"
     enabled: bool = True
@@ -59,6 +65,12 @@ async def update_source(
             src.url = body.url
         if body.category is not None:
             src.category = body.category
+        if body.region is not None:
+            src.region = body.region
+        if body.department is not None:
+            src.department = body.department
+        if body.tags is not None:
+            src.tags = body.tags
         if body.spider_config is not None:
             src.spider_config = body.spider_config
         if body.frequency is not None:
@@ -87,6 +99,9 @@ async def create_source(
             name=body.name,
             url=body.url,
             category=body.category,
+            region=body.region,
+            department=body.department,
+            tags=body.tags,
             spider_config=body.spider_config,
             frequency=body.frequency,
             enabled=body.enabled,

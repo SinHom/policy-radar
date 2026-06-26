@@ -41,7 +41,7 @@ async def summarize_one(
     llm: Optional[LLMClient] = None,
 ) -> dict:
     """摘要单条政策。返回写入的 summary_data。"""
-    llm = llm or get_llm_client()
+    llm = llm or await get_llm_client()
 
     async with get_session() as session:
         stmt = select(Policy).where(Policy.id == policy_id)
@@ -103,7 +103,7 @@ async def summarize_pending(
     llm: Optional[LLMClient] = None,
 ) -> list[dict]:
     """批量摘要：取所有未摘要的政策，限流并发。"""
-    llm = llm or get_llm_client()
+    llm = llm or await get_llm_client()
 
     async with get_session() as session:
         stmt = (
