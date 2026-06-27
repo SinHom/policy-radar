@@ -475,6 +475,86 @@
           </div>
         </div>
 
+        <!-- 审计日志 -->
+        <div v-show="currentTab === 'audit'">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-900">📋 审计日志</h2>
+            <div class="flex gap-2">
+              <button @click="loadAuditLogs" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
+            </div>
+          </div>
+          <!-- 统计卡片 -->
+          <div v-if="auditStats" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-3">
+              <div class="text-xs text-indigo-700">总记录</div>
+              <div class="text-2xl font-bold text-indigo-900">{{ auditStats.total || 0 }}</div>
+            </div>
+            <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-3">
+              <div class="text-xs text-emerald-700">今日</div>
+              <div class="text-2xl font-bold text-emerald-900">{{ auditStats.today || 0 }}</div>
+            </div>
+            <div class="bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg p-3">
+              <div class="text-xs text-rose-700">失败操作</div>
+              <div class="text-2xl font-bold text-rose-900">{{ failedAuditCount }}</div>
+            </div>
+            <div class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-3">
+              <div class="text-xs text-amber-700">最常操作</div>
+              <div class="text-lg font-bold text-amber-900">{{ topAction }}</div>
+            </div>
+          </div>
+          <!-- 筛选 -->
+          <div class="flex flex-wrap items-center gap-2 mb-3 text-xs">
+            <span class="text-gray-500">actor：</span>
+            <input v-model="auditFilter.actor" @change="loadAuditLogs" placeholder="admin / anonymous"
+                   class="px-2 py-1 border border-gray-200 rounded text-xs w-32" />
+            <span class="text-gray-500">action：</span>
+            <input v-model="auditFilter.action" @change="loadAuditLogs" placeholder="login / patch / delete"
+                   class="px-2 py-1 border border-gray-200 rounded text-xs w-32" />
+            <span class="text-gray-500">状态：</span>
+            <select v-model="auditFilter.status" @change="loadAuditLogs" class="px-2 py-1 border border-gray-200 rounded text-xs">
+              <option value="">全部</option>
+              <option value="success">成功</option>
+              <option value="failed">失败</option>
+            </select>
+            <span class="text-gray-500 ml-auto">共 {{ auditLogs.length }} 条</span>
+          </div>
+          <!-- 列表 -->
+          <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <table class="w-full text-xs">
+              <thead class="bg-gray-50 text-gray-600">
+                <tr>
+                  <th class="text-left px-3 py-2">时间</th>
+                  <th class="text-left px-3 py-2">操作人</th>
+                  <th class="text-left px-3 py-2">动作</th>
+                  <th class="text-left px-3 py-2">目标</th>
+                  <th class="text-left px-3 py-2">详情</th>
+                  <th class="text-left px-3 py-2">IP</th>
+                  <th class="text-left px-3 py-2">状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="log in auditLogs" :key="log.id" class="border-t border-gray-100 hover:bg-gray-50">
+                  <td class="px-3 py-2 font-mono text-gray-500 whitespace-nowrap">{{ log.created_at ? log.created_at.slice(0,19) : '' }}</td>
+                  <td class="px-3 py-2 font-medium" :class="log.actor === 'anonymous' ? 'text-gray-400' : ''">{{ log.actor }}</td>
+                  <td class="px-3 py-2">
+                    <span class="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-mono">{{ log.action }}</span>
+                  </td>
+                  <td class="px-3 py-2">
+                    <span v-if="log.target_type" class="text-xs text-gray-500">{{ log.target_type }}:</span>
+                    <span class="font-mono">{{ log.target_id || '-' }}</span>
+                  </td>
+                  <td class="px-3 py-2 text-gray-600 max-w-md truncate" :title="log.detail">{{ log.detail }}</td>
+                  <td class="px-3 py-2 font-mono text-gray-400 whitespace-nowrap">{{ log.ip }}</td>
+                  <td class="px-3 py-2">
+                    <span :class="log.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="text-xs px-1.5 py-0.5 rounded">{{ log.status }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-if="auditLogs.length === 0" class="text-center text-gray-400 text-xs py-6">暂无记录</div>
+          </div>
+        </div>
+
         <!-- Push Logs -->
         <div v-show="currentTab === 'push-logs'">
           <div class="flex items-center justify-between mb-4">
@@ -860,6 +940,7 @@
           { key: 'sources',       label: '政策源',     icon: '🕷️' },
           { key: 'push-logs',     label: '推送历史',   icon: '📤' },
           { key: 'llm',           label: 'LLM & 统计', icon: '🤖' },
+          { key: 'audit',         label: '审计',       icon: '📋' },
         ];
         const currentTab = ref('dashboard');
         const health = ref(null);
@@ -885,6 +966,10 @@
         // 公司展开状态 + 推送记录
         const expandedCompany = ref(null);
         const companyPushLogs = reactive({});
+        // 审计日志
+        const auditLogs = ref([]);
+        const auditStats = ref({ total: 0, today: 0, by_action: [] });
+        const auditFilter = reactive({ actor: '', action: '', status: '' });
         const loadingText = ref('处理中...');
 
         const serverOnline = computed(() => health.value?.status === 'ok');
@@ -988,6 +1073,30 @@
             showToast('❌ 读 LLM 用量失败');
           }
         }
+
+        async function loadAuditLogs() {
+          try {
+            const params = { limit: 200 };
+            if (auditFilter.actor) params.actor = auditFilter.actor;
+            if (auditFilter.action) params.action = auditFilter.action;
+            if (auditFilter.status) params.status = auditFilter.status;
+            const r = await api.get('/api/audit/logs', { params });
+            auditLogs.value = r.data.logs || [];
+            const sr = await api.get('/api/audit/stats');
+            auditStats.value = sr.data;
+          } catch (e) {
+            showToast('❌ 读审计失败: ' + (e.response?.data?.detail || e.message));
+          }
+        }
+
+        const failedAuditCount = computed(() =>
+          auditLogs.value.filter(l => l.status === 'failed').length
+        );
+        const topAction = computed(() => {
+          const a = (auditStats.value.by_action || []);
+          if (!a.length) return '-';
+          return a[0].action + ' (' + a[0].count + ')';
+        });
         async function loadPushLogs() { pushLogs.value = (await api.get('/api/push-logs', { params: { limit: 50 } })).data; }
 
         async function toggleSub(s, enable) {
@@ -1398,6 +1507,7 @@
           await loadAll();
           await loadLLMConfig();
           await loadLLMUsage(7);
+          await loadAuditLogs();
           // 每 30s 健康检查
           setInterval(loadHealth, 30000);
         });
@@ -1421,6 +1531,7 @@
           loadLLMConfig, saveLLMConfig, testLLMConfig, loadLLMUsage,
           sourceFilter, pushFilter,
           expandedCompany, companyPushLogs,
+          auditLogs, auditStats, auditFilter, loadAuditLogs, failedAuditCount, topAction,
         };
       },
     }).mount('#app');
