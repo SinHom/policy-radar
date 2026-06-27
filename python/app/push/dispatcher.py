@@ -49,6 +49,19 @@ class TextPayload:
 async def dispatch(content: PushContent, channel: str, config: dict) -> PushResult:
     """根据 channel 选择通道发送。"""
     from python.app.push import feishu, mock, webhook
+    # SSRF 防护：webhook 类通道必校验 URL
+    if channel in ("feishu", "webhook"):
+        webhook_url = (config or {}).get("webhook_url")
+        if webhook_url:
+            from python.app.security import validate_webhook_url
+            import os as _os
+            allow_private = _os.environ.get("ALLOW_PRIVATE_WEBHOOK") == "1"
+            ok, err = validate_webhook_url(webhook_url, allow_private=allow_private)
+            if not ok:
+                return PushResult(
+                    ok=False, channel=channel, target="-",
+                    error=f"webhook URL invalid: {err}",
+                )
     fn = CHANNELS.get(channel)
     if not fn:
         return PushResult(ok=False, channel=channel, target="-", error=f"unknown channel: {channel}")
