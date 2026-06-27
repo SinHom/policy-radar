@@ -22,7 +22,7 @@ BLOCKED_HOSTS = {
 
 
 def is_private_ip(ip: str) -> bool:
-    """判断是否是私有 / 保留 / 回环 IP。"""
+    """判断 IP 是否私有 / 保留 / 回环。非 IP（域名）返回 False（让 resolve_host 处理）。"""
     try:
         addr = ipaddress.ip_address(ip)
         return (
@@ -34,7 +34,7 @@ def is_private_ip(ip: str) -> bool:
             or addr.is_unspecified
         )
     except ValueError:
-        return True  # 无法解析视为不安全
+        return False  # 不是 IP 字面量（是域名），让 resolve_host 去解析
 
 
 def resolve_host(host: str) -> Optional[str]:
