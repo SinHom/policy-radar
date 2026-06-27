@@ -115,6 +115,15 @@ async def update_subscription(
                 raise HTTPException(status_code=400, detail=f"invalid push_channel: {body.push_channel}")
             sub.push_channel = body.push_channel
         if body.push_config is not None:
+            # SSRF 防护：校验所有 push_config 里的 URL
+            import os as _os
+            allow_private = _os.environ.get("ALLOW_PRIVATE_WEBHOOK") == "1"
+            for k, v in (body.push_config or {}).items():
+                if k.endswith("_url") and isinstance(v, str):
+                    from python.app.security import validate_webhook_url
+                    ok, err = validate_webhook_url(v, allow_private=allow_private)
+                    if not ok:
+                        raise HTTPException(status_code=400, detail=f"push_config.{k} invalid: {err}")
             sub.push_config = body.push_config
         await session.commit()
     return {"ok": True, "subscription_id": subscription_id}

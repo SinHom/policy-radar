@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from python.app.api.routes import router as api_router
 from python.app.api.health import router as health_router
 from python.app.api.dashboard import router as dashboard_router
+from python.app.api.audit import router as audit_router
 from python.app.api.auth import router as auth_router
 from python.app.api.companies import router as companies_router
 from python.app.api.llm_admin import router as llm_admin_router
@@ -71,6 +72,8 @@ def create_app() -> FastAPI:
     app.include_router(sources_admin_router, tags=["sources-admin"])
     # llm_admin_router（路径：/api/llm/usage, /api/config/llm）
     app.include_router(llm_admin_router, tags=["llm-admin"])
+    # audit_router（路径：/api/audit/logs, /api/audit/stats）
+    app.include_router(audit_router, tags=["audit"])
     app.include_router(health_router, tags=["ops"])
     app.include_router(dashboard_router, prefix="/api", tags=["dashboard"])
     app.include_router(web_router, tags=["web"])

@@ -10,22 +10,22 @@
 
 ### 1.1 API 鉴权分层
 
-| 端点 | 鉴权 | 当前状态 | 备注 |
+**当前所有 admin 写操作都已有 `require_admin` 鉴权（v0.2+）**。未来扩展对外 API 时，按下表分层：
+
+| 端点类型 | 鉴权 | 当前状态 | 备注 |
 |---|---|---|---|
-| `/api/auth/login` | 公开 | ✅ | 限流防爆破 |
-| `/api/auth/verify` | Bearer token | ✅ | |
-| `/api/auth/logout` | Bearer token | ✅ | |
-| `/api/subscriptions/*` | **未鉴权** | ❌ | **必须加 API key** |
-| `/api/companies/*` | **未鉴权** | ❌ | **必须加 API key** |
-| `/api/policies/*` | **未鉴权** | ❌ | **必须加 API key** |
-| `/api/sources/*` | **未鉴权** | ❌ | **必须加 API key** |
-| `/api/llm/*` | **未鉴权** | ❌ | **必须加 API key** |
-| `/api/config/*` | **未鉴权** | ❌ | **必须加 API key** |
-| `/api/push-logs` | **未鉴权** | ❌ | **必须加 API key** |
-| `/api/dashboard/*` | **未鉴权** | ❌ | **必须加 API key** |
+| `/api/auth/login` | 公开 | ✅ | 失败锁定 10 次/15min |
+| `/api/auth/verify`, `/logout` | Bearer token | ✅ | |
+| `/api/subscriptions/*` PATCH/POST/DELETE | require_admin | ✅ | |
+| `/api/companies/*` POST/PATCH | require_admin | ✅ | |
+| `/api/policies/{id}` PATCH/DELETE | require_admin | ✅ | |
+| `/api/sources/*` POST/PATCH/DELETE | require_admin | ✅ | |
+| `/api/llm/*`, `/api/config/*` | require_admin | ✅ | |
+| `/api/audit/*` | require_admin | ✅ | |
+| `/api/push-logs`, `/api/dashboard/*` GET | require_admin | ✅ | |
+| `/api/crawl/*`, `/api/policies/{id}/push` | require_admin | ✅ | |
 | `/admin`, `/`, `/static/*` | 公开（仅 admin 鉴权） | ✅ | admin 单独鉴权 |
-| MCP SSE 端点 | **未鉴权** | ❌ | **必须加 API key** |
-| `/api/crawl/*`, `/api/policies/{id}/push` | **未鉴权** | ❌ | 写操作必加 |
+| MCP SSE 端点（未来对外） | API key | ❌ 待加 | MCP 接入外部 AI 工具时必加 |
 
 ### 1.2 API key 规范
 
