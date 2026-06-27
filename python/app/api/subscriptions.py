@@ -101,6 +101,14 @@ async def update_subscription(
         if body.push_time is not None:
             sub.push_time = body.push_time
         if body.webhook_url is not None:
+            # SSRF 防护：校验 webhook_url
+            if body.webhook_url:
+                import os as _os
+                from python.app.security import validate_webhook_url
+                allow_private = _os.environ.get("ALLOW_PRIVATE_WEBHOOK") == "1"
+                ok, err = validate_webhook_url(body.webhook_url, allow_private=allow_private)
+                if not ok:
+                    raise HTTPException(status_code=400, detail=f"webhook_url invalid: {err}")
             sub.webhook_url = body.webhook_url or None
         if body.types is not None:
             sub.types = body.types
