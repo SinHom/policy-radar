@@ -17,7 +17,7 @@ import secrets
 import time
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from python.app.config import get_settings
@@ -71,9 +71,10 @@ class MeResponse(BaseModel):
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(req: LoginRequest) -> LoginResponse:
+async def login(req: LoginRequest, request: Request) -> LoginResponse:
     """登录：验证 user/pass，返回 token。"""
     settings = get_settings()
+    ip = request.client.host if request.client else ""
     # 用 constant-time compare 防时序攻击
     user_ok = hmac.compare_digest(req.username, settings.admin_user)
     pass_ok = hmac.compare_digest(req.password, settings.admin_password)
@@ -81,14 +82,23 @@ async def login(req: LoginRequest) -> LoginResponse:
         # 记录失败（IP-based 限流在 middleware 层）
         _FAIL_COUNT[req.username] = _FAIL_COUNT.get(req.username, 0) + 1
         # 超阈值 → 锁定
+        locked = False
         if _FAIL_COUNT[req.username] >= _FAIL_THRESHOLD:
             _FAIL_LOCKED_UNTIL[req.username] = time.time() + _FAIL_LOCK_WINDOW
+            locked = True
             logger.warning("admin login LOCKED: user=%s fail_count=%d lock_until=%s",
                            req.username, _FAIL_COUNT[req.username],
                            _FAIL_LOCKED_UNTIL[req.username])
         else:
             logger.warning("admin login failed: user=%s fail_count=%d",
                            req.username, _FAIL_COUNT[req.username])
+        # 写 audit（登录失败）
+        from python.models.audit_log import write_audit
+        await write_audit(
+            req.username, "login_fail", "auth", req.username,
+            detail=f"fail_count={_FAIL_COUNT[req.username]} locked={locked}",
+            ip=ip, status="failed",
+        )
         # 避免用户名枚举，加固定 sleep
         time.sleep(0.5)
         raise HTTPException(status_code=401, detail="Invalid username or password")
@@ -96,6 +106,12 @@ async def login(req: LoginRequest) -> LoginResponse:
     # 成功 → 清失败计数 + 解锁
     _FAIL_COUNT.pop(req.username, None)
     _FAIL_LOCKED_UNTIL.pop(req.username, None)
+    # 写 audit（登录成功）
+    from python.models.audit_log import write_audit
+    await write_audit(
+        req.username, "login", "auth", req.username,
+        detail=f"login success from {ip}", ip=ip, status="success",
+    )
 
     # 限同用户 token 数（防 token 洪水）
     user_tokens = [(k, v) for k, v in _TOKENS.items() if v.get("user") == req.username]

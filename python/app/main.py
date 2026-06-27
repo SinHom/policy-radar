@@ -49,10 +49,11 @@ def create_app() -> FastAPI:
     # === 安全中间件（顺序很重要：先外后内） ===
     from python.app.middleware import (
         SafeErrorMiddleware, SecurityHeadersMiddleware,
-        BodySizeLimitMiddleware, RateLimitMiddleware,
+        BodySizeLimitMiddleware, RateLimitMiddleware, AuditMiddleware,
     )
     # 最后加的最先执行（middleware stack 是 LIFO）
-    # 实际请求流：SafeError → SecurityHeaders → BodySize → RateLimit → route
+    # 实际请求流：SafeError → SecurityHeaders → BodySize → RateLimit → Audit → route
+    app.add_middleware(AuditMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(BodySizeLimitMiddleware, max_bytes=1 * 1024 * 1024)  # 1MB
     app.add_middleware(SecurityHeadersMiddleware)
