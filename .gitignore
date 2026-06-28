@@ -53,3 +53,8 @@ temp/
 *.bak
 ci_jobs.json
 data/ilink_token.json
+
+# 服务器本地配置（含真实 IP / 私钥路径，绝不入库）
+docs/SERVER-CONNECTION.local.md
+docs/*.local.md
+docs/.server-*.md

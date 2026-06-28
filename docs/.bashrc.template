@@ -1,0 +1,110 @@
+# ============================================================
+# 服务器 Shell 别名（通用模板）
+# 复制到 ~/.bashrc，替换所有 {{PLACEHOLDER}} 为真实值
+# source ~/.bashrc 生效
+#
+# 占位符对照表：
+#   {{ALIAS}}          SSH 别名（短名，如 radar/prod/aliyun）
+#   {{KEY_NAME}}       私钥文件名（~/.ssh/ 下）
+#   {{SSH_USER}}       SSH 登录用户
+#   {{SERVER_IP}}      服务器公网 IP
+# ============================================================
+
+# ============== 基础 SSH ==============
+alias {{ALIAS}}='ssh -i ~/.ssh/{{KEY_NAME}} -o LogLevel=ERROR -o ConnectTimeout=5 {{SSH_USER}}@{{SERVER_IP}}'
+
+# ============== 服务器信息 ==============
+alias {{ALIAS}}-info='{{ALIAS}} "uname -a && cat /etc/os-release | head -3 && uptime"'
+alias {{ALIAS}}-disk='{{ALIAS}} "df -h /"'
+alias {{ALIAS}}-mem='{{ALIAS}} "free -h && nproc"'
+alias {{ALIAS}}-full='{{ALIAS}}-info && echo "" && {{ALIAS}}-disk && echo "" && {{ALIAS}}-mem'
+
+# ============== Docker ==============
+alias {{ALIAS}}-docker='{{ALIAS}} "docker --version && docker compose version"'
+alias {{ALIAS}}-ps='{{ALIAS}} "docker ps -a --format \"table {{.Names}}\t{{.Status}}\t{{.Ports}}\""'
+alias {{ALIAS}}-images='{{ALIAS}} "docker images --format \"table {{.Repository}}\t{{.Tag}}\t{{.Size}}\""'
+alias {{ALIAS}}-df='{{ALIAS}} "docker system df"'
+
+# ============== 端口 / 网络 ==============
+alias {{ALIAS}}-ports='{{ALIAS}} "ss -tlnp 2>/dev/null || netstat -tlnp"'
+alias {{ALIAS}}-ip='{{ALIAS}} "curl -s ifconfig.me && echo && ip addr show 2>/dev/null | grep -E \"inet |inet6\" | grep -v 127.0.0.1 | grep -v ::1"'
+
+# ============== 文件操作 ==============
+# 上传文件到服务器 /tmp/
+{{ALIAS}}-upload() {
+    local src="$1"
+    local dst="${2:-/tmp/}"
+    scp -i ~/.ssh/{{KEY_NAME}} "$src" {{SSH_USER}}@{{SERVER_IP}}:"$dst"
+}
+
+# 下载文件
+{{ALIAS}}-download() {
+    local src="$1"
+    local dst="${2:-.}"
+    scp -i ~/.ssh/{{KEY_NAME}} {{SSH_USER}}@{{SERVER_IP}}:"$src" "$dst"
+}
+
+# ============== 维护 ==============
+# 屏蔽 1Panel banner（省 token，必做）
+alias {{ALIAS}}-hush='{{ALIAS}} "touch ~/.hushlogin && echo banner 已屏蔽"'
+
+# 清理 Docker 垃圾（72h 前的）
+alias {{ALIAS}}-prune='{{ALIAS}} "docker system prune -af --filter \"until=72h\""'
+
+# 进服务器交互
+alias {{ALIAS}}-shell='{{ALIAS}} -t'
+
+# ============== 项目部署（按需复制） ==============
+# 拉取项目
+{{ALIAS}}-clone() {
+    local repo="$1"
+    local dir="${2:-/opt/$(basename $repo .git)}"
+    {{ALIAS}} "git clone $repo $dir"
+}
+
+# 部署一个 docker-compose 项目
+{{ALIAS}}-deploy() {
+    local dir="$1"
+    {{ALIAS}} "cd $dir && docker compose up -d --build"
+}
+
+# 重启一个 docker-compose 项目
+{{ALIAS}}-restart() {
+    local dir="$1"
+    {{ALIAS}} "cd $dir && docker compose restart"
+}
+
+# 看一个项目的日志（自动找容器）
+{{ALIAS}}-logs() {
+    local dir="$1"
+    local tail="${2:-80}"
+    local container=$(ssh -i ~/.ssh/{{KEY_NAME}} -o LogLevel=ERROR {{SSH_USER}}@{{SERVER_IP}} "cd $dir && docker compose ps --services | head -1")
+    {{ALIAS}} "cd $dir && docker compose logs $container --tail $tail -t 2>&1" | grep -vE "^[█ *]+$"
+}
+
+# ============== 帮助 ==============
+{{ALIAS}}-help() {
+    cat <<'EOF'
+可用命令:
+  {{ALIAS}}                 # SSH 上去
+  {{ALIAS}}-info            # 系统信息
+  {{ALIAS}}-disk            # 磁盘
+  {{ALIAS}}-mem             # 内存
+  {{ALIAS}}-full            # 完整系统报告
+  {{ALIAS}}-docker          # Docker 版本
+  {{ALIAS}}-ps              # docker ps
+  {{ALIAS}}-images          # docker images
+  {{ALIAS}}-df              # docker system df
+  {{ALIAS}}-ports           # 监听端口
+  {{ALIAS}}-ip              # 公网/内网 IP
+  {{ALIAS}}-upload <f>      # 上传到 /tmp/
+  {{ALIAS}}-download <f>    # 从服务器下载
+  {{ALIAS}}-hush            # 屏蔽 banner
+  {{ALIAS}}-prune           # 清理 docker 垃圾
+  {{ALIAS}}-shell           # 交互式 SSH
+  {{ALIAS}}-clone <repo>    # 拉项目到 /opt/
+  {{ALIAS}}-deploy <dir>    # docker compose up
+  {{ALIAS}}-restart <dir>   # docker compose restart
+  {{ALIAS}}-logs <dir>      # 看项目日志
+EOF
+}
