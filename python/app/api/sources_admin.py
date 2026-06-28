@@ -1,9 +1,10 @@
 """政策源管理 API（管理后台用）。
 
 端点：
-- PATCH /api/sources/{id}   修改源（启用/停用、改名、调频率等）
-- POST   /api/sources       新建源
-- DELETE /api/sources/{id}  删除源（级联删 policies + push_logs）
+- PATCH /api/sources/{id}            修改源（启用/停用、改名、调频率等）
+- POST   /api/sources                新建源
+- DELETE /api/sources/{id}           删除源（级联删 policies + push_logs）
+- POST   /api/sources/batch-enabled  一键全启用/全停用（body: {enabled: bool, only_id?: [int]})
 """
 
 from __future__ import annotations
@@ -19,6 +20,12 @@ from python.models.base import get_session
 from python.models.policy_source import PolicySource
 
 router = APIRouter(prefix="/api/sources", tags=["sources-admin"])
+
+
+class BatchEnabledBody(BaseModel):
+    """批量启用/停用。"""
+    enabled: bool
+    only_id: Optional[list[int]] = None  # 为空则全表，否则只改指定 id
 
 
 class SourceUpdate(BaseModel):
@@ -124,3 +131,32 @@ async def delete_source(
         await session.delete(src)
         await session.commit()
     return {"ok": True, "source_id_db": source_id_db, "deleted": True}
+
+
+@router.post("/batch-enabled")
+async def batch_enabled(
+    body: BatchEnabledBody,
+    _user: str = Depends(require_admin),
+) -> dict:
+    """一键全启用/停用。only_id 为空时影响所有源。
+
+    返回受影响的 source_id_db 列表，方便前端 toast 反馈。
+    """
+    async with get_session() as session:
+        stmt = select(PolicySource)
+        if body.only_id:
+            stmt = stmt.where(PolicySource.id.in_(body.only_id))
+        rows = (await session.execute(stmt)).scalars().all()
+        affected: list[int] = []
+        for src in rows:
+            if src.enabled != body.enabled:
+                src.enabled = body.enabled
+                affected.append(src.id)
+        await session.commit()
+    return {
+        "ok": True,
+        "enabled": body.enabled,
+        "affected": affected,
+        "total": len(rows),
+        "changed": len(affected),
+    }

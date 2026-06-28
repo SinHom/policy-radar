@@ -429,7 +429,37 @@
 
         <!-- =============== 政策源 =============== -->
         <div v-show="currentTab === 'sources'" class="p-6 space-y-4">
-          <PageToolbar :primary="{ label: '全部爬取', handler: triggerCrawl }" :secondary="{ label: '刷新', handler: loadSources }" />
+          <!-- 工具栏：批量操作（爬取 / 启用 / 停用） -->
+          <div class="flex items-center justify-end gap-2">
+            <span class="text-xs text-ink-500 mr-auto">
+              共 {{ sources.length }} 个源 · <span class="text-ok-600 font-medium">{{ enabledCount }}</span> 启用中
+            </span>
+            <button @click="loadSources"
+                    class="text-sm font-medium px-3 py-1.5 rounded-lg border border-ink-200 text-ink-700 hover:bg-white transition">
+              刷新
+            </button>
+            <button @click="batchEnabled(true)"
+                    :disabled="!enabledCount || sources.length === enabledCount"
+                    :title="(sources.length === enabledCount) ? '已是全部启用' : `当前 ${sources.length - enabledCount} 个停用，点击全部启用`"
+                    class="text-sm font-medium px-3 py-1.5 rounded-lg border border-ok-200 text-ok-700 hover:bg-ok-50 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1.5">
+              <span v-html="iconSvg('enable')" class="w-4 h-4"></span>
+              全启用
+            </button>
+            <button @click="batchEnabled(false)"
+                    :disabled="!enabledCount"
+                    :title="!enabledCount ? '已全部停用' : `当前 ${enabledCount} 个启用，点击全部停用`"
+                    class="text-sm font-medium px-3 py-1.5 rounded-lg border border-ink-300 text-ink-700 hover:bg-ink-50 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1.5">
+              <span v-html="iconSvg('disable')" class="w-4 h-4"></span>
+              全停用
+            </button>
+            <button @click="triggerCrawl"
+                    :disabled="!enabledCount"
+                    :title="!enabledCount ? '没有启用的源' : `爬取 ${enabledCount} 个启用源`"
+                    class="text-sm font-medium px-3 py-1.5 rounded-lg bg-ink-900 text-white hover:bg-ink-800 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1.5">
+              <span v-html="iconSvg('refresh')" class="w-4 h-4"></span>
+              全部爬取
+            </button>
+          </div>
 
           <!-- 筛选器 -->
           <div class="bg-white rounded-xl shadow-card border border-ink-200 px-4 py-3 flex flex-wrap items-center gap-3 text-xs">
@@ -933,6 +963,8 @@ const ICONS = {
   building: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>',
   chart:    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>',
   token:    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>',
+  enable:   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+  disable:  '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>',
 };
 
 function iconSvg(name) {
@@ -1234,6 +1266,7 @@ createApp({
 
     // 源筛选
     const sourceFilter = reactive({ tag: '', region: '', category: '' });
+    const enabledCount = computed(() => sources.value.filter(s => s.enabled).length);
 
     // 公司展开 + 推送记录
     const expandedCompany = ref(null);
@@ -1403,6 +1436,21 @@ createApp({
         const r = await api.post('/crawl/all');
         const total = r.data.reduce((sum, x) => sum + (x.new_crawled || 0), 0);
         showToast(`✓ 全部爬取完成，新增 ${total} 条`);
+        await loadSources();
+      });
+    }
+    async function batchEnabled(enabled) {
+      const total = sources.value.length;
+      const willChange = sources.value.filter(s => s.enabled !== enabled).length;
+      if (!willChange) {
+        showToast(enabled ? '✓ 全部已启用' : '✓ 全部已停用');
+        return;
+      }
+      const verb = enabled ? '启用' : '停用';
+      if (!confirm(`确认${verb}全部 ${willChange} 个${total === willChange ? '' : '待切换的'}源？`)) return;
+      await withLoading(`正在${verb}…`, async () => {
+        const r = await api.post('/api/sources/batch-enabled', { enabled });
+        showToast(`✓ 已${verb} ${r.data.changed} 个源（共扫描 ${r.data.total} 个）`);
         await loadSources();
       });
     }
@@ -1728,7 +1776,7 @@ createApp({
       testPushChannel, onChannelChange,
       policyModal, openEditPolicy, savePolicyModal, deletePolicy,
       openEditCompany, deleteCompany, pushSubscriptionByCompany,
-      crawlOne, toggleSource, deleteSource, setSourceFilter,
+      crawlOne, toggleSource, deleteSource, setSourceFilter, batchEnabled, enabledCount,
       toggleCompanyDetail,
       llmConfig, llmUsage, llmUsageDays, llmUsageBy, llmTestResult,
       loadLLMConfig, saveLLMConfig, testLLMConfig, loadLLMUsage,
