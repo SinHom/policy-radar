@@ -4,821 +4,846 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>政策雷达 · 管理后台</title>
-  <!-- 本地化 CDN 资源（解决国内访问 unpkg/jsdelivr 不稳定） -->
+  <!-- 本地化资源（解决国内访问 unpkg/jsdelivr 不稳定） -->
   <script src="/static/vendor/tailwind.js"></script>
   <script src="/static/vendor/axios.min.js"></script>
   <!-- Vue 3 UMD 版（window.Vue 全局变量，不依赖 ESM module） -->
   <script src="/static/vendor/vue.global.prod.js"></script>
   <script>
+    // ============================================================
+    // 设计 token（颜色 / 字号 / 圆角 / 阴影）— 与项目 brand 蓝对齐
+    // ============================================================
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: { sans: ['"DM Sans"', '"Noto Sans SC"', 'system-ui', 'sans-serif'] },
+          fontFamily: { sans: ['"Inter"', '"DM Sans"', '"Noto Sans SC"', 'system-ui', 'sans-serif'] },
           colors: {
+            // 主色 — brand 蓝（与项目一致）
             brand: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
               400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
               800: '#1e40af', 900: '#1e3a8a' },
-            accent: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' },
+            // 中性灰 — 后台标准
+            ink: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1',
+              400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155',
+              800: '#1e293b', 900: '#0f172a' },
+            // 状态色
+            ok:    { 50:'#f0fdf4', 500:'#22c55e', 600:'#16a34a', 700:'#15803d' },
+            warn:  { 50:'#fffbeb', 500:'#f59e0b', 600:'#d97706', 700:'#b45309' },
+            err:   { 50:'#fef2f2', 500:'#ef4444', 600:'#dc2626', 700:'#b91c1c' },
+            info:  { 50:'#eff6ff', 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8' },
+          },
+          boxShadow: {
+            'card':  '0 1px 2px 0 rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.06)',
+            'pop':   '0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04)',
+            'inset': 'inset 0 1px 0 0 rgba(255, 255, 255, 0.04)',
           },
         },
       },
     };
   </script>
   <style>
-    body { font-family: 'DM Sans', 'Noto Sans SC', system-ui, sans-serif; }
+    body { font-family: 'Inter', 'DM Sans', 'Noto Sans SC', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
     [v-cloak] { display: none; }
-    .tab-active { @apply bg-brand-50 text-brand-700 border-brand-500; }
-    .badge { @apply text-xs px-2 py-0.5 rounded-full font-medium; }
+
+    /* 滚动条美化 */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* 表格行 hover */
+    .data-table tbody tr { transition: background-color 120ms ease; }
+    .data-table tbody tr:hover { background-color: #f8fafc; }
+
+    /* status dot 脉冲 */
+    @keyframes pulse-dot { 0%,100%{ opacity:1; } 50%{ opacity:0.4; } }
+    .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+    /* toast slide-in */
+    @keyframes toast-in { from { transform: translateY(20px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+    .toast-anim { animation: toast-in 200ms ease-out; }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-ink-50 text-ink-800 antialiased">
 
-  <div id="app">
-  <!-- ===== 登录页 ===== -->
-  <div v-if="!authed" class="min-h-screen flex items-center justify-center p-4">
+<div id="app" v-cloak>
+
+  <!-- ============================================================ -->
+  <!-- 登录页                                                       -->
+  <!-- ============================================================ -->
+  <div v-if="!authed" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-ink-50 via-white to-brand-50 p-4">
     <div class="w-full max-w-md">
       <div class="text-center mb-8">
-        <div class="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 items-center justify-center text-white text-2xl font-bold mb-4">雷</div>
-        <h1 class="text-2xl font-semibold text-gray-900">政策雷达</h1>
-        <p class="text-sm text-gray-500 mt-1">管理后台 · 请登录</p>
+        <div class="inline-flex w-14 h-14 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 items-center justify-center text-white text-xl font-semibold mb-4 shadow-pop">雷</div>
+        <h1 class="text-2xl font-semibold text-ink-900 tracking-tight">政策雷达</h1>
+        <p class="text-sm text-ink-500 mt-1.5">运营管理后台</p>
       </div>
-      <form @submit.prevent="doLogin" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
+      <form @submit.prevent="doLogin" class="bg-white rounded-xl shadow-card border border-ink-200 p-6 space-y-4">
         <div>
-          <label class="text-xs font-medium text-gray-700">用户名</label>
-          <input v-model="loginForm.username" type="text" required
-                 class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          <label class="block text-sm font-medium text-ink-700 mb-1.5">账号</label>
+          <input v-model="loginForm.username" type="text" required autocomplete="username"
+                 class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm placeholder:text-ink-400 hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
         </div>
         <div>
-          <label class="text-xs font-medium text-gray-700">密码</label>
-          <input v-model="loginForm.password" type="password" required
-                 class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          <label class="block text-sm font-medium text-ink-700 mb-1.5">密码</label>
+          <input v-model="loginForm.password" type="password" required autocomplete="current-password"
+                 class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm placeholder:text-ink-400 hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
         </div>
-        <div v-if="loginError" class="text-xs text-red-600 bg-red-50 px-3 py-2 rounded">
-          {{ loginError }}
+        <div v-if="loginError" class="flex items-start gap-2 text-sm text-err-700 bg-err-50 px-3 py-2 rounded-lg">
+          <span class="shrink-0 mt-0.5">⚠</span>
+          <span>{{ loginError }}</span>
         </div>
         <button type="submit" :disabled="logging"
-                class="w-full bg-brand-500 hover:bg-brand-600 text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">
-          {{ logging ? '登录中...' : '登 录' }}
+                class="w-full bg-ink-900 hover:bg-ink-800 text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
+          <span v-if="logging" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          <span>{{ logging ? '登录中…' : '登录' }}</span>
         </button>
-        <p class="text-xs text-gray-400 text-center pt-2 border-t border-gray-100">
-          默认账号 admin / policy-radar-2026（可在 .env 修改）
+        <p class="text-xs text-ink-400 text-center pt-3 border-t border-ink-100">
+          默认账号 admin · 密码可在 .env 修改
         </p>
       </form>
     </div>
   </div>
 
-  <!-- ===== 后台主界面（已登录） ===== -->
-  <div v-else>
-    <!-- Top Bar -->
-    <header class="sticky top-0 z-20 bg-white/80 backdrop-blur-lg border-b border-gray-200/60">
-      <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold">雷</div>
-          <div>
-            <h1 class="text-lg font-semibold text-gray-900">政策雷达</h1>
-            <p class="text-xs text-gray-500">管理后台 · 登录用户: {{ currentUser }}</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 text-xs">
-          <span :class="serverOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-1 rounded-full">
-            <span :class="serverOnline ? 'bg-green-500' : 'bg-red-500'" class="inline-block w-1.5 h-1.5 rounded-full mr-1"></span>
-            服务 {{ serverOnline ? '在线' : '离线' }}
-          </span>
-          <span class="text-gray-500 hidden sm:inline">v0.2.0</span>
-          <button @click="doLogout" class="ml-2 px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">登出</button>
+  <!-- ============================================================ -->
+  <!-- 后台主界面（已登录）                                          -->
+  <!-- ============================================================ -->
+  <div v-else class="flex min-h-screen">
+
+    <!-- ========== 左侧 Sidebar ========== -->
+    <aside class="w-60 bg-white border-r border-ink-200 flex flex-col shrink-0">
+      <!-- Logo -->
+      <div class="h-14 px-5 flex items-center gap-2.5 border-b border-ink-200">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-sm font-semibold">雷</div>
+        <div class="leading-tight">
+          <div class="text-sm font-semibold text-ink-900">政策雷达</div>
+          <div class="text-[11px] text-ink-500">Admin Console</div>
         </div>
       </div>
-    </header>
 
-    <div class="max-w-7xl mx-auto px-6 py-6 flex gap-6">
-      <!-- Sidebar -->
-      <nav class="w-48 shrink-0">
-        <ul class="space-y-1 sticky top-20">
-          <li v-for="t in tabs" :key="t.key">
-            <button @click="currentTab = t.key"
-                    :class="currentTab === t.key ? 'bg-brand-50 text-brand-700 border-l-2 border-brand-500' : 'text-gray-600 hover:bg-gray-100'"
-                    class="w-full text-left px-4 py-2.5 rounded-r-lg text-sm font-medium transition-colors">
-              <span class="mr-2">{{ t.icon }}</span>{{ t.label }}
-            </button>
-          </li>
-        </ul>
+      <!-- 导航分组 -->
+      <nav class="flex-1 px-3 py-4 overflow-y-auto">
+        <template v-for="(group, gi) in navGroups" :key="gi">
+          <div class="px-2 mt-4 mb-2 first:mt-0 text-[11px] font-semibold text-ink-400 uppercase tracking-wider">{{ group.title }}</div>
+          <ul class="space-y-0.5">
+            <li v-for="item in group.items" :key="item.key">
+              <button @click="currentTab = item.key"
+                      :class="currentTab === item.key ? 'bg-brand-50 text-brand-700' : 'text-ink-600 hover:bg-ink-50 hover:text-ink-900'"
+                      class="w-full text-left px-2.5 py-1.5 rounded-md text-sm font-medium transition flex items-center justify-between">
+                <span class="flex items-center gap-2.5">
+                  <span v-html="iconSvg(item.icon)" :class="currentTab === item.key ? 'text-brand-600' : 'text-ink-400'" class="w-4 h-4 shrink-0"></span>
+                  <span>{{ item.label }}</span>
+                </span>
+                <span v-if="item.badge && item.badge > 0" class="text-[11px] font-medium px-1.5 py-0.5 rounded bg-err-50 text-err-600 min-w-[20px] text-center">
+                  {{ item.badge > 99 ? '99+' : item.badge }}
+                </span>
+              </button>
+            </li>
+          </ul>
+        </template>
       </nav>
 
-      <main class="flex-1 min-w-0">
-        <!-- Dashboard -->
-        <div v-show="currentTab === 'dashboard'">
-          <h2 class="text-xl font-semibold text-gray-900 mb-4">📊 概览</h2>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div v-for="(v, k) in statCards" :key="k" class="bg-white border border-gray-200 rounded-xl p-4">
-              <div class="text-xs text-gray-500">{{ v.label }}</div>
-              <div class="text-2xl font-semibold mt-1" :class="v.color">{{ v.value }}</div>
+      <!-- 底部用户 -->
+      <div class="border-t border-ink-200 p-3">
+        <div class="flex items-center gap-2.5 px-2 py-1.5">
+          <div class="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-xs font-semibold">{{ currentUser[0]?.toUpperCase() || 'A' }}</div>
+          <div class="flex-1 min-w-0 leading-tight">
+            <div class="text-sm font-medium text-ink-900 truncate">{{ currentUser }}</div>
+            <div class="text-[11px] text-ink-500 flex items-center gap-1">
+              <span :class="serverOnline ? 'bg-ok-500' : 'bg-err-500'" class="w-1.5 h-1.5 rounded-full pulse-dot"></span>
+              <span>{{ serverOnline ? '服务在线' : '服务离线' }}</span>
             </div>
           </div>
-          <div class="bg-white border border-gray-200 rounded-xl p-4 mb-6">
-            <h3 class="text-sm font-semibold text-gray-900 mb-3">漏斗（推送 → 触达 → 咨询）</h3>
-            <div v-if="funnel" class="flex items-end gap-4 h-32">
-              <div v-for="(stage, i) in funnel.funnel" :key="stage.stage" class="flex-1 flex flex-col items-center">
-                <div class="text-xs text-gray-500 mb-1">{{ stage.stage }}</div>
-                <div class="w-full rounded-t-md transition-all"
-                     :class="i === 0 ? 'bg-brand-500' : i === 1 ? 'bg-brand-400' : 'bg-accent-500'"
-                     :style="{ height: (stage.count / Math.max(funnel.funnel[0].count, 1) * 100) + '%' }"></div>
-                <div class="text-lg font-semibold mt-2">{{ stage.count }}</div>
+          <button @click="doLogout" title="登出" class="text-ink-400 hover:text-ink-700 transition p-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ========== 主内容区 ========== -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+      <!-- 顶栏 -->
+      <header class="h-14 bg-white border-b border-ink-200 px-6 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3 min-w-0">
+          <h2 class="text-base font-semibold text-ink-900">{{ pageTitle }}</h2>
+          <span class="text-xs text-ink-400">{{ pageSubtitle }}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="text-ink-500 hover:text-ink-900 p-2 rounded-md hover:bg-ink-50 transition" title="刷新当前页" @click="refreshCurrent">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
+          <span class="text-xs text-ink-400 font-mono">v0.3.0</span>
+        </div>
+      </header>
+
+      <!-- 页面内容（滚动） -->
+      <main class="flex-1 overflow-y-auto">
+
+        <!-- =============== 概览 =============== -->
+        <div v-show="currentTab === 'dashboard'" class="p-6 space-y-6">
+          <!-- KPI 卡片 -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div v-for="kpi in kpiCards" :key="kpi.key" class="bg-white rounded-xl shadow-card border border-ink-200 p-5">
+              <div class="flex items-start justify-between">
+                <div>
+                  <div class="text-xs font-medium text-ink-500 uppercase tracking-wider">{{ kpi.label }}</div>
+                  <div class="mt-2 text-2xl font-semibold text-ink-900 tabular-nums">{{ kpi.value }}</div>
+                </div>
+                <div :class="kpi.iconBg" class="w-9 h-9 rounded-lg flex items-center justify-center">
+                  <span v-html="iconSvg(kpi.icon)" class="w-4 h-4 text-white"></span>
+                </div>
+              </div>
+              <div v-if="kpi.sub" class="mt-3 flex items-center gap-1 text-xs text-ink-500">
+                <span>{{ kpi.sub }}</span>
               </div>
             </div>
           </div>
-          <div v-if="companies?.length" class="bg-white border border-gray-200 rounded-xl p-4">
-            <h3 class="text-sm font-semibold text-gray-900 mb-3">企业概览</h3>
-            <table class="w-full text-sm">
-              <thead class="text-xs text-gray-500">
-                <tr><th class="text-left py-2">企业</th><th class="text-center">行业</th><th class="text-center">地区</th><th class="text-center">订阅</th><th class="text-center">匹配</th><th class="text-center">推送</th></tr>
+
+          <!-- 漏斗 + 健康状态 -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-card border border-ink-200 p-5">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold text-ink-900">推送漏斗</h3>
+                <span class="text-xs text-ink-400">最近 30 天</span>
+              </div>
+              <div v-if="funnel?.funnel?.length" class="space-y-3">
+                <div v-for="(stage, i) in funnel.funnel" :key="stage.stage" class="flex items-center gap-3">
+                  <div class="w-20 text-sm text-ink-600 shrink-0">{{ stage.stage }}</div>
+                  <div class="flex-1 bg-ink-100 rounded-md h-7 relative overflow-hidden">
+                    <div :class="['absolute inset-y-0 left-0 transition-all duration-500',
+                                  i === 0 ? 'bg-brand-500' : i === 1 ? 'bg-brand-400' : 'bg-warn-500']"
+                         :style="{ width: (stage.count / Math.max(funnel.funnel[0].count, 1) * 100) + '%' }"></div>
+                    <div class="absolute inset-0 flex items-center px-3 text-xs font-medium text-ink-700">
+                      {{ stage.count }} 次
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="py-8 text-center text-sm text-ink-400">暂无推送数据</div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-card border border-ink-200 p-5">
+              <h3 class="text-sm font-semibold text-ink-900 mb-4">系统状态</h3>
+              <dl class="space-y-3 text-sm">
+                <div class="flex justify-between"><dt class="text-ink-500">服务</dt><dd :class="serverOnline ? 'text-ok-600' : 'text-err-600'" class="font-medium">{{ serverOnline ? '运行中' : '离线' }}</dd></div>
+                <div class="flex justify-between"><dt class="text-ink-500">数据库</dt><dd class="text-ink-700 font-medium">{{ health?.db || '—' }}</dd></div>
+                <div class="flex justify-between"><dt class="text-ink-500">LLM 模型</dt><dd class="text-ink-700 font-medium font-mono text-xs">{{ health?.llm_model || '—' }}</dd></div>
+                <div class="flex justify-between"><dt class="text-ink-500">时区</dt><dd class="text-ink-700 font-mono text-xs">{{ health?.tz || '—' }}</dd></div>
+              </dl>
+            </div>
+          </div>
+
+          <!-- 最近推送 -->
+          <div class="bg-white rounded-xl shadow-card border border-ink-200">
+            <div class="px-5 py-4 border-b border-ink-100 flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-ink-900">最近推送</h3>
+              <button @click="currentTab = 'push-logs'" class="text-xs text-brand-600 hover:text-brand-700 font-medium">查看全部 →</button>
+            </div>
+            <table class="w-full text-sm data-table">
+              <thead>
+                <tr class="text-left text-xs font-medium text-ink-500 border-b border-ink-100">
+                  <th class="px-5 py-3">时间</th><th class="px-5 py-3">政策</th><th class="px-5 py-3">渠道</th><th class="px-5 py-3">状态</th>
+                </tr>
               </thead>
               <tbody>
-                <tr v-for="c in companies" :key="c.company_id" class="border-t border-gray-100">
-                  <td class="py-2 font-medium">{{ c.name }}</td>
-                  <td class="text-center">{{ c.industry || '-' }}</td>
-                  <td class="text-center">{{ c.region || '-' }}</td>
-                  <td class="text-center">{{ c.subscriptions }}</td>
-                  <td class="text-center">{{ c.matches }}</td>
-                  <td class="text-center">{{ c.pushed }}</td>
+                <tr v-for="log in recentPushes" :key="log.id" class="border-b border-ink-100 last:border-0">
+                  <td class="px-5 py-3 font-mono text-xs text-ink-500 whitespace-nowrap">{{ (log.created_at || '').slice(0, 19) }}</td>
+                  <td class="px-5 py-3 text-ink-800 truncate max-w-xs">{{ log.content?.slice(0, 40) || '—' }}</td>
+                  <td class="px-5 py-3 text-ink-600 font-mono text-xs">{{ log.target || '—' }}</td>
+                  <td class="px-5 py-3"><StatusBadge :status="log.status" /></td>
                 </tr>
+                <tr v-if="!recentPushes.length"><td colspan="4" class="px-5 py-8 text-center text-ink-400 text-sm">暂无推送</td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Companies (MCP 用户) -->
-        <div v-show="currentTab === 'companies'">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold text-gray-900">🏢 MCP 用户（公司）</h2>
-            <div class="flex gap-2">
-              <button @click="openNewSubModal" class="text-sm px-3 py-1.5 rounded-lg bg-brand-500 text-white hover:bg-brand-600">+ 新建用户</button>
-              <button @click="loadCompanies" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
-            </div>
+        <!-- =============== MCP 用户 =============== -->
+        <div v-show="currentTab === 'companies'" class="p-6 space-y-4">
+          <PageToolbar :search="companyQuery" @update:search="companyQuery = $event" @search="loadCompanies"
+                       :primary="{ label: '新建用户', handler: openNewSubModal }" :secondary="{ label: '刷新', handler: loadCompanies }" />
+          <div class="text-xs text-ink-500">共 {{ companiesCount }} 个公司 · {{ subscribedCount }} 个有订阅</div>
+
+          <div class="bg-white rounded-xl shadow-card border border-ink-200 overflow-hidden">
+            <table class="w-full text-sm data-table">
+              <thead>
+                <tr class="text-left text-xs font-medium text-ink-500 bg-ink-50 border-b border-ink-200">
+                  <th class="px-5 py-3 w-10"></th>
+                  <th class="px-5 py-3">公司</th>
+                  <th class="px-5 py-3">行业</th>
+                  <th class="px-5 py-3">地区</th>
+                  <th class="px-5 py-3">订阅</th>
+                  <th class="px-5 py-3">注册时间</th>
+                  <th class="px-5 py-3 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="c in companiesList" :key="c.id">
+                  <tr class="border-b border-ink-100 last:border-0">
+                    <td class="px-5 py-3">
+                      <button @click="toggleCompanyDetail(c)" class="text-ink-400 hover:text-ink-700">
+                        <svg class="w-4 h-4 transition-transform" :class="expandedCompany === c.id ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                      </button>
+                    </td>
+                    <td class="px-5 py-3">
+                      <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-100 to-brand-200 text-brand-700 flex items-center justify-center text-xs font-semibold">{{ c.name[0] }}</div>
+                        <div>
+                          <div class="font-medium text-ink-900">{{ c.name }}</div>
+                          <div v-if="c.tags?.length" class="text-[11px] text-ink-400 mt-0.5">#{{ c.tags.slice(0, 2).join(' #') }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-5 py-3 text-ink-600">{{ c.industry || '—' }}</td>
+                    <td class="px-5 py-3 text-ink-600">{{ c.region || '—' }}</td>
+                    <td class="px-5 py-3">
+                      <StatusBadge :status="c.has_subscription ? 'success' : 'neutral'" :label="c.has_subscription ? '已订阅' : '未订阅'" />
+                    </td>
+                    <td class="px-5 py-3 text-ink-500 text-xs font-mono whitespace-nowrap">{{ (c.created_at || '').slice(0, 10) || '—' }}</td>
+                    <td class="px-5 py-3 text-right">
+                      <div class="flex items-center justify-end gap-1.5">
+                        <button v-if="c.has_subscription" @click="pushSubscriptionByCompany(c)" class="text-xs font-medium px-2.5 py-1 rounded-md bg-brand-500 text-white hover:bg-brand-600 transition">立即推送</button>
+                        <button @click="openEditCompany(c)" class="text-xs font-medium px-2.5 py-1 rounded-md border border-ink-200 text-ink-600 hover:bg-ink-50 transition">编辑</button>
+                        <button @click="deleteCompany(c)" class="text-xs font-medium px-2.5 py-1 rounded-md border border-err-200 text-err-600 hover:bg-err-50 transition">删除</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="expandedCompany === c.id" class="bg-ink-50/50">
+                    <td colspan="7" class="px-5 py-4">
+                      <div class="text-xs font-medium text-ink-500 mb-2">最近推送记录</div>
+                      <div v-if="!companyPushLogs[c.id]" class="text-xs text-ink-400">加载中…</div>
+                      <div v-else-if="!companyPushLogs[c.id].length" class="text-xs text-ink-400">暂无</div>
+                      <div v-else class="space-y-1.5">
+                        <div v-for="log in companyPushLogs[c.id]" :key="log.id" class="bg-white rounded-md border border-ink-200 px-3 py-2 flex items-start gap-3">
+                          <StatusBadge :status="log.status" />
+                          <div class="flex-1 min-w-0">
+                            <div class="text-xs font-mono text-ink-500">{{ (log.created_at || '').slice(0, 19) }} · policy #{{ log.policy_id }}</div>
+                            <div class="text-xs text-ink-700 truncate">{{ log.content?.slice(0, 80) }}</div>
+                            <div v-if="log.error_msg" class="text-xs text-err-600 mt-0.5">{{ log.error_msg }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+                <tr v-if="!companiesList.length"><td colspan="7" class="px-5 py-12 text-center text-ink-400 text-sm">暂无数据 · 点上方「新建用户」</td></tr>
+              </tbody>
+            </table>
           </div>
-          <div class="text-xs text-gray-500 mb-2">共 {{ (companies?.count ?? companies?.length ?? 0) }} 个公司 · {{ (companies?.filter?.(c => c.has_subscription) || []).length || 0 }} 个有订阅</div>
-          <div v-if="!companies || companies.length === 0" class="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-400 text-sm">
-            暂无公司 · 点上方「+ 新建用户」添加
-          </div>
-          <div v-else class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
-            <div v-for="c in companies" :key="c.id" class="px-5 py-3 hover:bg-gray-50">
-              <div class="flex items-center justify-between gap-4 cursor-pointer" @click="toggleCompanyDetail(c)">
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 mb-1">
-                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-sm font-bold">{{ c.name[0] }}</div>
-                    <span class="font-medium text-gray-900 text-sm">{{ c.name }}</span>
-                    <span v-if="c.has_subscription" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">已订阅</span>
-                    <span v-else class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未订阅</span>
-                    <span class="text-xs text-gray-400">company #{{ c.id }}</span>
-                    <span class="text-xs text-gray-400">📅 注册：{{ c.created_at ? c.created_at.slice(0,10) : '-' }}</span>
-                    <span v-if="expandedCompany === c.id" class="text-xs text-gray-400">▼</span>
-                    <span v-else class="text-xs text-gray-400">▶</span>
-                  </div>
-                  <div class="text-xs text-gray-500">
-                    行业：{{ c.industry || '-' }} · 地区：{{ c.region || '-' }} · 规模：{{ c.scale || '-' }}
-                  </div>
-                  <div v-if="c.tags && c.tags.length" class="text-xs text-gray-500 mt-1">
-                    标签：<span v-for="t in c.tags" :key="t" class="inline-block bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs mr-1">{{ t }}</span>
-                  </div>
-                  <div v-if="c.has_subscription" class="text-xs text-gray-400 mt-1">
-                    推送：{{ c.push_schedule }} · {{ c.push_time }} · 上次：{{ c.last_push_at || '从未' }}
-                  </div>
-                </div>
-                <div class="flex flex-col gap-1 shrink-0">
-                  <button v-if="c.has_subscription" @click.stop="pushSubscriptionByCompany(c)" class="text-xs px-2 py-1 rounded bg-brand-500 text-white hover:bg-brand-600">📤 推送</button>
-                  <button @click.stop="openEditCompany(c)" class="text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50">✏️ 编辑</button>
-                  <button @click.stop="deleteCompany(c)" class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">删除</button>
-                </div>
-              </div>
-              <!-- 展开的详情：推送记录 -->
-              <div v-if="expandedCompany === c.id" class="mt-3 pl-10 border-t border-gray-100 pt-3">
-                <div class="text-xs text-gray-500 mb-2">📤 推送记录（最近 10 条）</div>
-                <div v-if="companyPushLogs[c.id] === undefined" class="text-xs text-gray-400">加载中...</div>
-                <div v-else-if="!companyPushLogs[c.id] || companyPushLogs[c.id].length === 0" class="text-xs text-gray-400">暂无推送记录</div>
-                <div v-else class="space-y-2">
-                  <div v-for="log in companyPushLogs[c.id]" :key="log.id" class="bg-gray-50 rounded p-2 text-xs">
-                    <div class="flex items-center gap-2 mb-1">
-                      <span class="font-mono text-gray-500">{{ log.created_at ? log.created_at.slice(0,19) : '' }}</span>
-                      <span :class="log.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-1.5 py-0.5 rounded">{{ log.status }}</span>
-                      <span class="text-gray-500">policy #{{ log.policy_id }}</span>
-                      <span class="text-gray-400">→ {{ log.target }}</span>
+        </div>
+
+        <!-- =============== 订阅 =============== -->
+        <div v-show="currentTab === 'subscriptions'" class="p-6 space-y-4">
+          <PageToolbar :primary="{ label: '新建订阅', handler: openNewSubModal }" :secondary="{ label: '刷新', handler: loadSubs }" />
+          <div class="text-xs text-ink-500">共 {{ subs.length }} 条订阅</div>
+
+          <div class="bg-white rounded-xl shadow-card border border-ink-200 overflow-hidden">
+            <table class="w-full text-sm data-table">
+              <thead>
+                <tr class="text-left text-xs font-medium text-ink-500 bg-ink-50 border-b border-ink-200">
+                  <th class="px-5 py-3">公司</th>
+                  <th class="px-5 py-3">关注</th>
+                  <th class="px-5 py-3">渠道</th>
+                  <th class="px-5 py-3">频率</th>
+                  <th class="px-5 py-3">状态</th>
+                  <th class="px-5 py-3">最近推送</th>
+                  <th class="px-5 py-3 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="s in subs" :key="s.subscription_id" class="border-b border-ink-100 last:border-0">
+                  <td class="px-5 py-3">
+                    <div class="font-medium text-ink-900">{{ s.company_name }}</div>
+                    <div class="text-[11px] text-ink-400">#{{ s.subscription_id }}</div>
+                  </td>
+                  <td class="px-5 py-3">
+                    <div class="flex flex-wrap gap-1">
+                      <span v-for="t in (s.types || []).slice(0, 3)" :key="t" class="text-[11px] px-1.5 py-0.5 rounded bg-ink-100 text-ink-700">{{ t }}</span>
+                      <span v-if="(s.types || []).length > 3" class="text-[11px] text-ink-400">+{{ s.types.length - 3 }}</span>
                     </div>
-                    <pre class="text-gray-600 whitespace-pre-wrap font-sans text-xs overflow-hidden" style="max-height: 4em;">{{ log.content }}</pre>
-                    <div v-if="log.error_msg" class="text-red-600 mt-1">⚠️ {{ log.error_msg }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+                  </td>
+                  <td class="px-5 py-3"><ChannelBadge :channel="s.push_channel" /></td>
+                  <td class="px-5 py-3 text-xs text-ink-600">{{ scheduleLabel(s.push_schedule) }} · {{ s.push_time }}</td>
+                  <td class="px-5 py-3"><StatusBadge :status="s.enabled ? 'success' : 'neutral'" :label="s.enabled ? '启用' : '暂停'" /></td>
+                  <td class="px-5 py-3 text-xs text-ink-500 font-mono whitespace-nowrap">{{ s.last_push_at || '从未' }}</td>
+                  <td class="px-5 py-3 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button @click="pushNow(s)" class="text-xs font-medium px-2.5 py-1 rounded-md bg-brand-500 text-white hover:bg-brand-600 transition">推送</button>
+                      <button @click="openEditSub(s)" class="text-xs font-medium px-2.5 py-1 rounded-md border border-ink-200 text-ink-600 hover:bg-ink-50 transition">编辑</button>
+                      <button @click="toggleSub(s, !s.enabled)" :class="s.enabled ? 'border border-ink-200 text-ink-600 hover:bg-ink-50' : 'bg-ok-500 text-white hover:bg-ok-600'" class="text-xs font-medium px-2.5 py-1 rounded-md transition">{{ s.enabled ? '暂停' : '启用' }}</button>
+                      <button @click="deleteSub(s)" class="text-xs font-medium px-2.5 py-1 rounded-md border border-err-200 text-err-600 hover:bg-err-50 transition">删除</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="!subs.length"><td colspan="7" class="px-5 py-12 text-center text-ink-400 text-sm">暂无订阅</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <!-- Subscriptions -->
-        <div v-show="currentTab === 'subscriptions'">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold text-gray-900">📋 订阅管理</h2>
-            <div class="flex gap-2">
-              <button @click="openNewSubModal" class="text-sm px-3 py-1.5 rounded-lg bg-brand-500 text-white hover:bg-brand-600">+ 新建订阅</button>
-              <button @click="loadSubscriptions" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
-            </div>
-          </div>
-          <div v-if="subs.length === 0" class="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-400 text-sm">
-            暂无订阅 · 点上方「+ 新建订阅」或通过 MCP 的 start_setup 创建
-          </div>
-          <div v-else class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
-            <div v-for="s in subs" :key="s.subscription_id" class="px-5 py-4 hover:bg-gray-50">
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex-1 min-w-0 cursor-pointer" @click="openEditSub(s)">
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="font-medium text-gray-900">{{ s.company_name }}</span>
-                    <span :class="s.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'" class="text-xs px-2 py-0.5 rounded-full font-medium">
-                      {{ s.enabled ? '启用' : '暂停' }}
-                    </span>
-                    <span class="text-xs text-gray-400">sub #{{ s.subscription_id }}</span>
-                    <span v-if="s.industry" class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{{ s.industry }}</span>
-                    <span v-if="s.region" class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">{{ s.region }}</span>
-                    <span :class="channelBadge(s.push_channel)" class="text-xs px-2 py-0.5 rounded-full font-medium">
-                      {{ channelIcon(s.push_channel) }} {{ channelLabel(s.push_channel) }}
-                    </span>
-                  </div>
-                  <div class="text-xs text-gray-500">
-                    关注：{{ (s.types || []).join('、') || '-' }} · 地区：{{ (s.regions || []).join('、') || '-' }} · 频率：{{ s.push_schedule }} · 时间：{{ s.push_time }}
-                  </div>
-                  <div v-if="s.push_channel === 'feishu' && s.push_config && s.push_config.webhook_url" class="text-xs text-blue-600 mt-1 truncate">
-                    🦊 飞书: {{ s.push_config.webhook_url.slice(0, 50) }}...
-                  </div>
-                  <div v-else-if="s.push_channel === 'webhook' && s.push_config && s.push_config.webhook_url" class="text-xs text-gray-400 mt-1 truncate">
-                    🔗 webhook: {{ s.push_config.webhook_url.slice(0, 60) }}
-                  </div>
-                  <div v-else class="text-xs text-gray-400 mt-1 truncate">🧪 mock 通道（仅本地）</div>
-                  <div class="text-xs text-gray-400">最近推送：{{ s.last_push_at || '从未' }}</div>
-                </div>
-                <div class="flex flex-col gap-1 shrink-0">
-                  <button @click="pushNow(s)" class="text-xs px-2 py-1 rounded bg-brand-500 text-white hover:bg-brand-600">📤 立即推送</button>
-                  <button @click="openEditSub(s)" class="text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50">✏️ 编辑</button>
-                  <button v-if="s.enabled" @click="toggleSub(s, false)" class="text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50">暂停</button>
-                  <button v-else @click="toggleSub(s, true)" class="text-xs px-2 py-1 rounded bg-green-500 text-white hover:bg-green-600">启用</button>
-                  <button @click="deleteSub(s)" class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">删除</button>
-                </div>
-              </div>
-            </div>
+        <!-- =============== 政策库 =============== -->
+        <div v-show="currentTab === 'policies'" class="p-6 space-y-4">
+          <PageToolbar :search="policyQuery" @update:search="policyQuery = $event" @search="loadPolicies"
+                       :primary="{ label: '搜索', handler: loadPolicies }" :secondary="{ label: '爬取', handler: triggerCrawl }" />
+          <div class="text-xs text-ink-500">共 {{ policies.length }} 条政策</div>
+
+          <div class="bg-white rounded-xl shadow-card border border-ink-200 overflow-hidden">
+            <table class="w-full text-sm data-table">
+              <thead>
+                <tr class="text-left text-xs font-medium text-ink-500 bg-ink-50 border-b border-ink-200">
+                  <th class="px-5 py-3">类型</th>
+                  <th class="px-5 py-3">标题</th>
+                  <th class="px-5 py-3">源</th>
+                  <th class="px-5 py-3">关键信息</th>
+                  <th class="px-5 py-3 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in policies" :key="p.id" class="border-b border-ink-100 last:border-0">
+                  <td class="px-5 py-3"><TypeBadge :type="p.summary_type" /></td>
+                  <td class="px-5 py-3 max-w-md">
+                    <div class="font-medium text-ink-900 line-clamp-1">{{ p.title }}</div>
+                    <div class="text-xs text-ink-500 line-clamp-1 mt-0.5">{{ p.summary || '(无摘要)' }}</div>
+                  </td>
+                  <td class="px-5 py-3 text-xs text-ink-500 font-mono">#{{ p.id }} · {{ p.source_id }}</td>
+                  <td class="px-5 py-3">
+                    <div class="flex flex-col gap-0.5 text-xs">
+                      <span v-if="p.amount" class="text-ok-700 font-medium">{{ p.amount }}</span>
+                      <span v-if="p.deadline" class="text-warn-700">{{ p.deadline }} 截止</span>
+                    </div>
+                  </td>
+                  <td class="px-5 py-3 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button @click="openEditPolicy(p)" class="text-xs font-medium px-2.5 py-1 rounded-md border border-ink-200 text-ink-600 hover:bg-ink-50 transition">编辑</button>
+                      <button @click="deletePolicy(p)" class="text-xs font-medium px-2.5 py-1 rounded-md border border-err-200 text-err-600 hover:bg-err-50 transition">删除</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="!policies.length"><td colspan="5" class="px-5 py-12 text-center text-ink-400 text-sm">暂无政策</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <!-- Policies -->
-        <div v-show="currentTab === 'policies'">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold text-gray-900">📜 政策库</h2>
-            <div class="flex gap-2">
-              <input v-model="policyQuery" @keyup.enter="loadPolicies" placeholder="搜索关键词..."
-                     class="text-sm px-3 py-1.5 border border-gray-200 rounded-lg" />
-              <button @click="loadPolicies" class="text-sm px-3 py-1.5 rounded-lg bg-brand-500 text-white hover:bg-brand-600">搜索</button>
-              <button @click="triggerCrawl" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">爬取</button>
-            </div>
-          </div>
-          <div class="text-xs text-gray-500 mb-2">共 {{ policies.length }} 条</div>
-          <div class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
-            <div v-for="p in policies" :key="p.id" class="px-5 py-3 hover:bg-gray-50">
-              <div class="flex items-center gap-2 mb-1">
-                <span :class="badgeColor(p.summary_type)" class="text-xs px-2 py-0.5 rounded-full font-medium">{{ p.summary_type || '其他' }}</span>
-                <span class="text-xs text-gray-400">#{{ p.id }} · {{ p.source_id }}</span>
-                <span v-if="p.deadline" class="text-xs text-orange-600">⏰ {{ p.deadline }}</span>
-                <span v-if="p.amount" class="text-xs text-green-600">💰 {{ p.amount }}</span>
-                <span class="ml-auto flex gap-1">
-                  <button @click="openEditPolicy(p)" class="text-xs px-2 py-0.5 rounded border border-gray-200 text-gray-600 hover:bg-gray-50">✏️ 编辑</button>
-                  <button @click="deletePolicy(p)" class="text-xs px-2 py-0.5 rounded border border-red-200 text-red-600 hover:bg-red-50">🗑 删除</button>
-                </span>
-              </div>
-              <h3 class="text-sm font-medium text-gray-900">{{ p.title }}</h3>
-              <p class="text-xs text-gray-600 line-clamp-2 mt-1">{{ p.summary || '(无摘要)' }}</p>
-            </div>
-          </div>
-        </div>
+        <!-- =============== 政策源 =============== -->
+        <div v-show="currentTab === 'sources'" class="p-6 space-y-4">
+          <PageToolbar :primary="{ label: '全部爬取', handler: triggerCrawl }" :secondary="{ label: '刷新', handler: loadSources }" />
 
-        <!-- Sources -->
-        <div v-show="currentTab === 'sources'">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold text-gray-900">🕷️ 政策源</h2>
-            <div class="flex gap-2">
-              <button @click="triggerCrawl" class="text-sm px-3 py-1.5 rounded-lg bg-brand-500 text-white hover:bg-brand-600">🚀 全部爬取</button>
-              <button @click="loadSources" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
-            </div>
-          </div>
           <!-- 筛选器 -->
-          <div class="flex flex-wrap items-center gap-2 mb-3 text-xs">
-            <span class="text-gray-500">层级：</span>
-            <button @click="setSourceFilter('category','')" :class="!sourceFilter.category ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'" class="px-2 py-1 rounded">全部</button>
-            <button v-for="c in ['国家级','省级','市级','区级']" :key="c" @click="setSourceFilter('category',c)"
-                    :class="sourceFilter.category === c ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                    class="px-2 py-1 rounded">{{ c }}</button>
-            <span class="text-gray-500 ml-3">委办：</span>
-            <button @click="setSourceFilter('tag','')" :class="!sourceFilter.tag ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'" class="px-2 py-1 rounded">全部</button>
-            <button v-for="d in ['发改','工信','科技','财政','人社','税务','商务','环保']" :key="d" @click="setSourceFilter('tag',d)"
-                    :class="sourceFilter.tag === d ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                    class="px-2 py-1 rounded">{{ d }}</button>
-            <span class="text-gray-500 ml-3">地区：</span>
-            <input v-model="sourceFilter.region" @change="loadSources" placeholder="广东/深圳..."
-                   class="px-2 py-1 border border-gray-200 rounded text-xs w-20" />
-            <span class="text-gray-500 ml-auto">共 {{ sources.length }} 个源</span>
-          </div>
-          <div class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
-            <div v-for="s in sources" :key="s.id" class="px-5 py-3">
-              <div class="flex items-center justify-between gap-4">
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 mb-1 flex-wrap">
-                    <span class="font-medium text-gray-900 text-sm">{{ s.name }}</span>
-                    <span class="text-xs text-gray-400">{{ s.source_id }}</span>
-                    <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{{ s.category || '其他' }}</span>
-                    <span v-if="s.region" class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">{{ s.region }}</span>
-                    <span v-if="s.department" class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full">{{ s.department }}</span>
-                    <span v-for="t in (s.tags || []).filter(x => !['国家级','省级','市级','区级'].includes(x) && !['发改','工信','科技','财政','人社','税务','商务','环保'].includes(x))" :key="t"
-                          class="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">#{{ t }}</span>
-                    <span :class="s.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'" class="text-xs px-2 py-0.5 rounded-full font-medium">
-                      {{ s.enabled ? '启用' : '停用' }}
-                    </span>
-                    <span v-if="s.last_status === 'failed'" class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">爬取失败</span>
-                    <span v-else-if="s.last_status === 'ok'" class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">爬取成功</span>
-                  </div>
-                  <div class="text-xs text-gray-500 truncate">{{ s.url || '(无 URL)' }}</div>
-                  <div class="text-xs text-gray-400 mt-1">频率：{{ s.frequency }} · 最后爬取：{{ s.last_crawl_at || '从未' }}</div>
-                </div>
-                <div class="flex flex-col gap-1 shrink-0">
-                  <button @click="crawlOne(s)" class="text-xs px-2 py-1 rounded bg-brand-500 text-white hover:bg-brand-600">🚀 爬取</button>
-                  <button @click="toggleSource(s)" :class="s.enabled ? 'text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:bg-gray-50' : 'text-xs px-2 py-1 rounded bg-green-500 text-white hover:bg-green-600'">
-                    {{ s.enabled ? '停用' : '启用' }}
-                  </button>
-                  <button @click="deleteSource(s)" class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">删除</button>
-                </div>
-              </div>
+          <div class="bg-white rounded-xl shadow-card border border-ink-200 px-4 py-3 flex flex-wrap items-center gap-3 text-xs">
+            <div class="flex items-center gap-1.5">
+              <span class="text-ink-500 font-medium">层级</span>
+              <FilterChip v-for="c in ['全部','国家级','省级','市级','区级']" :key="c" :label="c" :active="(sourceFilter.category || '全部') === c" @click="setSourceFilter('category', c === '全部' ? '' : c)" />
             </div>
+            <div class="w-px h-4 bg-ink-200"></div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-ink-500 font-medium">委办</span>
+              <FilterChip v-for="d in ['全部','发改','工信','科技','财政','人社','税务','商务','环保']" :key="d" :label="d" :active="(sourceFilter.tag || '全部') === d" @click="setSourceFilter('tag', d === '全部' ? '' : d)" />
+            </div>
+            <div class="w-px h-4 bg-ink-200"></div>
+            <input v-model="sourceFilter.region" @change="loadSources" placeholder="地区筛选…"
+                   class="px-2.5 py-1 border border-ink-200 rounded-md text-xs w-24 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500" />
+            <span class="ml-auto text-ink-500">共 {{ sources.length }} 个源</span>
+          </div>
+
+          <div class="bg-white rounded-xl shadow-card border border-ink-200 overflow-hidden">
+            <table class="w-full text-sm data-table">
+              <thead>
+                <tr class="text-left text-xs font-medium text-ink-500 bg-ink-50 border-b border-ink-200">
+                  <th class="px-5 py-3">名称</th>
+                  <th class="px-5 py-3">层级 / 委办</th>
+                  <th class="px-5 py-3">地区</th>
+                  <th class="px-5 py-3">状态</th>
+                  <th class="px-5 py-3">最近爬取</th>
+                  <th class="px-5 py-3 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="s in sources" :key="s.id" class="border-b border-ink-100 last:border-0">
+                  <td class="px-5 py-3">
+                    <div class="font-medium text-ink-900">{{ s.name }}</div>
+                    <div class="text-[11px] text-ink-400 truncate max-w-xs">{{ s.url }}</div>
+                  </td>
+                  <td class="px-5 py-3">
+                    <div class="flex flex-wrap gap-1">
+                      <span class="text-[11px] px-1.5 py-0.5 rounded bg-brand-50 text-brand-700">{{ s.category || '其他' }}</span>
+                      <span v-if="s.department" class="text-[11px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700">{{ s.department }}</span>
+                    </div>
+                  </td>
+                  <td class="px-5 py-3 text-xs text-ink-600">{{ s.region || '—' }}</td>
+                  <td class="px-5 py-3"><StatusBadge :status="s.last_status || 'neutral'" :label="statusLabel(s)" /></td>
+                  <td class="px-5 py-3 text-xs text-ink-500 font-mono whitespace-nowrap">{{ s.last_crawl_at || '从未' }}</td>
+                  <td class="px-5 py-3 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button @click="crawlOne(s)" class="text-xs font-medium px-2.5 py-1 rounded-md bg-brand-500 text-white hover:bg-brand-600 transition">爬取</button>
+                      <button @click="toggleSource(s)" :class="s.enabled ? 'border border-ink-200 text-ink-600 hover:bg-ink-50' : 'bg-ok-500 text-white hover:bg-ok-600'" class="text-xs font-medium px-2.5 py-1 rounded-md transition">{{ s.enabled ? '停用' : '启用' }}</button>
+                      <button @click="deleteSource(s)" class="text-xs font-medium px-2.5 py-1 rounded-md border border-err-200 text-err-600 hover:bg-err-50 transition">删除</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="!sources.length"><td colspan="6" class="px-5 py-12 text-center text-ink-400 text-sm">暂无源</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <!-- LLM & Token 统计 -->
-        <div v-show="currentTab === 'llm'">
-          <h2 class="text-xl font-semibold text-gray-900 mb-4">🤖 LLM 配置 & Token 消耗</h2>
+        <!-- =============== LLM 配置 + 用量 =============== -->
+        <div v-show="currentTab === 'llm'" class="p-6 space-y-6">
 
           <!-- LLM 配置 -->
-          <div class="bg-white border border-gray-200 rounded-xl p-5 mb-6">
-            <h3 class="text-sm font-semibold text-gray-900 mb-3">⚙️ LLM 接入配置（热切换，不需重启）</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+          <div class="bg-white rounded-xl shadow-card border border-ink-200 p-6">
+            <div class="flex items-center justify-between mb-4">
               <div>
-                <label class="text-xs text-gray-600">模型</label>
+                <h3 class="text-sm font-semibold text-ink-900">LLM 接入配置</h3>
+                <p class="text-xs text-ink-500 mt-0.5">热切换，无需重启 · 当前来源：<span class="font-mono text-ink-700">{{ llmConfig.source }}</span></p>
+              </div>
+              <StatusBadge :status="llmConfig.api_key_set ? 'success' : 'warning'" :label="llmConfig.api_key_set ? 'API Key 已配置' : '未配置 Key'" />
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField label="模型" required>
                 <input v-model="llmConfig.model" placeholder="MiniMax-M3 / gpt-4 / claude-3-..."
-                       class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-              </div>
-              <div>
-                <label class="text-xs text-gray-600">Base URL</label>
+                       class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition font-mono" />
+              </FormField>
+              <FormField label="Base URL" required>
                 <input v-model="llmConfig.base_url" placeholder="https://api.minimaxi.com/v1"
-                       class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-              </div>
-              <div>
-                <label class="text-xs text-gray-600">API Key（脱敏显示）</label>
+                       class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition font-mono" />
+              </FormField>
+              <FormField label="API Key" hint="脱敏显示 · 仅保存时覆盖">
                 <input v-model="llmConfig.api_key" :placeholder="llmConfig._current_key_masked || '输入新 key 覆盖'"
-                       class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-              </div>
+                       class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition font-mono" />
+              </FormField>
             </div>
-            <div class="flex items-center gap-2 text-xs text-gray-500">
-              <span>当前来源：<span class="font-mono">{{ llmConfig.source }}</span></span>
-              <span v-if="llmConfig.api_key_set" class="text-green-600">✓ key 已设置</span>
+            <div class="flex items-center gap-2 mt-5">
+              <button @click="saveLLMConfig" class="text-sm font-medium px-4 py-2 rounded-lg bg-ink-900 text-white hover:bg-ink-800 transition flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                保存
+              </button>
+              <button @click="testLLMConfig" class="text-sm font-medium px-4 py-2 rounded-lg border border-ink-200 text-ink-700 hover:bg-ink-50 transition">测试连通</button>
+              <button @click="loadLLMConfig" class="text-sm font-medium px-4 py-2 rounded-lg border border-ink-200 text-ink-700 hover:bg-ink-50 transition">刷新</button>
             </div>
-            <div class="flex gap-2 mt-3">
-              <button @click="saveLLMConfig" class="text-sm px-4 py-2 rounded-lg bg-brand-500 text-white hover:bg-brand-600">💾 保存</button>
-              <button @click="testLLMConfig" class="text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">🔌 测连通</button>
-              <button @click="loadLLMConfig" class="text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">🔄 刷新</button>
-            </div>
-            <div v-if="llmTestResult" class="mt-3 px-3 py-2 rounded text-xs"
-                 :class="llmTestResult.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'">
-              {{ llmTestResult.ok ? '✅' : '❌' }} {{ llmTestResult.error || '连通成功 · 模型: ' + llmTestResult.model }}
+            <div v-if="llmTestResult" class="mt-4 px-3 py-2.5 rounded-lg text-sm flex items-start gap-2"
+                 :class="llmTestResult.ok ? 'bg-ok-50 text-ok-700' : 'bg-err-50 text-err-700'">
+              <span class="shrink-0 mt-0.5">{{ llmTestResult.ok ? '✓' : '✕' }}</span>
+              <span>{{ llmTestResult.error || '连通成功 · 模型: ' + llmTestResult.model }}</span>
             </div>
           </div>
 
-          <!-- Token 消耗统计 -->
-          <div class="bg-white border border-gray-200 rounded-xl p-5 mb-6">
-            <h3 class="text-sm font-semibold text-gray-900 mb-3">📊 Token 消耗统计</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-              <div class="bg-gradient-to-br from-brand-50 to-brand-100 rounded-lg p-3">
-                <div class="text-xs text-brand-700">总调用</div>
-                <div class="text-2xl font-bold text-brand-900">{{ llmUsage.total?.calls || 0 }}</div>
-              </div>
-              <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-3">
-                <div class="text-xs text-emerald-700">输入 Token</div>
-                <div class="text-2xl font-bold text-emerald-900">{{ (llmUsage.total?.input_tokens || 0).toLocaleString() }}</div>
-              </div>
-              <div class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-3">
-                <div class="text-xs text-amber-700">输出 Token</div>
-                <div class="text-2xl font-bold text-amber-900">{{ (llmUsage.total?.output_tokens || 0).toLocaleString() }}</div>
-              </div>
-              <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3">
-                <div class="text-xs text-purple-700">总 Token</div>
-                <div class="text-2xl font-bold text-purple-900">{{ (llmUsage.total?.total_tokens || 0).toLocaleString() }}</div>
+          <!-- Token 用量统计 -->
+          <div class="bg-white rounded-xl shadow-card border border-ink-200 p-6">
+            <div class="flex items-center justify-between mb-5">
+              <h3 class="text-sm font-semibold text-ink-900">Token 消耗统计</h3>
+              <div class="flex items-center gap-1.5 text-xs">
+                <span class="text-ink-500">周期</span>
+                <FilterChip v-for="d in [{v:1,l:'今日'},{v:7,l:'7天'},{v:30,l:'30天'}]" :key="d.v" :label="d.l" :active="llmUsageDays === d.v" @click="loadLLMUsage(d.v)" />
+                <span class="text-ink-500 ml-3">维度</span>
+                <FilterChip v-for="b in [{v:'',l:'按天'},{v:'model',l:'按模型'},{v:'purpose',l:'按用途'}]" :key="b.v || 'day'" :label="b.l" :active="llmUsageBy === b.v" @click="loadLLMUsage(llmUsageDays, b.v)" />
               </div>
             </div>
 
-            <div class="flex gap-2 mb-3 text-xs">
-              <span class="text-gray-500">周期：</span>
-              <button v-for="d in [1,7,30]" :key="d" @click="loadLLMUsage(d)"
-                      :class="llmUsageDays === d ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                      class="px-3 py-1 rounded-full">
-                {{ d === 1 ? '今日' : '近 ' + d + ' 天' }}
-              </button>
-              <span class="ml-4 text-gray-500">按：</span>
-              <button @click="loadLLMUsage(llmUsageDays, 'model')"
-                      :class="llmUsageBy === 'model' ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                      class="px-3 py-1 rounded-full">模型</button>
-              <button @click="loadLLMUsage(llmUsageDays, 'purpose')"
-                      :class="llmUsageBy === 'purpose' ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                      class="px-3 py-1 rounded-full">用途</button>
+            <!-- 4 个数字 -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+              <MiniStat label="总调用" :value="llmUsage.total?.calls || 0" />
+              <MiniStat label="输入 Token" :value="(llmUsage.total?.input_tokens || 0).toLocaleString()" />
+              <MiniStat label="输出 Token" :value="(llmUsage.total?.output_tokens || 0).toLocaleString()" />
+              <MiniStat label="总 Token" :value="(llmUsage.total?.total_tokens || 0).toLocaleString()" accent />
             </div>
 
-            <!-- 按天 -->
-            <div v-if="!llmUsageBy && llmUsage.daily && llmUsage.daily.length" class="mb-4">
-              <div class="text-xs text-gray-500 mb-2">每日用量</div>
-              <div class="space-y-1">
-                <div v-for="d in llmUsage.daily" :key="d.day" class="flex items-center gap-2 text-xs">
-                  <span class="w-20 text-gray-600 font-mono">{{ d.day }}</span>
-                  <div class="flex-1 bg-gray-100 rounded h-5 relative overflow-hidden">
-                    <div class="bg-gradient-to-r from-brand-400 to-brand-600 h-full"
-                         :style="{width: Math.max(2, (d.total_tokens / Math.max(...llmUsage.daily.map(x => x.total_tokens), 1) * 100)) + '%'}">
-                    </div>
+            <!-- 每日用量 -->
+            <div v-if="!llmUsageBy && llmUsage.daily?.length">
+              <div class="text-xs font-medium text-ink-500 mb-3">每日用量</div>
+              <div class="space-y-2">
+                <div v-for="d in llmUsage.daily" :key="d.day" class="flex items-center gap-3 text-xs">
+                  <span class="w-24 text-ink-500 font-mono">{{ d.day }}</span>
+                  <div class="flex-1 bg-ink-100 rounded h-6 relative overflow-hidden">
+                    <div class="bg-gradient-to-r from-brand-400 to-brand-600 h-full transition-all"
+                         :style="{ width: Math.max(2, d.total_tokens / Math.max(...llmUsage.daily.map(x => x.total_tokens), 1) * 100) + '%' }"></div>
+                    <div class="absolute inset-0 flex items-center px-2.5 text-ink-700 font-medium">{{ d.total_tokens.toLocaleString() }} tok</div>
                   </div>
-                  <span class="w-32 text-right text-gray-700">{{ d.total_tokens.toLocaleString() }} tok</span>
-                  <span class="w-16 text-right text-gray-500">{{ d.calls }} 次</span>
+                  <span class="w-16 text-right text-ink-500 tabular-nums">{{ d.calls }} 次</span>
                 </div>
               </div>
             </div>
 
-            <!-- 按模型/用途 -->
-            <div v-if="llmUsageBy && llmUsage.groups && llmUsage.groups.length">
-              <div class="text-xs text-gray-500 mb-2">按 {{ llmUsageBy === 'model' ? '模型' : '用途' }} 分组</div>
-              <table class="w-full text-xs">
-                <thead class="text-gray-500 border-b border-gray-200">
-                  <tr><th class="text-left py-1">{{ llmUsageBy === 'model' ? '模型' : '用途' }}</th>
-                      <th class="text-right py-1">调用</th>
-                      <th class="text-right py-1">输入</th>
-                      <th class="text-right py-1">输出</th>
-                      <th class="text-right py-1">总</th></tr>
-                </thead>
+            <!-- 分组 -->
+            <div v-else-if="llmUsageBy && llmUsage.groups?.length">
+              <div class="text-xs font-medium text-ink-500 mb-3">按 {{ llmUsageBy === 'model' ? '模型' : '用途' }} 分组</div>
+              <table class="w-full text-sm data-table">
+                <thead><tr class="text-left text-xs font-medium text-ink-500 border-b border-ink-200">
+                  <th class="py-2.5">{{ llmUsageBy === 'model' ? '模型' : '用途' }}</th>
+                  <th class="py-2.5 text-right">调用</th>
+                  <th class="py-2.5 text-right">输入</th>
+                  <th class="py-2.5 text-right">输出</th>
+                  <th class="py-2.5 text-right">总计</th>
+                </tr></thead>
                 <tbody>
-                  <tr v-for="g in llmUsage.groups" :key="g.key" class="border-b border-gray-100">
-                    <td class="py-1 font-mono">{{ g.key }}</td>
-                    <td class="text-right">{{ g.calls }}</td>
-                    <td class="text-right">{{ g.input_tokens.toLocaleString() }}</td>
-                    <td class="text-right">{{ g.output_tokens.toLocaleString() }}</td>
-                    <td class="text-right font-medium">{{ g.total_tokens.toLocaleString() }}</td>
+                  <tr v-for="g in llmUsage.groups" :key="g.key" class="border-b border-ink-100 last:border-0">
+                    <td class="py-2.5 font-mono text-xs">{{ g.key }}</td>
+                    <td class="py-2.5 text-right tabular-nums">{{ g.calls }}</td>
+                    <td class="py-2.5 text-right tabular-nums">{{ g.input_tokens.toLocaleString() }}</td>
+                    <td class="py-2.5 text-right tabular-nums">{{ g.output_tokens.toLocaleString() }}</td>
+                    <td class="py-2.5 text-right tabular-nums font-medium">{{ g.total_tokens.toLocaleString() }}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-
-            <div v-if="!llmUsage.daily || llmUsage.daily.length === 0" class="text-xs text-gray-400 text-center py-4">
-              暂无数据 · 跑一次摘要就会记录
-            </div>
+            <div v-else class="py-10 text-center text-sm text-ink-400">暂无数据 · 跑一次摘要就会记录</div>
           </div>
         </div>
 
-        <!-- 审计日志 -->
-        <div v-show="currentTab === 'audit'">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold text-gray-900">📋 审计日志</h2>
-            <div class="flex gap-2">
-              <button @click="loadAuditLogs" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
-            </div>
-          </div>
-          <!-- 统计卡片 -->
-          <div v-if="auditStats" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-3">
-              <div class="text-xs text-indigo-700">总记录</div>
-              <div class="text-2xl font-bold text-indigo-900">{{ auditStats.total || 0 }}</div>
-            </div>
-            <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-3">
-              <div class="text-xs text-emerald-700">今日</div>
-              <div class="text-2xl font-bold text-emerald-900">{{ auditStats.today || 0 }}</div>
-            </div>
-            <div class="bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg p-3">
-              <div class="text-xs text-rose-700">失败操作</div>
-              <div class="text-2xl font-bold text-rose-900">{{ failedAuditCount }}</div>
-            </div>
-            <div class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-3">
-              <div class="text-xs text-amber-700">最常操作</div>
-              <div class="text-lg font-bold text-amber-900">{{ topAction }}</div>
-            </div>
-          </div>
-          <!-- 筛选 -->
-          <div class="flex flex-wrap items-center gap-2 mb-3 text-xs">
-            <span class="text-gray-500">actor：</span>
-            <input v-model="auditFilter.actor" @change="loadAuditLogs" placeholder="admin / anonymous"
-                   class="px-2 py-1 border border-gray-200 rounded text-xs w-32" />
-            <span class="text-gray-500">action：</span>
-            <input v-model="auditFilter.action" @change="loadAuditLogs" placeholder="login / patch / delete"
-                   class="px-2 py-1 border border-gray-200 rounded text-xs w-32" />
-            <span class="text-gray-500">状态：</span>
-            <select v-model="auditFilter.status" @change="loadAuditLogs" class="px-2 py-1 border border-gray-200 rounded text-xs">
-              <option value="">全部</option>
-              <option value="success">成功</option>
-              <option value="failed">失败</option>
-            </select>
-            <span class="text-gray-500 ml-auto">共 {{ auditLogs.length }} 条</span>
-          </div>
-          <!-- 列表 -->
-          <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <table class="w-full text-xs">
-              <thead class="bg-gray-50 text-gray-600">
-                <tr>
-                  <th class="text-left px-3 py-2">时间</th>
-                  <th class="text-left px-3 py-2">操作人</th>
-                  <th class="text-left px-3 py-2">动作</th>
-                  <th class="text-left px-3 py-2">目标</th>
-                  <th class="text-left px-3 py-2">详情</th>
-                  <th class="text-left px-3 py-2">IP</th>
-                  <th class="text-left px-3 py-2">状态</th>
+        <!-- =============== 推送历史 =============== -->
+        <div v-show="currentTab === 'push-logs'" class="p-6 space-y-4">
+          <PageToolbar :secondary="{ label: '刷新', handler: loadPushLogs }" />
+          <div class="text-xs text-ink-500">共 {{ pushLogs.length }} 条推送</div>
+
+          <div class="bg-white rounded-xl shadow-card border border-ink-200 overflow-hidden">
+            <table class="w-full text-sm data-table">
+              <thead>
+                <tr class="text-left text-xs font-medium text-ink-500 bg-ink-50 border-b border-ink-200">
+                  <th class="px-5 py-3">时间</th>
+                  <th class="px-5 py-3">政策</th>
+                  <th class="px-5 py-3">渠道</th>
+                  <th class="px-5 py-3">状态</th>
+                  <th class="px-5 py-3">详情</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="log in auditLogs" :key="log.id" class="border-t border-gray-100 hover:bg-gray-50">
-                  <td class="px-3 py-2 font-mono text-gray-500 whitespace-nowrap">{{ log.created_at ? log.created_at.slice(0,19) : '' }}</td>
-                  <td class="px-3 py-2 font-medium" :class="log.actor === 'anonymous' ? 'text-gray-400' : ''">{{ log.actor }}</td>
-                  <td class="px-3 py-2">
-                    <span class="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-mono">{{ log.action }}</span>
+                <tr v-for="log in pushLogs" :key="log.id" class="border-b border-ink-100 last:border-0">
+                  <td class="px-5 py-3 font-mono text-xs text-ink-500 whitespace-nowrap">{{ log.created_at }}</td>
+                  <td class="px-5 py-3 max-w-md">
+                    <div class="text-ink-800 line-clamp-1">{{ log.content?.slice(0, 60) || '—' }}</div>
+                    <div class="text-[11px] text-ink-400 mt-0.5">policy #{{ log.policy_id }}</div>
                   </td>
-                  <td class="px-3 py-2">
-                    <span v-if="log.target_type" class="text-xs text-gray-500">{{ log.target_type }}:</span>
-                    <span class="font-mono">{{ log.target_id || '-' }}</span>
-                  </td>
-                  <td class="px-3 py-2 text-gray-600 max-w-md truncate" :title="log.detail">{{ log.detail }}</td>
-                  <td class="px-3 py-2 font-mono text-gray-400 whitespace-nowrap">{{ log.ip }}</td>
-                  <td class="px-3 py-2">
-                    <span :class="log.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="text-xs px-1.5 py-0.5 rounded">{{ log.status }}</span>
-                  </td>
+                  <td class="px-5 py-3 text-xs font-mono text-ink-600">{{ log.target || '—' }}</td>
+                  <td class="px-5 py-3"><StatusBadge :status="log.status" /></td>
+                  <td class="px-5 py-3 text-xs text-ink-500 truncate max-w-xs">{{ log.error_msg || '—' }}</td>
                 </tr>
+                <tr v-if="!pushLogs.length"><td colspan="5" class="px-5 py-12 text-center text-ink-400 text-sm">暂无推送</td></tr>
               </tbody>
             </table>
-            <div v-if="auditLogs.length === 0" class="text-center text-gray-400 text-xs py-6">暂无记录</div>
           </div>
         </div>
 
-        <!-- Push Logs -->
-        <div v-show="currentTab === 'push-logs'">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold text-gray-900">📤 推送历史</h2>
-            <button @click="loadPushLogs" class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">刷新</button>
+        <!-- =============== 审计 =============== -->
+        <div v-show="currentTab === 'audit'" class="p-6 space-y-4">
+          <!-- KPI -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" v-if="auditStats">
+            <MiniStat label="总记录" :value="auditStats.total || 0" />
+            <MiniStat label="今日操作" :value="auditStats.today || 0" />
+            <MiniStat label="失败操作" :value="failedAuditCount" :tone="failedAuditCount > 0 ? 'danger' : 'neutral'" />
+            <MiniStat label="最常操作" :value="topAction" />
           </div>
-          <div class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
-            <div v-for="log in pushLogs" :key="log.id" class="px-5 py-3">
-              <div class="flex items-center gap-2 text-xs mb-1">
-                <span class="font-mono text-gray-500">{{ log.created_at }}</span>
-                <span :class="log.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-0.5 rounded-full font-medium">{{ log.status }}</span>
-                <span class="text-gray-400">policy #{{ log.policy_id }}</span>
-              </div>
-              <pre class="text-xs text-gray-600 whitespace-pre-wrap font-sans">{{ log.content }}</pre>
-            </div>
+
+          <div class="bg-white rounded-xl shadow-card border border-ink-200 px-4 py-3 flex flex-wrap items-center gap-3 text-xs">
+            <span class="text-ink-500 font-medium">筛选</span>
+            <input v-model="auditFilter.actor" @change="loadAuditLogs" placeholder="操作人"
+                   class="px-2.5 py-1 border border-ink-200 rounded-md w-24 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500" />
+            <input v-model="auditFilter.action" @change="loadAuditLogs" placeholder="动作"
+                   class="px-2.5 py-1 border border-ink-200 rounded-md w-24 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500" />
+            <select v-model="auditFilter.status" @change="loadAuditLogs"
+                    class="px-2.5 py-1 border border-ink-200 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+              <option value="">全部状态</option>
+              <option value="success">成功</option>
+              <option value="failed">失败</option>
+            </select>
+            <span class="ml-auto text-ink-500">共 {{ auditLogs.length }} 条</span>
+            <button @click="loadAuditLogs" class="px-2.5 py-1 border border-ink-200 rounded-md text-ink-600 hover:bg-ink-50">刷新</button>
+          </div>
+
+          <div class="bg-white rounded-xl shadow-card border border-ink-200 overflow-hidden">
+            <table class="w-full text-sm data-table">
+              <thead>
+                <tr class="text-left text-xs font-medium text-ink-500 bg-ink-50 border-b border-ink-200">
+                  <th class="px-5 py-3">时间</th>
+                  <th class="px-5 py-3">操作人</th>
+                  <th class="px-5 py-3">动作</th>
+                  <th class="px-5 py-3">目标</th>
+                  <th class="px-5 py-3">详情</th>
+                  <th class="px-5 py-3">IP</th>
+                  <th class="px-5 py-3">状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="log in auditLogs" :key="log.id" class="border-b border-ink-100 last:border-0">
+                  <td class="px-5 py-3 font-mono text-xs text-ink-500 whitespace-nowrap">{{ (log.created_at || '').slice(0, 19) }}</td>
+                  <td class="px-5 py-3 text-sm font-medium" :class="log.actor === 'anonymous' ? 'text-ink-400' : 'text-ink-900'">{{ log.actor }}</td>
+                  <td class="px-5 py-3"><span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-ink-100 text-ink-700">{{ log.action }}</span></td>
+                  <td class="px-5 py-3 text-xs text-ink-600"><span v-if="log.target_type" class="text-ink-400">{{ log.target_type }}:</span> <span class="font-mono">{{ log.target_id || '—' }}</span></td>
+                  <td class="px-5 py-3 text-xs text-ink-600 truncate max-w-xs" :title="log.detail">{{ log.detail }}</td>
+                  <td class="px-5 py-3 font-mono text-xs text-ink-400 whitespace-nowrap">{{ log.ip }}</td>
+                  <td class="px-5 py-3"><StatusBadge :status="log.status" /></td>
+                </tr>
+                <tr v-if="!auditLogs.length"><td colspan="7" class="px-5 py-12 text-center text-ink-400 text-sm">暂无记录</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
+
       </main>
     </div>
   </div>
 
-  <!-- Toast -->
-  <div v-if="toast.show" class="fixed bottom-6 right-6 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg max-w-sm z-50">
-    {{ toast.msg }}
+  <!-- ============================================================ -->
+  <!-- Toast                                                       -->
+  <!-- ============================================================ -->
+  <div v-if="toast.show" class="fixed bottom-6 right-6 bg-ink-900 text-white px-4 py-3 rounded-lg shadow-pop max-w-sm z-50 toast-anim flex items-start gap-2">
+    <span class="text-sm">{{ toast.msg }}</span>
   </div>
 
-  <!-- ===== 订阅/公司编辑 Modal ===== -->
-  <div v-if="subModal.show" class="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" @click.self="subModal.show = false">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-900">
-          {{ subModal.isNew ? '➕ 新建订阅' : '✏️ 编辑订阅 #' + subModal.data.subscription_id }}
-        </h3>
-        <button @click="subModal.show = false" class="text-gray-400 hover:text-gray-600 text-xl">×</button>
+  <!-- ============================================================ -->
+  <!-- 订阅/公司 Modal                                              -->
+  <!-- ============================================================ -->
+  <div v-if="subModal.show" class="fixed inset-0 bg-ink-900/40 z-40 flex items-center justify-center p-4" @click.self="subModal.show = false">
+    <div class="bg-white rounded-xl shadow-pop w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="px-6 py-4 border-b border-ink-100 flex items-center justify-between shrink-0">
+        <h3 class="text-base font-semibold text-ink-900">{{ subModal.isNew ? '新建订阅' : '编辑订阅 #' + subModal.data.subscription_id }}</h3>
+        <button @click="subModal.show = false" class="text-ink-400 hover:text-ink-700 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
       </div>
-      <div class="p-6 space-y-5">
-        <!-- 公司信息 -->
-        <div>
-          <h4 class="text-sm font-semibold text-gray-700 mb-3">🏢 公司信息</h4>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="text-xs text-gray-600">公司名称 *</label>
+      <div class="p-6 overflow-y-auto space-y-6">
+        <section>
+          <h4 class="text-xs font-semibold text-ink-500 uppercase tracking-wider mb-3">公司信息</h4>
+          <div class="grid grid-cols-2 gap-4">
+            <FormField label="公司名称" required>
               <input v-model="subModal.data.company_name" required
-                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-            </div>
-            <div>
-              <label class="text-xs text-gray-600">行业</label>
-              <input v-model="subModal.data.industry" placeholder="信息技术 / 人工智能 / ..."
-                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-            </div>
-            <div>
-              <label class="text-xs text-gray-600">地区</label>
-              <input v-model="subModal.data.region" placeholder="深圳市 / 广东省 / ..."
-                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-            </div>
-            <div>
-              <label class="text-xs text-gray-600">规模</label>
+                     class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+            </FormField>
+            <FormField label="行业">
+              <input v-model="subModal.data.industry" placeholder="信息技术 / 人工智能"
+                     class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+            </FormField>
+            <FormField label="地区">
+              <input v-model="subModal.data.region" placeholder="深圳市 / 广东省"
+                     class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+            </FormField>
+            <FormField label="规模">
               <input v-model="subModal.data.scale" placeholder="小微 / 中型 / 大型"
-                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-            </div>
+                     class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+            </FormField>
             <div class="col-span-2">
-              <label class="text-xs text-gray-600">标签（逗号分隔）</label>
-              <input v-model="subModal.tagsText" placeholder="高新, 专精特新, 科技型中小企业"
-                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+              <FormField label="标签" hint="逗号分隔">
+                <input v-model="subModal.tagsText" placeholder="高新, 专精特新, 科技型"
+                       class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+              </FormField>
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- 订阅设置 -->
-        <div v-if="!subModal.isNew">
-          <h4 class="text-sm font-semibold text-gray-700 mb-3">⚙️ 订阅设置</h4>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="text-xs text-gray-600">推送频率</label>
+        <section>
+          <h4 class="text-xs font-semibold text-ink-500 uppercase tracking-wider mb-3">推送设置</h4>
+          <div class="grid grid-cols-2 gap-4">
+            <FormField label="推送频率">
               <select v-model="subModal.data.push_schedule"
-                      class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                      class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
                 <option value="realtime">实时</option>
                 <option value="daily">每日</option>
                 <option value="weekly">每周</option>
                 <option value="manual">手动</option>
               </select>
-            </div>
-            <div>
-              <label class="text-xs text-gray-600">推送时间</label>
+            </FormField>
+            <FormField label="推送时间">
               <input v-model="subModal.data.push_time" placeholder="08:30"
-                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-            </div>
-            <div>
-              <label class="text-xs text-gray-600">推送渠道</label>
+                     class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+            </FormField>
+            <FormField label="推送渠道">
               <select v-model="subModal.data.push_channel" @change="onChannelChange"
-                      class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
-                <option value="mock">🧪 Mock（仅本地日志）</option>
-                <option value="feishu">🦊 飞书群机器人</option>
-                <option value="wecom">🏢 企微群机器人（占位）</option>
-                <option value="wechat">💬 微信 iLink（占位）</option>
-                <option value="webhook">🔗 通用 Webhook</option>
-                <option value="email">📧 邮件（占位）</option>
+                      class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
+                <option value="mock">Mock（仅本地）</option>
+                <option value="feishu">飞书群机器人</option>
+                <option value="wecom">企微群机器人（占位）</option>
+                <option value="wechat">微信 iLink（占位）</option>
+                <option value="webhook">通用 Webhook</option>
+                <option value="email">邮件（占位）</option>
               </select>
-            </div>
+            </FormField>
             <div>
-              <label class="text-xs text-gray-600">&nbsp;</label>
-              <button @click="testPushChannel" class="mt-1 w-full px-3 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">🔌 测连通</button>
+              <label class="block text-sm font-medium text-ink-700 mb-1.5">&nbsp;</label>
+              <button @click="testPushChannel" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200 text-ink-700 hover:bg-ink-50 transition">测试连通</button>
             </div>
-            <!-- 飞书配置 -->
-            <div v-if="subModal.data.push_channel === 'feishu'" class="col-span-2 border border-blue-100 bg-blue-50 rounded-lg p-3 space-y-2">
-              <div>
-                <label class="text-xs text-gray-600">飞书 Webhook URL（必填）</label>
-                <input v-model="subModal.feishuWebhook" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/xxxx"
-                       class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500" />
-                <p class="text-xs text-gray-400 mt-1">飞书群 → 设置 → 群机器人 → 添加自定义机器人 → 复制 webhook URL</p>
-              </div>
-              <div>
-                <label class="text-xs text-gray-600">签名校验密钥（可选，启用签名校验时必填）</label>
-                <input v-model="subModal.feishuSecret" placeholder="SEC..."
-                       class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500" />
-                <p class="text-xs text-gray-400 mt-1">勾选「签名校验」后才有，开启后推送会带 HMAC-SHA256 签名</p>
-              </div>
-              <div v-if="subModal.feishuTestResult" :class="subModal.feishuTestResult.ok ? 'text-green-700' : 'text-red-700'" class="text-xs">
-                {{ subModal.feishuTestResult.ok ? '✅' : '❌' }} {{ subModal.feishuTestResult.error || '连通成功' }}
-              </div>
-            </div>
-            <!-- webhook 配置 -->
-            <div v-if="subModal.data.push_channel === 'webhook'" class="col-span-2 border border-gray-200 bg-gray-50 rounded-lg p-3 space-y-2">
-              <div>
-                <label class="text-xs text-gray-600">Webhook URL（必填）</label>
-                <input v-model="subModal.webhookUrl" placeholder="https://example.com/webhook"
-                       class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono" />
-              </div>
-              <div>
-                <label class="text-xs text-gray-600">HMAC 签名密钥（可选）</label>
-                <input v-model="subModal.webhookSecret" placeholder="可选"
-                       class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono" />
-              </div>
-            </div>
-            <!-- 占位通道提示 -->
-            <div v-if="['wecom','wechat','email'].includes(subModal.data.push_channel)" class="col-span-2 border border-amber-100 bg-amber-50 rounded-lg p-3 text-xs text-amber-700">
-              ⚠️ {{ subModal.data.push_channel }} 通道尚未实现，目前会回退到 mock。后续版本补全。
-            </div>
-            <div class="col-span-2">
-              <label class="text-xs text-gray-600">关注政策类型（逗号分隔）</label>
-              <input v-model="subModal.typesText" placeholder="补贴, 贷款, 税收, 人才"
-                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-            </div>
-            <div class="col-span-2">
-              <label class="text-xs text-gray-600">关注地区（逗号分隔）</label>
-              <input v-model="subModal.regionsText" placeholder="深圳, 广东, 北京"
-                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-            </div>
-            <div class="col-span-2">
-              <label class="text-xs text-gray-600">关键词（逗号分隔，可选）</label>
-              <input v-model="subModal.keywordsText" placeholder="专精特新, 高新技术"
-                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-            </div>
-          </div>
-        </div>
 
-        <!-- 新建时的订阅设置 -->
-        <div v-else>
-          <h4 class="text-sm font-semibold text-gray-700 mb-3">⚙️ 订阅设置（新建时）</h4>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="text-xs text-gray-600">推送频率</label>
-              <select v-model="subModal.data.push_schedule"
-                      class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
-                <option value="realtime">实时</option>
-                <option value="daily">每日</option>
-                <option value="weekly">每周</option>
-                <option value="manual">手动</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-xs text-gray-600">推送时间</label>
-              <input v-model="subModal.data.push_time" placeholder="08:30"
-                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-            </div>
-            <div>
-              <label class="text-xs text-gray-600">推送渠道</label>
-              <select v-model="subModal.data.push_channel" @change="onChannelChange"
-                      class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
-                <option value="mock">🧪 Mock（仅本地日志）</option>
-                <option value="feishu">🦊 飞书群机器人</option>
-                <option value="wecom">🏢 企微群机器人（占位）</option>
-                <option value="wechat">💬 微信 iLink（占位）</option>
-                <option value="webhook">🔗 通用 Webhook</option>
-                <option value="email">📧 邮件（占位）</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-xs text-gray-600">&nbsp;</label>
-              <button @click="testPushChannel" class="mt-1 w-full px-3 py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">🔌 测连通</button>
-            </div>
-            <!-- 飞书配置 -->
-            <div v-if="subModal.data.push_channel === 'feishu'" class="col-span-2 border border-blue-100 bg-blue-50 rounded-lg p-3 space-y-2">
-              <div>
-                <label class="text-xs text-gray-600">飞书 Webhook URL（必填）</label>
-                <input v-model="subModal.feishuWebhook" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/xxxx"
-                       class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500" />
-                <p class="text-xs text-gray-400 mt-1">飞书群 → 设置 → 群机器人 → 添加自定义机器人 → 复制 webhook URL</p>
-              </div>
-              <div>
-                <label class="text-xs text-gray-600">签名校验密钥（可选，启用签名校验时必填）</label>
+            <div v-if="subModal.data.push_channel === 'feishu'" class="col-span-2 bg-brand-50/50 border border-brand-100 rounded-lg p-4 space-y-3">
+              <FormField label="飞书 Webhook URL" required hint="飞书群 → 设置 → 群机器人 → 自定义机器人">
+                <input v-model="subModal.feishuWebhook" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..."
+                       class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+              </FormField>
+              <FormField label="签名密钥" hint="启用签名校验时必填">
                 <input v-model="subModal.feishuSecret" placeholder="SEC..."
-                       class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500" />
-                <p class="text-xs text-gray-400 mt-1">勾选「签名校验」后才有，开启后推送会带 HMAC-SHA256 签名</p>
-              </div>
-              <div v-if="subModal.feishuTestResult" :class="subModal.feishuTestResult.ok ? 'text-green-700' : 'text-red-700'" class="text-xs">
-                {{ subModal.feishuTestResult.ok ? '✅' : '❌' }} {{ subModal.feishuTestResult.error || '连通成功' }}
+                       class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+              </FormField>
+              <div v-if="subModal.feishuTestResult" :class="subModal.feishuTestResult.ok ? 'text-ok-700' : 'text-err-700'" class="text-xs flex items-center gap-1.5">
+                <span>{{ subModal.feishuTestResult.ok ? '✓' : '✕' }}</span>
+                <span>{{ subModal.feishuTestResult.error || '连通成功' }}</span>
               </div>
             </div>
-            <!-- webhook 配置 -->
-            <div v-if="subModal.data.push_channel === 'webhook'" class="col-span-2 border border-gray-200 bg-gray-50 rounded-lg p-3 space-y-2">
-              <div>
-                <label class="text-xs text-gray-600">Webhook URL（必填）</label>
+
+            <div v-if="subModal.data.push_channel === 'webhook'" class="col-span-2 bg-ink-50 border border-ink-200 rounded-lg p-4 space-y-3">
+              <FormField label="Webhook URL" required>
                 <input v-model="subModal.webhookUrl" placeholder="https://example.com/webhook"
-                       class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono" />
-              </div>
-              <div>
-                <label class="text-xs text-gray-600">HMAC 签名密钥（可选）</label>
+                       class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+              </FormField>
+              <FormField label="HMAC 密钥" hint="可选">
                 <input v-model="subModal.webhookSecret" placeholder="可选"
-                       class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono" />
-              </div>
+                       class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+              </FormField>
             </div>
-            <!-- 占位通道提示 -->
-            <div v-if="['wecom','wechat','email'].includes(subModal.data.push_channel)" class="col-span-2 border border-amber-100 bg-amber-50 rounded-lg p-3 text-xs text-amber-700">
-              ⚠️ {{ subModal.data.push_channel }} 通道尚未实现，目前会回退到 mock。后续版本补全。
+
+            <div v-if="['wecom','wechat','email'].includes(subModal.data.push_channel)" class="col-span-2 bg-warn-50 border border-warn-200 rounded-lg p-3 text-xs text-warn-700">
+              ⚠ {{ subModal.data.push_channel }} 通道尚未实现，目前会回退到 mock
+            </div>
+
+            <div class="col-span-2">
+              <FormField label="关注政策类型" hint="逗号分隔">
+                <input v-model="subModal.typesText" placeholder="补贴, 贷款, 税收, 人才"
+                       class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+              </FormField>
             </div>
             <div class="col-span-2">
-              <label class="text-xs text-gray-600">关注政策类型（逗号分隔）</label>
-              <input v-model="subModal.typesText" placeholder="补贴, 贷款, 税收"
-                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+              <FormField label="关注地区" hint="逗号分隔">
+                <input v-model="subModal.regionsText" placeholder="深圳, 广东, 北京"
+                       class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+              </FormField>
             </div>
-            <div class="col-span-2">
-              <label class="text-xs text-gray-600">关注地区（逗号分隔）</label>
-              <input v-model="subModal.regionsText" placeholder="深圳, 广东"
-                     class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            <div v-if="!subModal.isNew" class="col-span-2">
+              <FormField label="关键词" hint="逗号分隔">
+                <input v-model="subModal.keywordsText" placeholder="专精特新, 高新技术"
+                       class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+              </FormField>
             </div>
           </div>
-        </div>
+        </section>
       </div>
-      <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
-        <button @click="subModal.show = false" class="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">取消</button>
-        <button @click="saveSubModal" :disabled="subModal.saving" class="px-4 py-2 text-sm rounded-lg bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50">
-          {{ subModal.saving ? '保存中...' : '保存' }}
+      <div class="px-6 py-4 border-t border-ink-100 flex justify-end gap-2 shrink-0 bg-ink-50/50">
+        <button @click="subModal.show = false" class="px-4 py-2 text-sm font-medium rounded-lg border border-ink-200 text-ink-700 hover:bg-white transition">取消</button>
+        <button @click="saveSubModal" :disabled="subModal.saving"
+                class="px-4 py-2 text-sm font-medium rounded-lg bg-ink-900 text-white hover:bg-ink-800 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-1.5">
+          <span v-if="subModal.saving" class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          <span>{{ subModal.saving ? '保存中…' : '保存' }}</span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ===== 政策编辑 Modal ===== -->
-  <div v-if="policyModal.show" class="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4" @click.self="policyModal.show = false">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
-      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-900">✏️ 编辑政策 #{{ policyModal.data.id }}</h3>
-        <button @click="policyModal.show = false" class="text-gray-400 hover:text-gray-600 text-xl">×</button>
+  <!-- ============================================================ -->
+  <!-- 政策编辑 Modal                                              -->
+  <!-- ============================================================ -->
+  <div v-if="policyModal.show" class="fixed inset-0 bg-ink-900/40 z-40 flex items-center justify-center p-4" @click.self="policyModal.show = false">
+    <div class="bg-white rounded-xl shadow-pop w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="px-6 py-4 border-b border-ink-100 flex items-center justify-between shrink-0">
+        <h3 class="text-base font-semibold text-ink-900">编辑政策 #{{ policyModal.data.id }}</h3>
+        <button @click="policyModal.show = false" class="text-ink-400 hover:text-ink-700 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
       </div>
-      <div class="p-6 space-y-4">
+      <div class="p-6 overflow-y-auto space-y-4">
         <div>
-          <label class="text-xs text-gray-600">标题</label>
-          <div class="mt-1 text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">{{ policyModal.data.title }}</div>
+          <div class="text-xs font-medium text-ink-500 uppercase tracking-wider mb-1.5">标题</div>
+          <div class="text-sm text-ink-900 bg-ink-50 px-3 py-2 rounded-lg">{{ policyModal.data.title }}</div>
         </div>
-        <div>
-          <label class="text-xs text-gray-600">政策类型</label>
+        <FormField label="政策类型">
           <select v-model="policyModal.data.summary_type"
-                  class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                  class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
             <option value="">（未分类）</option>
             <option value="补贴">补贴</option>
             <option value="贷款">贷款</option>
@@ -828,713 +853,893 @@
             <option value="资质认定">资质认定</option>
             <option value="其他">其他</option>
           </select>
-        </div>
-        <div>
-          <label class="text-xs text-gray-600">摘要（运营可修正 AI 摘要）</label>
+        </FormField>
+        <FormField label="摘要" hint="运营可修正 AI 摘要">
           <textarea v-model="policyModal.data.summary" rows="5"
-                    class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="text-xs text-gray-600">金额（如：最高 500 万）</label>
-            <input v-model="policyModal.data.amount"
-                   class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-          </div>
-          <div>
-            <label class="text-xs text-gray-600">截止日期（YYYY-MM-DD）</label>
+                    class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition resize-none"></textarea>
+        </FormField>
+        <div class="grid grid-cols-2 gap-4">
+          <FormField label="金额">
+            <input v-model="policyModal.data.amount" placeholder="最高 500 万"
+                   class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+          </FormField>
+          <FormField label="截止日期">
             <input v-model="policyModal.data.deadline" placeholder="2026-12-31"
-                   class="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-          </div>
+                   class="w-full px-3 py-2 bg-white border border-ink-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+          </FormField>
         </div>
       </div>
-      <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
-        <button @click="policyModal.show = false" class="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">取消</button>
-        <button @click="savePolicyModal" :disabled="policyModal.saving" class="px-4 py-2 text-sm rounded-lg bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50">
-          {{ policyModal.saving ? '保存中...' : '保存' }}
+      <div class="px-6 py-4 border-t border-ink-100 flex justify-end gap-2 shrink-0 bg-ink-50/50">
+        <button @click="policyModal.show = false" class="px-4 py-2 text-sm font-medium rounded-lg border border-ink-200 text-ink-700 hover:bg-white transition">取消</button>
+        <button @click="savePolicyModal" :disabled="policyModal.saving"
+                class="px-4 py-2 text-sm font-medium rounded-lg bg-ink-900 text-white hover:bg-ink-800 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-1.5">
+          <span v-if="policyModal.saving" class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          <span>{{ policyModal.saving ? '保存中…' : '保存' }}</span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Loading -->
-  <div v-if="loading" class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center">
-    <div class="bg-white rounded-2xl p-6 shadow-xl flex items-center gap-3">
+  <!-- Loading 全屏 -->
+  <div v-if="loading" class="fixed inset-0 bg-ink-900/30 z-40 flex items-center justify-center">
+    <div class="bg-white rounded-xl p-5 shadow-pop flex items-center gap-3">
       <div class="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
-      <span class="text-sm">{{ loadingText }}</span>
+      <span class="text-sm text-ink-700">{{ loadingText }}</span>
     </div>
   </div>
-  </div> <!-- /#app -->
 
-  <!-- Vue 3 UMD (从 window.Vue 解构) -->
-  <script>
-    const { createApp, ref, computed, onMounted, reactive } = Vue;
+</div>
 
-    // === axios + token 拦截器 ===
-    const TOKEN_KEY = 'policy_radar_token';
-    const USER_KEY = 'policy_radar_user';
-    const api = axios.create({ baseURL: '' });  // 同源
-    api.interceptors.request.use((cfg) => {
-      const tok = localStorage.getItem(TOKEN_KEY);
-      if (tok) cfg.headers.Authorization = `Bearer ${tok}`;
-      return cfg;
+<!-- ============================================================ -->
+<!-- Vue 3 UMD 脚本                                                -->
+<!-- ============================================================ -->
+<script>
+const { createApp, ref, computed, onMounted, reactive, defineComponent, h } = Vue;
+
+// === axios + token 拦截器 ===
+const TOKEN_KEY = 'policy_radar_token';
+const USER_KEY = 'policy_radar_user';
+const api = axios.create({ baseURL: '' });
+api.interceptors.request.use((cfg) => {
+  const tok = localStorage.getItem(TOKEN_KEY);
+  if (tok) cfg.headers.Authorization = `Bearer ${tok}`;
+  return cfg;
+});
+api.interceptors.response.use(
+  (r) => r,
+  (err) => {
+    if (err.response && err.response.status === 401) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      location.reload();
+    }
+    return Promise.reject(err);
+  }
+);
+
+// ============================================================
+// SVG 图标库（避免 emoji，统一线性图标风格）
+// ============================================================
+const ICONS = {
+  dashboard: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>',
+  users:    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>',
+  subs:     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>',
+  policy:   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>',
+  source:   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>',
+  push:     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>',
+  llm:      '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>',
+  audit:    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>',
+  refresh:  '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>',
+  building: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>',
+  chart:    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>',
+  token:    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>',
+};
+
+function iconSvg(name) {
+  const path = ICONS[name] || ICONS.dashboard;
+  return `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">${path}</svg>`;
+}
+
+// ============================================================
+// 通用组件：StatusBadge
+// ============================================================
+const StatusBadge = defineComponent({
+  name: 'StatusBadge',
+  props: { status: String, label: String },
+  setup(props) {
+    const config = computed(() => {
+      const s = props.status || 'neutral';
+      const map = {
+        success:   { bg: 'bg-ok-50',    text: 'text-ok-700',    dot: 'bg-ok-500' },
+        ok:        { bg: 'bg-ok-50',    text: 'text-ok-700',    dot: 'bg-ok-500' },
+        failed:    { bg: 'bg-err-50',   text: 'text-err-700',   dot: 'bg-err-500' },
+        error:     { bg: 'bg-err-50',   text: 'text-err-700',   dot: 'bg-err-500' },
+        warning:   { bg: 'bg-warn-50',  text: 'text-warn-700',  dot: 'bg-warn-500' },
+        warn:      { bg: 'bg-warn-50',  text: 'text-warn-700',  dot: 'bg-warn-500' },
+        pending:   { bg: 'bg-ink-100',  text: 'text-ink-700',   dot: 'bg-ink-400' },
+        neutral:   { bg: 'bg-ink-100',  text: 'text-ink-600',   dot: 'bg-ink-400' },
+      };
+      return map[s] || map.neutral;
     });
-    api.interceptors.response.use(
-      (r) => r,
-      (err) => {
-        if (err.response && err.response.status === 401) {
-          // token 失效 → 清掉 + 跳 login（authed=false 触发 v-if）
-          localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(USER_KEY);
-          location.reload();
-        }
-        return Promise.reject(err);
+    const labelText = computed(() => {
+      if (props.label) return props.label;
+      const map = { success: '成功', failed: '失败', warning: '警告', pending: '等待', neutral: '—' };
+      return map[props.status] || props.status;
+    });
+    return () => h('span', {
+      class: ['inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full', config.value.bg, config.value.text]
+    }, [
+      h('span', { class: ['w-1.5 h-1.5 rounded-full', config.value.dot] }),
+      labelText.value,
+    ]);
+  }
+});
+
+// ============================================================
+// 通用组件：ChannelBadge
+// ============================================================
+const ChannelBadge = defineComponent({
+  name: 'ChannelBadge',
+  props: { channel: String },
+  setup(props) {
+    const map = {
+      mock:    { label: 'Mock',    bg: 'bg-ink-100',    text: 'text-ink-700' },
+      feishu:  { label: '飞书',    bg: 'bg-blue-50',    text: 'text-blue-700' },
+      wecom:   { label: '企微',    bg: 'bg-green-50',   text: 'text-green-700' },
+      wechat:  { label: '微信',    bg: 'bg-green-50',   text: 'text-green-700' },
+      webhook: { label: 'Webhook', bg: 'bg-amber-50',   text: 'text-amber-700' },
+      email:   { label: '邮件',    bg: 'bg-purple-50',  text: 'text-purple-700' },
+    };
+    const cfg = computed(() => map[props.channel] || map.mock);
+    return () => h('span', {
+      class: ['inline-flex text-xs font-medium px-2 py-0.5 rounded-full', cfg.value.bg, cfg.value.text]
+    }, cfg.value.label);
+  }
+});
+
+// ============================================================
+// 通用组件：TypeBadge（政策类型）
+// ============================================================
+const TypeBadge = defineComponent({
+  name: 'TypeBadge',
+  props: { type: String },
+  setup(props) {
+    const map = {
+      '补贴':     { bg: 'bg-green-50',  text: 'text-green-700' },
+      '贷款':     { bg: 'bg-blue-50',   text: 'text-blue-700' },
+      '税收':     { bg: 'bg-purple-50', text: 'text-purple-700' },
+      '人才':     { bg: 'bg-pink-50',   text: 'text-pink-700' },
+      '产业扶持': { bg: 'bg-orange-50', text: 'text-orange-700' },
+      '资质认定': { bg: 'bg-indigo-50', text: 'text-indigo-700' },
+    };
+    const cfg = computed(() => map[props.type] || { bg: 'bg-ink-100', text: 'text-ink-600' });
+    return () => props.type ? h('span', {
+      class: ['inline-flex text-xs font-medium px-2 py-0.5 rounded-full', cfg.value.bg, cfg.value.text]
+    }, props.type) : h('span', { class: 'text-xs text-ink-400' }, '—');
+  }
+});
+
+// ============================================================
+// 通用组件：MiniStat
+// ============================================================
+const MiniStat = defineComponent({
+  name: 'MiniStat',
+  props: { label: String, value: [String, Number], tone: { type: String, default: 'default' }, accent: Boolean },
+  setup(props) {
+    return () => h('div', {
+      class: ['rounded-lg p-3', props.accent ? 'bg-gradient-to-br from-brand-50 to-brand-100/50 border border-brand-100' : 'bg-ink-50/60 border border-ink-100']
+    }, [
+      h('div', { class: 'text-xs font-medium text-ink-500' }, props.label),
+      h('div', {
+        class: ['mt-1 text-xl font-semibold tabular-nums',
+                props.tone === 'danger' ? 'text-err-600' :
+                props.accent ? 'text-brand-700' : 'text-ink-900']
+      }, props.value),
+    ]);
+  }
+});
+
+// ============================================================
+// 通用组件：FormField（label 在上 + helper text 在下）
+// ============================================================
+const FormField = defineComponent({
+  name: 'FormField',
+  props: { label: String, required: Boolean, hint: String },
+  setup(props, { slots }) {
+    return () => h('div', null, [
+      h('label', { class: 'flex items-center gap-1 text-sm font-medium text-ink-700 mb-1.5' }, [
+        props.label,
+        props.required ? h('span', { class: 'text-err-500' }, '*') : null,
+      ]),
+      slots.default ? slots.default() : null,
+      props.hint ? h('p', { class: 'mt-1 text-xs text-ink-400' }, props.hint) : null,
+    ]);
+  }
+});
+
+// ============================================================
+// 通用组件：FilterChip（筛选标签）
+// ============================================================
+const FilterChip = defineComponent({
+  name: 'FilterChip',
+  props: { label: String, active: Boolean },
+  emits: ['click'],
+  setup(props, { emit }) {
+    return () => h('button', {
+      onClick: () => emit('click'),
+      class: ['px-2.5 py-1 rounded-md text-xs font-medium transition',
+              props.active ? 'bg-ink-900 text-white' : 'bg-ink-100 text-ink-600 hover:bg-ink-200']
+    }, props.label);
+  }
+});
+
+// ============================================================
+// 通用组件：PageToolbar（顶部工具栏）
+// ============================================================
+const PageToolbar = defineComponent({
+  name: 'PageToolbar',
+  props: { search: String, primary: Object, secondary: Object },
+  emits: ['update:search', 'search'],
+  setup(props, { emit, slots }) {
+    return () => h('div', { class: 'flex items-center justify-between' }, [
+      h('div', { class: 'flex items-center gap-2' }, [
+        props.search !== undefined ? h('div', { class: 'relative' }, [
+          h('svg', { class: 'w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-400', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+            h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' })
+          ]),
+          h('input', {
+            value: props.search,
+            onInput: (e) => emit('update:search', e.target.value),
+            onKeyup: (e) => e.key === 'Enter' && emit('search'),
+            placeholder: '搜索…',
+            class: 'pl-9 pr-3 py-1.5 bg-white border border-ink-200 rounded-lg text-sm w-64 hover:border-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition',
+          }),
+        ]) : null,
+      ]),
+      h('div', { class: 'flex items-center gap-2' }, [
+        props.secondary ? h('button', {
+          onClick: props.secondary.handler,
+          class: 'text-sm font-medium px-3 py-1.5 rounded-lg border border-ink-200 text-ink-700 hover:bg-white transition'
+        }, props.secondary.label) : null,
+        props.primary ? h('button', {
+          onClick: props.primary.handler,
+          class: 'text-sm font-medium px-3 py-1.5 rounded-lg bg-ink-900 text-white hover:bg-ink-800 transition flex items-center gap-1.5'
+        }, [
+          h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+            h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 4v16m8-8H4' })
+          ]),
+          props.primary.label,
+        ]) : null,
+      ]),
+    ]);
+  }
+});
+
+createApp({
+  setup() {
+    // ========== Auth ==========
+    const authed = ref(!!localStorage.getItem(TOKEN_KEY));
+    const currentUser = ref(localStorage.getItem(USER_KEY) || '');
+    const loginForm = reactive({ username: '', password: '' });
+    const loginError = ref('');
+    const logging = ref(false);
+
+    async function doLogin() {
+      loginError.value = '';
+      logging.value = true;
+      try {
+        const r = await axios.post('/api/auth/login', {
+          username: loginForm.username,
+          password: loginForm.password,
+        });
+        localStorage.setItem(TOKEN_KEY, r.data.token);
+        localStorage.setItem(USER_KEY, r.data.user);
+        currentUser.value = r.data.user;
+        authed.value = true;
+        await loadHealth();
+        await loadAll();
+        await loadLLMConfig();
+        await loadLLMUsage(7);
+        await loadAuditLogs();
+      } catch (e) {
+        loginError.value = e.response?.data?.detail || '登录失败';
+      } finally {
+        logging.value = false;
       }
-    );
+    }
 
-    createApp({
-      setup() {
-        // ===== Auth =====
-        const authed = ref(!!localStorage.getItem(TOKEN_KEY));
-        const currentUser = ref(localStorage.getItem(USER_KEY) || '');
-        const loginForm = reactive({ username: '', password: '' });
-        const loginError = ref('');
-        const logging = ref(false);
+    async function doLogout() {
+      try { await api.post('/api/auth/logout'); } catch (e) {}
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      authed.value = false;
+      currentUser.value = '';
+    }
 
-        async function doLogin() {
-          loginError.value = '';
-          logging.value = true;
-          try {
-            const r = await axios.post('/api/auth/login', {
-              username: loginForm.username,
-              password: loginForm.password,
-            });
-            localStorage.setItem(TOKEN_KEY, r.data.token);
-            localStorage.setItem(USER_KEY, r.data.user);
-            currentUser.value = r.data.user;
-            authed.value = true;
-            // 登录后自动加载数据
-            await loadHealth();
-            await loadAll();
-          } catch (e) {
-            loginError.value = e.response?.data?.detail || '登录失败';
-          } finally {
-            logging.value = false;
+    // ========== 导航分组 ==========
+    const currentTab = ref('dashboard');
+    const navGroups = computed(() => [
+      {
+        title: '数据',
+        items: [
+          { key: 'dashboard', label: '概览', icon: 'dashboard' },
+          { key: 'companies', label: 'MCP 用户', icon: 'users' },
+          { key: 'subscriptions', label: '订阅', icon: 'subs' },
+        ]
+      },
+      {
+        title: '政策',
+        items: [
+          { key: 'policies', label: '政策库', icon: 'policy' },
+          { key: 'sources', label: '政策源', icon: 'source' },
+          { key: 'push-logs', label: '推送历史', icon: 'push' },
+        ]
+      },
+      {
+        title: '系统',
+        items: [
+          { key: 'llm', label: 'LLM 配置', icon: 'llm' },
+          { key: 'audit', label: '审计', icon: 'audit', badge: failedAuditCount.value },
+        ]
+      }
+    ]);
+
+    const pageTitle = computed(() => {
+      const map = {
+        dashboard: '概览',
+        companies: 'MCP 用户',
+        subscriptions: '订阅管理',
+        policies: '政策库',
+        sources: '政策源',
+        'push-logs': '推送历史',
+        llm: 'LLM 配置',
+        audit: '审计日志',
+      };
+      return map[currentTab.value] || '';
+    });
+    const pageSubtitle = computed(() => {
+      const map = {
+        dashboard: '实时运营数据',
+        companies: '已接入 MCP 的企业用户',
+        subscriptions: '推送订阅与渠道配置',
+        policies: '已爬取的政策清单',
+        sources: '数据采集源配置',
+        'push-logs': '推送历史记录',
+        llm: 'LLM 接入与 Token 统计',
+        audit: '操作审计日志',
+      };
+      return map[currentTab.value] || '';
+    });
+
+    // ========== 状态 ==========
+    const health = ref(null);
+    const funnel = ref(null);
+    const companiesList = ref([]);
+    const subs = ref([]);
+    const policies = ref([]);
+    const sources = ref([]);
+    const pushLogs = ref([]);
+    const companyQuery = ref('');
+    const policyQuery = ref('');
+    const toast = ref({ show: false, msg: '' });
+    const loading = ref(false);
+    const loadingText = ref('处理中…');
+
+    // LLM
+    const llmConfig = reactive({ model: '', base_url: '', api_key: '', source: 'env', api_key_set: false, _current_key_masked: '' });
+    const llmUsage = reactive({ total: {}, daily: [], groups: [] });
+    const llmUsageDays = ref(7);
+    const llmUsageBy = ref('');
+    const llmTestResult = ref(null);
+
+    // 源筛选
+    const sourceFilter = reactive({ tag: '', region: '', category: '' });
+
+    // 公司展开 + 推送记录
+    const expandedCompany = ref(null);
+    const companyPushLogs = reactive({});
+
+    // 审计
+    const auditLogs = ref([]);
+    const auditStats = ref({ total: 0, today: 0, by_action: [] });
+    const auditFilter = reactive({ actor: '', action: '', status: '' });
+
+    const serverOnline = computed(() => health.value?.status === 'ok');
+    const companiesCount = computed(() => Array.isArray(companiesList.value) ? companiesList.value.length : 0);
+    const subscribedCount = computed(() => companiesList.value.filter(c => c.has_subscription).length);
+    const recentPushes = computed(() => pushLogs.value.slice(0, 5));
+
+    // ========== KPI 卡（数字 + 图标） ==========
+    const kpiCards = computed(() => {
+      const s = funnel.value?.stats || {};
+      return [
+        { key: 'companies', label: 'MCP 用户', value: companiesCount.value, sub: `${subscribedCount.value} 个已订阅`, icon: 'users', iconBg: 'bg-gradient-to-br from-brand-500 to-brand-600' },
+        { key: 'policies', label: '政策总数', value: policies.value.length, sub: '已爬取', icon: 'policy', iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600' },
+        { key: 'push', label: '推送成功', value: s.push_success || 0, sub: `成功率 ${((s.push_success_rate || 0) * 100).toFixed(0)}%`, icon: 'push', iconBg: 'bg-gradient-to-br from-ok-500 to-ok-600' },
+        { key: 'sources', label: '采集源', value: sources.value.length, sub: '启用中', icon: 'source', iconBg: 'bg-gradient-to-br from-warn-500 to-warn-600' },
+      ];
+    });
+
+    const failedAuditCount = computed(() => auditLogs.value.filter(l => l.status === 'failed').length);
+    const topAction = computed(() => {
+      const a = (auditStats.value.by_action || []);
+      if (!a.length) return '—';
+      return a[0].action + ' (' + a[0].count + ')';
+    });
+
+    // ========== 工具 ==========
+    function showToast(msg, ms = 2500) {
+      toast.value = { show: true, msg };
+      setTimeout(() => toast.value.show = false, ms);
+    }
+    async function withLoading(text, fn) {
+      loading.value = true;
+      loadingText.value = text;
+      try { return await fn(); }
+      catch (e) { showToast('✕ ' + (e.response?.data?.detail || e.message)); throw e; }
+      finally { loading.value = false; }
+    }
+
+    function scheduleLabel(s) {
+      return { realtime: '实时', daily: '每日', weekly: '每周', manual: '手动' }[s] || s;
+    }
+    function statusLabel(s) {
+      if (!s.enabled) return '已停用';
+      if (s.last_status === 'failed') return '爬取失败';
+      if (s.last_status === 'ok') return '爬取成功';
+      return '等待爬取';
+    }
+
+    // ========== 数据加载 ==========
+    async function loadHealth() {
+      try { health.value = (await axios.get('/health')).data; } catch {}
+    }
+    async function loadAll() {
+      await Promise.all([loadFunnel(), loadCompanies(), loadSubs(), loadPolicies(), loadSources(), loadPushLogs()]);
+    }
+    async function loadFunnel() { funnel.value = (await api.get('/api/dashboard/funnel')).data; }
+    async function loadCompanies() {
+      const r = await api.get('/api/companies');
+      companiesList.value = Array.isArray(r.data) ? r.data : (r.data.companies || []);
+    }
+    async function loadSubs() {
+      const r = await api.get('/api/subscriptions');
+      subs.value = r.data.subscriptions || [];
+    }
+    async function loadPolicies() {
+      const r = await api.get('/api/policies', { params: { query: policyQuery.value, limit: 50, summarized_only: false } });
+      policies.value = Array.isArray(r.data) ? r.data : (r.data.policies || []);
+    }
+    async function loadSources() {
+      const params = {};
+      if (sourceFilter.tag) params.tag = sourceFilter.tag;
+      if (sourceFilter.region) params.region = sourceFilter.region;
+      if (sourceFilter.category) params.category = sourceFilter.category;
+      const r = await api.get('/api/sources', { params });
+      sources.value = Array.isArray(r.data) ? r.data : (r.data.sources || []);
+    }
+    async function loadPushLogs() {
+      const r = await api.get('/api/push-logs', { params: { limit: 50 } });
+      pushLogs.value = Array.isArray(r.data) ? r.data : (r.data.logs || []);
+    }
+
+    async function loadLLMConfig() {
+      try {
+        const r = await api.get('/api/config/llm');
+        llmConfig.model = r.data.model;
+        llmConfig.base_url = r.data.base_url;
+        llmConfig.api_key = '';
+        llmConfig.source = r.data.source;
+        llmConfig.api_key_set = r.data.api_key_set;
+        llmConfig._current_key_masked = r.data.api_key;
+      } catch (e) { showToast('✕ 读 LLM 配置失败'); }
+    }
+    async function saveLLMConfig() {
+      try {
+        const body = { model: llmConfig.model, base_url: llmConfig.base_url };
+        if (llmConfig.api_key) body.api_key = llmConfig.api_key;
+        await api.put('/api/config/llm', body);
+        showToast('✓ LLM 配置已保存');
+        llmConfig.api_key = '';
+        await loadLLMConfig();
+      } catch (e) { showToast('✕ 保存失败: ' + (e.response?.data?.detail || e.message)); }
+    }
+    async function testLLMConfig() {
+      llmTestResult.value = null;
+      try {
+        const r = await api.post('/api/config/llm/test');
+        llmTestResult.value = r.data;
+      } catch (e) {
+        llmTestResult.value = { ok: false, error: e.response?.data?.detail || e.message };
+      }
+    }
+    async function loadLLMUsage(days = 7, by = '') {
+      try {
+        const r = await api.get('/api/llm/usage', { params: { days, by: by || undefined } });
+        llmUsageDays.value = days;
+        llmUsageBy.value = by;
+        if (by) {
+          llmUsage.groups = r.data.groups || [];
+        } else {
+          llmUsage.total = r.data.total || {};
+          llmUsage.daily = r.data.daily || [];
+        }
+      } catch (e) { showToast('✕ 读 LLM 用量失败'); }
+    }
+
+    async function loadAuditLogs() {
+      try {
+        const params = { limit: 200 };
+        if (auditFilter.actor) params.actor = auditFilter.actor;
+        if (auditFilter.action) params.action = auditFilter.action;
+        if (auditFilter.status) params.status = auditFilter.status;
+        const r = await api.get('/api/audit/logs', { params });
+        auditLogs.value = r.data.logs || [];
+        const sr = await api.get('/api/audit/stats');
+        auditStats.value = sr.data;
+      } catch (e) { showToast('✕ 读审计失败'); }
+    }
+
+    // ========== 订阅/公司操作 ==========
+    async function toggleSub(s, enable) {
+      const path = enable ? `${s.subscription_id}/resume` : `${s.subscription_id}/pause`;
+      await withLoading((enable ? '启用' : '暂停') + '订阅…', async () => {
+        await api.post(`/api/subscriptions/${path}`);
+        showToast('✓ 已' + (enable ? '启用' : '暂停'));
+        await loadSubs();
+      });
+    }
+    async function deleteSub(s) {
+      if (!confirm(`确定删除「${s.company_name}」及其所有数据？`)) return;
+      await withLoading('删除订阅…', async () => {
+        await api.delete(`/api/subscriptions/${s.subscription_id}`);
+        showToast('✓ 已删除');
+        await loadSubs();
+      });
+    }
+    async function triggerCrawl() {
+      showToast('⏳ 爬取所有源中…');
+      await withLoading('爬取所有源…', async () => {
+        const r = await api.post('/crawl/all');
+        const total = r.data.reduce((sum, x) => sum + (x.new_crawled || 0), 0);
+        showToast(`✓ 全部爬取完成，新增 ${total} 条`);
+        await loadSources();
+      });
+    }
+    async function crawlOne(s) {
+      await withLoading(`爬取「${s.name}」…`, async () => {
+        const r = await api.post(`/crawl/${s.source_id}`);
+        showToast(`✓ ${s.name}：列表 ${r.data.total_listed} / 新增 ${r.data.new_crawled}`);
+        await loadSources();
+      });
+    }
+    async function toggleSource(s) {
+      try {
+        await api.patch(`/api/sources/${s.id}`, { enabled: !s.enabled });
+        showToast(`✓ 已${!s.enabled ? '启用' : '停用'}「${s.name}」`);
+        await loadSources();
+      } catch (e) { showToast('✕ 失败: ' + (e.response?.data?.detail || e.message)); }
+    }
+    async function deleteSource(s) {
+      if (!confirm(`确定删除「${s.name}」？\n会级联删除其所有政策 + 推送日志`)) return;
+      await withLoading('删除中…', async () => {
+        await api.delete(`/api/sources/${s.id}`);
+        showToast('✓ 已删除');
+        await loadSources();
+      });
+    }
+    function setSourceFilter(key, value) {
+      sourceFilter[key] = value;
+      loadSources();
+    }
+    function openEditCompany(c) {
+      subModal.isNew = false;
+      subModal.data = {
+        subscription_id: null,
+        company_id: c.id,
+        company_name: c.name,
+        industry: c.industry || '',
+        region: c.region || '',
+        scale: c.scale || '',
+        webhook_url: c.webhook_url || '',
+        push_schedule: c.push_schedule || 'daily',
+        push_time: c.push_time || '08:30',
+        types: [], regions: [], keywords: [],
+        enabled: c.enabled,
+      };
+      subModal.tagsText = (c.tags || []).join(', ');
+      subModal.typesText = '';
+      subModal.regionsText = '';
+      subModal.keywordsText = '';
+      subModal.show = true;
+      if (c.has_subscription) {
+        api.get('/api/subscriptions').then(r => {
+          const sub = r.data.subscriptions.find(s => s.company_id === c.id);
+          if (sub) {
+            subModal.data.subscription_id = sub.subscription_id;
+            subModal.data.webhook_url = sub.webhook_url || '';
+            subModal.data.push_schedule = sub.push_schedule;
+            subModal.data.push_time = sub.push_time;
+            subModal.data.enabled = sub.enabled;
+            subModal.typesText = (sub.types || []).join(', ');
+            subModal.regionsText = (sub.regions || []).join(', ');
+            subModal.keywordsText = (sub.keywords || []).join(', ');
           }
-        }
-
-        async function doLogout() {
-          try { await api.post('/api/auth/logout'); } catch (e) {}
-          localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(USER_KEY);
-          authed.value = false;
-          currentUser.value = '';
-          loginForm.username = ''; loginForm.password = '';
-        }
-
-        // ===== 状态 =====
-        const tabs = [
-          { key: 'dashboard',     label: '概览',       icon: '📊' },
-          { key: 'companies',     label: 'MCP 用户',   icon: '🏢' },
-          { key: 'subscriptions', label: '订阅',       icon: '📋' },
-          { key: 'policies',      label: '政策库',     icon: '📜' },
-          { key: 'sources',       label: '政策源',     icon: '🕷️' },
-          { key: 'push-logs',     label: '推送历史',   icon: '📤' },
-          { key: 'llm',           label: 'LLM & 统计', icon: '🤖' },
-          { key: 'audit',         label: '审计',       icon: '📋' },
-        ];
-        const currentTab = ref('dashboard');
-        const health = ref(null);
-        const funnel = ref(null);
-        const companies = ref(null);
-        const subs = ref([]);
-        const policies = ref([]);
-        const sources = ref([]);
-        const pushLogs = ref([]);
-        const policyQuery = ref('');
-        const toast = ref({ show: false, msg: '' });
-        const loading = ref(false);
-        // LLM 配置 + 统计
-        const llmConfig = reactive({ model: '', base_url: '', api_key: '', source: 'env', api_key_set: false, _current_key_masked: '' });
-        const llmUsage = reactive({ total: {}, daily: [], groups: [] });
-        const llmUsageDays = ref(7);
-        const llmUsageBy = ref('');
-        const llmTestResult = ref(null);
-        // 源 tag 筛选
-        const sourceFilter = reactive({ tag: '', region: '', category: '' });
-        // 推送记录筛选
-        const pushFilter = reactive({ target: '' });
-        // 公司展开状态 + 推送记录
-        const expandedCompany = ref(null);
-        const companyPushLogs = reactive({});
-        // 审计日志
-        const auditLogs = ref([]);
-        const auditStats = ref({ total: 0, today: 0, by_action: [] });
-        const auditFilter = reactive({ actor: '', action: '', status: '' });
-        const loadingText = ref('处理中...');
-
-        const serverOnline = computed(() => health.value?.status === 'ok');
-        const statCards = computed(() => {
-          if (!funnel.value) return {};
-          const s = funnel.value.stats || {};
-          return {
-            push: { label: '推送成功', value: s.push_success || 0, color: 'text-green-600' },
-            reached: { label: '触达',   value: s.reached || 0,      color: 'text-brand-600' },
-            companies: { label: '企业', value: companies.value?.count || 0, color: 'text-accent-600' },
-            rate: { label: '成功率', value: ((s.push_success_rate || 0) * 100).toFixed(0) + '%', color: 'text-gray-900' },
-          };
         });
-
-        function showToast(msg, ms = 2500) {
-          toast.value = { show: true, msg };
-          setTimeout(() => toast.value.show = false, ms);
-        }
-
-        async function withLoading(text, fn) {
-          loading.value = true;
-          loadingText.value = text;
-          try { return await fn(); }
-          catch (e) { showToast('❌ ' + (e.response?.data?.detail || e.message)); throw e; }
-          finally { loading.value = false; }
-        }
-
-        // ===== 数据加载 =====
-        async function loadHealth() {
-          try { health.value = (await axios.get('/health')).data; } catch {}
-        }
-        async function loadAll() {
-          await Promise.all([loadFunnel(), loadCompanies(), loadSubs(), loadPolicies(), loadSources(), loadPushLogs()]);
-        }
-        async function loadFunnel() { funnel.value = (await api.get('/api/dashboard/funnel')).data; }
-        async function loadCompanies() { companies.value = (await api.get('/api/companies')).data; }
-        async function loadSubs() { subs.value = (await api.get('/api/subscriptions')).data.subscriptions || []; }
-        async function loadPolicies() {
-          const r = await api.get('/api/policies', { params: { query: policyQuery.value, limit: 50, summarized_only: false } });
-          policies.value = r.data;
-        }
-        async function loadSources() {
-          const params = {};
-          if (sourceFilter.tag) params.tag = sourceFilter.tag;
-          if (sourceFilter.region) params.region = sourceFilter.region;
-          if (sourceFilter.category) params.category = sourceFilter.category;
-          sources.value = (await api.get('/api/sources', { params })).data;
-        }
-
-        async function loadLLMConfig() {
-          try {
-            const r = await api.get('/api/config/llm');
-            llmConfig.model = r.data.model;
-            llmConfig.base_url = r.data.base_url;
-            llmConfig.api_key = '';  // 不显示原 key
-            llmConfig.source = r.data.source;
-            llmConfig.api_key_set = r.data.api_key_set;
-            llmConfig._current_key_masked = r.data.api_key;
-          } catch (e) {
-            showToast('❌ 读 LLM 配置失败');
-          }
-        }
-
-        async function saveLLMConfig() {
-          try {
-            const body = { model: llmConfig.model, base_url: llmConfig.base_url };
-            if (llmConfig.api_key && llmConfig.api_key !== '') {
-              body.api_key = llmConfig.api_key;
-            }
-            await api.put('/api/config/llm', body);
-            showToast('✅ LLM 配置已保存（下次调用生效）');
-            llmConfig.api_key = '';
-            await loadLLMConfig();
-          } catch (e) {
-            showToast('❌ 保存失败: ' + (e.response?.data?.detail || e.message));
-          }
-        }
-
-        async function testLLMConfig() {
-          llmTestResult.value = null;
-          try {
-            const r = await api.post('/api/config/llm/test');
-            llmTestResult.value = r.data;
-          } catch (e) {
-            llmTestResult.value = { ok: false, error: e.response?.data?.detail || e.message };
-          }
-        }
-
-        async function loadLLMUsage(days = 7, by = '') {
-          try {
-            const r = await api.get('/api/llm/usage', { params: { days, by: by || undefined } });
-            llmUsageDays.value = days;
-            llmUsageBy.value = by;
-            if (by) {
-              llmUsage.groups = r.data.groups || [];
-            } else {
-              llmUsage.total = r.data.total || {};
-              llmUsage.daily = r.data.daily || [];
-            }
-          } catch (e) {
-            showToast('❌ 读 LLM 用量失败');
-          }
-        }
-
-        async function loadAuditLogs() {
-          try {
-            const params = { limit: 200 };
-            if (auditFilter.actor) params.actor = auditFilter.actor;
-            if (auditFilter.action) params.action = auditFilter.action;
-            if (auditFilter.status) params.status = auditFilter.status;
-            const r = await api.get('/api/audit/logs', { params });
-            auditLogs.value = r.data.logs || [];
-            const sr = await api.get('/api/audit/stats');
-            auditStats.value = sr.data;
-          } catch (e) {
-            showToast('❌ 读审计失败: ' + (e.response?.data?.detail || e.message));
-          }
-        }
-
-        const failedAuditCount = computed(() =>
-          auditLogs.value.filter(l => l.status === 'failed').length
-        );
-        const topAction = computed(() => {
-          const a = (auditStats.value.by_action || []);
-          if (!a.length) return '-';
-          return a[0].action + ' (' + a[0].count + ')';
-        });
-        async function loadPushLogs() { pushLogs.value = (await api.get('/api/push-logs', { params: { limit: 50 } })).data; }
-
-        async function toggleSub(s, enable) {
-          const path = enable ? `${s.subscription_id}/resume` : `${s.subscription_id}/pause`;
-          await withLoading((enable ? '启用' : '暂停') + '订阅...', async () => {
-            await api.post(`/api/subscriptions/${path}`);
-            showToast('✅ 已' + (enable ? '启用' : '暂停'));
-            await loadSubs();
-          });
-        }
-
-        async function deleteSub(s) {
-          if (!confirm(`确定删除「${s.company_name}」及其所有数据？`)) return;
-          await withLoading('删除订阅...', async () => {
-            await api.delete(`/api/subscriptions/${s.subscription_id}`);
-            showToast('✅ 已删除');
-            await loadSubs();
-          });
-        }
-
-        async function triggerCrawl() {
-          showToast('⏳ 爬取所有源中...');
-          await withLoading('爬取所有源...', async () => {
-            const r = await api.post('/crawl/all');
-            const total = r.data.reduce((sum, x) => sum + (x.new_crawled || 0), 0);
-            showToast(`✅ 全部爬取完成，新增 ${total} 条`);
-            await loadSources();
-          });
-        }
-
-        async function crawlOne(s) {
-          await withLoading(`爬取「${s.name}」...`, async () => {
-            const r = await api.post(`/crawl/${s.source_id}`);
-            showToast(`✅ ${s.name}：列表 ${r.data.total_listed} / 新增 ${r.data.new_crawled}`);
-            await loadSources();
-          });
-        }
-
-        async function toggleSource(s) {
-          try {
-            await api.patch(`/api/sources/${s.id}`, { enabled: !s.enabled });
-            showToast(`✅ 已${!s.enabled ? '启用' : '停用'}「${s.name}」`);
-            await loadSources();
-          } catch (e) {
-            showToast('❌ 失败: ' + (e.response?.data?.detail || e.message));
-          }
-        }
-
-        async function deleteSource(s) {
-          if (!confirm(`确定删除「${s.name}」？\n会级联删除其所有政策 + 推送日志`)) return;
-          await withLoading('删除中...', async () => {
-            await api.delete(`/api/sources/${s.id}`);
-            showToast('✅ 已删除');
-            await loadSources();
-          });
-        }
-
-        function setSourceFilter(key, value) {
-          sourceFilter[key] = value;
-          loadSources();
-        }
-
-        async function loadCompanies2() {
-          try {
-            const r = await api.get('/api/companies');
-            companies.value = r.data;
-          } catch (e) {
-            showToast('❌ 加载公司失败: ' + (e.response?.data?.detail || e.message));
-          }
-        }
-
-        function openEditCompany(c) {
-          // 复用订阅 modal，传 subscription 或 company 模式
-          subModal.isNew = false;
-          subModal.data = {
-            subscription_id: null,
-            company_id: c.id,
-            company_name: c.name,
-            industry: c.industry || '',
-            region: c.region || '',
-            scale: c.scale || '',
-            webhook_url: c.webhook_url || '',
-            push_schedule: c.push_schedule || 'daily',
-            push_time: c.push_time || '08:30',
-            types: [], regions: [], keywords: [],
-            enabled: c.enabled,
-          };
-          subModal.tagsText = (c.tags || []).join(', ');
-          subModal.typesText = '';
-          subModal.regionsText = '';
-          subModal.keywordsText = '';
-          subModal.show = true;
-          // 如果有订阅，拉详情
-          if (c.has_subscription) {
-            api.get('/api/subscriptions').then(r => {
-              const sub = r.data.subscriptions.find(s => s.company_id === c.id);
-              if (sub) {
-                subModal.data.subscription_id = sub.subscription_id;
-                subModal.data.webhook_url = sub.webhook_url || '';
-                subModal.data.push_schedule = sub.push_schedule;
-                subModal.data.push_time = sub.push_time;
-                subModal.data.enabled = sub.enabled;
-                subModal.typesText = (sub.types || []).join(', ');
-                subModal.regionsText = (sub.regions || []).join(', ');
-                subModal.keywordsText = (sub.keywords || []).join(', ');
-              }
-            });
-          }
-        }
-
-        async function deleteCompany(c) {
-          if (!confirm(`确定删除「${c.name}」及其所有订阅/数据？`)) return;
-          await withLoading('删除中...', async () => {
-            // 先删订阅（如果有）
-            if (c.has_subscription) {
-              const r = await api.get('/api/subscriptions');
-              const sub = r.data.subscriptions.find(s => s.company_id === c.id);
-              if (sub) await api.delete(`/api/subscriptions/${sub.subscription_id}`);
-            }
-            // 删公司（级联删剩下的）
-            // 注：Company 暂时没有 DELETE API，需要直接 PATCH 改名 + delete via subscription
-            showToast('⚠️ 请通过订阅 tab 删除');
-          });
-        }
-
-        async function pushSubscriptionByCompany(c) {
-          // 通过 company 找 subscription，再 push
+      }
+    }
+    async function deleteCompany(c) {
+      if (!confirm(`确定删除「${c.name}」及其所有订阅/数据？`)) return;
+      await withLoading('删除中…', async () => {
+        if (c.has_subscription) {
           const r = await api.get('/api/subscriptions');
           const sub = r.data.subscriptions.find(s => s.company_id === c.id);
-          if (!sub) { showToast('❌ 该公司无订阅'); return; }
-          await pushNow(sub);
-          await loadCompanies();
+          if (sub) await api.delete(`/api/subscriptions/${sub.subscription_id}`);
+        }
+        showToast('⚠ 请通过订阅 tab 完成剩余清理');
+      });
+    }
+    async function pushSubscriptionByCompany(c) {
+      const r = await api.get('/api/subscriptions');
+      const sub = r.data.subscriptions.find(s => s.company_id === c.id);
+      if (!sub) { showToast('✕ 该公司无订阅'); return; }
+      await pushNow(sub);
+      await loadCompanies();
+    }
+    async function toggleCompanyDetail(c) {
+      if (expandedCompany.value === c.id) { expandedCompany.value = null; return; }
+      expandedCompany.value = c.id;
+      companyPushLogs[c.id] = undefined;
+      try {
+        const r = await api.get('/api/subscriptions');
+        const sub = r.data.subscriptions.find(s => s.company_id === c.id);
+        if (!sub) { companyPushLogs[c.id] = []; return; }
+        const target = `sub-${sub.subscription_id}`;
+        const logs = await api.get('/api/push-logs', { params: { target, limit: 10 } });
+        companyPushLogs[c.id] = Array.isArray(logs.data) ? logs.data : (logs.data.logs || []);
+      } catch (e) { companyPushLogs[c.id] = []; }
+    }
+
+    function refreshCurrent() {
+      const map = {
+        dashboard: loadAll,
+        companies: loadCompanies,
+        subscriptions: loadSubs,
+        policies: loadPolicies,
+        sources: loadSources,
+        'push-logs': loadPushLogs,
+        llm: async () => { await loadLLMConfig(); await loadLLMUsage(llmUsageDays.value, llmUsageBy.value); },
+        audit: loadAuditLogs,
+      };
+      (map[currentTab.value] || (() => {}))();
+      showToast('已刷新');
+    }
+
+    // ========== Modals ==========
+    const subModal = reactive({
+      show: false, isNew: false, saving: false, data: {},
+      tagsText: '', typesText: '', regionsText: '', keywordsText: '',
+      feishuWebhook: '', feishuSecret: '', feishuTestResult: null,
+      webhookUrl: '', webhookSecret: '',
+    });
+    const policyModal = reactive({ show: false, saving: false, data: {} });
+
+    function openEditSub(s) {
+      subModal.isNew = false;
+      subModal.data = { ...s, push_channel: s.push_channel || 'mock', push_config: s.push_config || {} };
+      subModal.tagsText = '';
+      subModal.typesText = (s.types || []).join(', ');
+      subModal.regionsText = (s.regions || []).join(', ');
+      subModal.keywordsText = (s.keywords || []).join(', ');
+      const pc = s.push_config || {};
+      if (s.push_channel === 'feishu') {
+        subModal.feishuWebhook = pc.webhook_url || '';
+        subModal.feishuSecret = pc.secret || '';
+        subModal.webhookUrl = '';
+        subModal.webhookSecret = '';
+      } else if (s.push_channel === 'webhook') {
+        subModal.webhookUrl = pc.webhook_url || '';
+        subModal.webhookSecret = pc.secret || '';
+        subModal.feishuWebhook = '';
+        subModal.feishuSecret = '';
+      } else {
+        subModal.feishuWebhook = '';
+        subModal.feishuSecret = '';
+        subModal.webhookUrl = '';
+        subModal.webhookSecret = '';
+      }
+      subModal.feishuTestResult = null;
+      subModal.show = true;
+      api.get(`/api/companies`).then(r => {
+        const list = Array.isArray(r.data) ? r.data : (r.data.companies || []);
+        const c = list.find(c => c.id === s.company_id);
+        if (c) {
+          subModal.data.industry = c.industry || '';
+          subModal.data.region = c.region || '';
+          subModal.data.scale = c.scale || '';
+          subModal.tagsText = (c.tags || []).join(', ');
+        }
+      }).catch(() => {});
+    }
+    function openNewSubModal() {
+      subModal.isNew = true;
+      subModal.data = {
+        company_name: '', industry: '', region: '', scale: '', webhook_url: '',
+        push_schedule: 'daily', push_time: '08:30',
+        push_channel: 'mock', push_config: {},
+        types: [], regions: [], keywords: [],
+      };
+      subModal.tagsText = '';
+      subModal.typesText = '';
+      subModal.regionsText = '';
+      subModal.keywordsText = '';
+      subModal.feishuWebhook = '';
+      subModal.feishuSecret = '';
+      subModal.feishuTestResult = null;
+      subModal.webhookUrl = '';
+      subModal.webhookSecret = '';
+      subModal.show = true;
+    }
+    async function saveSubModal() {
+      if (!subModal.data.company_name) { showToast('✕ 公司名必填'); return; }
+      subModal.saving = true;
+      try {
+        const tags = subModal.tagsText.split(',').map(s => s.trim()).filter(Boolean);
+        const types = subModal.typesText.split(',').map(s => s.trim()).filter(Boolean);
+        const regions = subModal.regionsText.split(',').map(s => s.trim()).filter(Boolean);
+        const keywords = subModal.keywordsText.split(',').map(s => s.trim()).filter(Boolean);
+
+        let pushConfig = {};
+        if (subModal.data.push_channel === 'feishu') {
+          if (!subModal.feishuWebhook) { showToast('✕ 飞书 webhook_url 必填'); subModal.saving = false; return; }
+          pushConfig = { webhook_url: subModal.feishuWebhook, secret: subModal.feishuSecret || null };
+        } else if (subModal.data.push_channel === 'webhook') {
+          if (!subModal.webhookUrl) { showToast('✕ webhook URL 必填'); subModal.saving = false; return; }
+          pushConfig = { webhook_url: subModal.webhookUrl, secret: subModal.webhookSecret || null };
         }
 
-        async function toggleCompanyDetail(c) {
-          if (expandedCompany.value === c.id) {
-            expandedCompany.value = null;
-            return;
-          }
-          expandedCompany.value = c.id;
-          // 加载推送记录：通过 subscription 找 target='sub-{id}'
-          companyPushLogs[c.id] = undefined;
-          try {
-            const r = await api.get('/api/subscriptions');
-            const sub = r.data.subscriptions.find(s => s.company_id === c.id);
-            if (!sub) { companyPushLogs[c.id] = []; return; }
-            const target = `sub-${sub.subscription_id}`;
-            const logs = await api.get('/api/push-logs', { params: { target, limit: 10 } });
-            companyPushLogs[c.id] = logs.data;
-          } catch (e) {
-            companyPushLogs[c.id] = [];
-          }
-        }
-
-        // ===== 订阅/公司 Modal =====
-        const subModal = reactive({
-          show: false,
-          isNew: false,
-          saving: false,
-          data: {},
-          tagsText: '',
-          typesText: '',
-          regionsText: '',
-          keywordsText: '',
-          // 渠道配置临时字段
-          feishuWebhook: '',
-          feishuSecret: '',
-          feishuTestResult: null,
-          webhookUrl: '',
-          webhookSecret: '',
-        });
-
-        function openEditSub(s) {
-          subModal.isNew = false;
-          subModal.data = { ...s, push_channel: s.push_channel || 'mock', push_config: s.push_config || {} };
-          subModal.tagsText = '';
-          subModal.typesText = (s.types || []).join(', ');
-          subModal.regionsText = (s.regions || []).join(', ');
-          subModal.keywordsText = (s.keywords || []).join(', ');
-          // 渠道配置填进临时字段
-          const pc = s.push_config || {};
-          if (s.push_channel === 'feishu') {
-            subModal.feishuWebhook = pc.webhook_url || '';
-            subModal.feishuSecret = pc.secret || '';
-            subModal.webhookUrl = '';
-            subModal.webhookSecret = '';
-          } else if (s.push_channel === 'webhook') {
-            subModal.webhookUrl = pc.webhook_url || '';
-            subModal.webhookSecret = pc.secret || '';
-            subModal.feishuWebhook = '';
-            subModal.feishuSecret = '';
-          } else {
-            subModal.feishuWebhook = '';
-            subModal.feishuSecret = '';
-            subModal.webhookUrl = '';
-            subModal.webhookSecret = '';
-          }
-          subModal.feishuTestResult = null;
-          subModal.show = true;
-          // 拉 company 详情填 tags
-          api.get(`/api/companies`).then(r => {
-            const c = r.data.find(c => c.id === s.company_id);
-            if (c) {
-              subModal.data.industry = c.industry || '';
-              subModal.data.region = c.region || '';
-              subModal.data.scale = c.scale || '';
-              subModal.tagsText = (c.tags || []).join(', ');
-            }
-          }).catch(() => {});
-        }
-
-        function openNewSubModal() {
-          subModal.isNew = true;
-          subModal.data = {
-            company_name: '',
-            industry: '',
-            region: '',
-            scale: '',
-            webhook_url: '',
-            push_schedule: 'daily',
-            push_time: '08:30',
-            push_channel: 'mock',
-            push_config: {},
-            types: [],
-            regions: [],
-            keywords: [],
-          };
-          subModal.tagsText = '';
-          subModal.typesText = '';
-          subModal.regionsText = '';
-          subModal.keywordsText = '';
-          subModal.feishuWebhook = '';
-          subModal.feishuSecret = '';
-          subModal.feishuTestResult = null;
-          subModal.webhookUrl = '';
-          subModal.webhookSecret = '';
-          subModal.show = true;
-        }
-
-        async function saveSubModal() {
-          if (!subModal.data.company_name) { showToast('❌ 公司名必填'); return; }
-          subModal.saving = true;
-          try {
-            const tags = subModal.tagsText.split(',').map(s => s.trim()).filter(Boolean);
-            const types = subModal.typesText.split(',').map(s => s.trim()).filter(Boolean);
-            const regions = subModal.regionsText.split(',').map(s => s.trim()).filter(Boolean);
-            const keywords = subModal.keywordsText.split(',').map(s => s.trim()).filter(Boolean);
-
-            // 构造 push_config
-            let pushConfig = {};
-            if (subModal.data.push_channel === 'feishu') {
-              if (!subModal.feishuWebhook) { showToast('❌ 飞书 webhook_url 必填'); subModal.saving = false; return; }
-              pushConfig = { webhook_url: subModal.feishuWebhook, secret: subModal.feishuSecret || null };
-            } else if (subModal.data.push_channel === 'webhook') {
-              if (!subModal.webhookUrl) { showToast('❌ webhook URL 必填'); subModal.saving = false; return; }
-              pushConfig = { webhook_url: subModal.webhookUrl, secret: subModal.webhookSecret || null };
-            }
-
-            if (subModal.isNew) {
-              // 新建公司+订阅
-              await api.post('/api/companies', {
-                name: subModal.data.company_name,
-                industry: subModal.data.industry || null,
-                region: subModal.data.region || null,
-                scale: subModal.data.scale || null,
-                tags,
-                push_schedule: subModal.data.push_schedule,
-                push_time: subModal.data.push_time,
-                webhook_url: subModal.data.webhook_url || null,
-                types, regions, keywords: keywords.length ? keywords : null,
-                push_channel: subModal.data.push_channel,
-                push_config: pushConfig,
-              });
-              showToast('✅ 已新建订阅');
-            } else {
-              // 改 company
-              await api.patch(`/api/companies/${subModal.data.company_id}`, {
-                name: subModal.data.company_name,
-                industry: subModal.data.industry || null,
-                region: subModal.data.region || null,
-                scale: subModal.data.scale || null,
-                tags,
-              });
-              // 改 subscription
-              await api.patch(`/api/subscriptions/${subModal.data.subscription_id}`, {
-                push_schedule: subModal.data.push_schedule,
-                push_time: subModal.data.push_time,
-                webhook_url: subModal.data.webhook_url || null,
-                types, regions, keywords: keywords.length ? keywords : null,
-                push_channel: subModal.data.push_channel,
-                push_config: pushConfig,
-              });
-              showToast('✅ 已保存');
-            }
-            subModal.show = false;
-            await loadSubscriptions();
-          } catch (e) {
-            showToast('❌ 保存失败: ' + (e.response?.data?.detail || e.message));
-          } finally {
-            subModal.saving = false;
-          }
-        }
-
-        async function testPushChannel() {
-          const channel = subModal.data.push_channel;
-          if (!channel) { showToast('❌ 请先选渠道'); return; }
-          let config = {};
-          if (channel === 'feishu') {
-            if (!subModal.feishuWebhook) { showToast('❌ 先填飞书 webhook URL'); return; }
-            config = { webhook_url: subModal.feishuWebhook, secret: subModal.feishuSecret || null };
-          } else if (channel === 'webhook') {
-            if (!subModal.webhookUrl) { showToast('❌ 先填 webhook URL'); return; }
-            config = { webhook_url: subModal.webhookUrl, secret: subModal.webhookSecret || null };
-          } else if (channel === 'mock') {
-            // mock 通道没有外部目标，跳过
-            showToast('ℹ️ Mock 通道无外部目标，无需测连通');
-            return;
-          }
-          try {
-            const r = await api.post('/api/subscriptions/test-push', config, { params: { channel } });
-            subModal.feishuTestResult = r.data;
-            if (r.data.ok) showToast('✅ ' + channel + ' 连通成功');
-            else showToast('❌ ' + channel + ': ' + r.data.error);
-          } catch (e) {
-            subModal.feishuTestResult = { ok: false, error: e.response?.data?.detail || e.message };
-            showToast('❌ 测试失败');
-          }
-        }
-
-        function onChannelChange() {
-          // 切渠道时清空临时字段 + 测试结果
-          subModal.feishuTestResult = null;
-        }
-
-        async function pushNow(s) {
-          await withLoading('推送中...', async () => {
-            const r = await api.post(`/api/subscriptions/${s.subscription_id}/push`);
-            showToast(`✅ 已推到 ${r.data.channel}: ${r.data.policy_title.slice(0, 30)}...`);
-            await loadSubscriptions();
-            await loadPushLogs();
+        if (subModal.isNew) {
+          await api.post('/api/companies', {
+            name: subModal.data.company_name,
+            industry: subModal.data.industry || null,
+            region: subModal.data.region || null,
+            scale: subModal.data.scale || null,
+            tags,
+            push_schedule: subModal.data.push_schedule,
+            push_time: subModal.data.push_time,
+            webhook_url: subModal.data.webhook_url || null,
+            types, regions, keywords: keywords.length ? keywords : null,
+            push_channel: subModal.data.push_channel,
+            push_config: pushConfig,
           });
-        }
-
-        // ===== 政策 Modal =====
-        const policyModal = reactive({
-          show: false,
-          saving: false,
-          data: {},
-        });
-
-        function openEditPolicy(p) {
-          policyModal.data = { ...p };
-          policyModal.show = true;
-        }
-
-        async function savePolicyModal() {
-          policyModal.saving = true;
-          try {
-            await api.patch(`/api/policies/${policyModal.data.id}`, {
-              summary_type: policyModal.data.summary_type || null,
-              summary_text: policyModal.data.summary || null,
-              amount: policyModal.data.amount || null,
-              deadline: policyModal.data.deadline || null,
-            });
-            showToast('✅ 已保存');
-            policyModal.show = false;
-            await loadPolicies();
-          } catch (e) {
-            showToast('❌ 保存失败: ' + (e.response?.data?.detail || e.message));
-          } finally {
-            policyModal.saving = false;
-          }
-        }
-
-        async function deletePolicy(p) {
-          if (!confirm(`确定删除政策 #${p.id}「${p.title.slice(0, 30)}...」？\n（会级联删 push_logs + matches）`)) return;
-          await withLoading('删除中...', async () => {
-            await api.delete(`/api/policies/${p.id}`);
-            showToast('✅ 已删除');
-            await loadPolicies();
+          showToast('✓ 已新建订阅');
+        } else {
+          await api.patch(`/api/companies/${subModal.data.company_id}`, {
+            name: subModal.data.company_name,
+            industry: subModal.data.industry || null,
+            region: subModal.data.region || null,
+            scale: subModal.data.scale || null,
+            tags,
           });
+          await api.patch(`/api/subscriptions/${subModal.data.subscription_id}`, {
+            push_schedule: subModal.data.push_schedule,
+            push_time: subModal.data.push_time,
+            webhook_url: subModal.data.webhook_url || null,
+            types, regions, keywords: keywords.length ? keywords : null,
+            push_channel: subModal.data.push_channel,
+            push_config: pushConfig,
+          });
+          showToast('✓ 已保存');
         }
+        subModal.show = false;
+        await loadSubs();
+      } catch (e) {
+        showToast('✕ 保存失败: ' + (e.response?.data?.detail || e.message));
+      } finally {
+        subModal.saving = false;
+      }
+    }
+    async function testPushChannel() {
+      const channel = subModal.data.push_channel;
+      if (!channel) { showToast('✕ 请先选渠道'); return; }
+      let config = {};
+      if (channel === 'feishu') {
+        if (!subModal.feishuWebhook) { showToast('✕ 先填飞书 webhook URL'); return; }
+        config = { webhook_url: subModal.feishuWebhook, secret: subModal.feishuSecret || null };
+      } else if (channel === 'webhook') {
+        if (!subModal.webhookUrl) { showToast('✕ 先填 webhook URL'); return; }
+        config = { webhook_url: subModal.webhookUrl, secret: subModal.webhookSecret || null };
+      } else if (channel === 'mock') {
+        showToast('ℹ Mock 通道无外部目标，无需测连通');
+        return;
+      }
+      try {
+        const r = await api.post('/api/subscriptions/test-push', config, { params: { channel } });
+        subModal.feishuTestResult = r.data;
+        if (r.data.ok) showToast('✓ ' + channel + ' 连通成功');
+        else showToast('✕ ' + channel + ': ' + r.data.error);
+      } catch (e) {
+        subModal.feishuTestResult = { ok: false, error: e.response?.data?.detail || e.message };
+        showToast('✕ 测试失败');
+      }
+    }
+    function onChannelChange() { subModal.feishuTestResult = null; }
+    async function pushNow(s) {
+      await withLoading('推送中…', async () => {
+        const r = await api.post(`/api/subscriptions/${s.subscription_id}/push`);
+        showToast(`✓ 已推到 ${r.data.channel}: ${r.data.policy_title?.slice(0, 30)}…`);
+        await loadSubs();
+        await loadPushLogs();
+      });
+    }
 
-        function badgeColor(type) {
-          const m = {
-            '补贴': 'bg-green-100 text-green-700',
-            '贷款': 'bg-blue-100 text-blue-700',
-            '税收': 'bg-purple-100 text-purple-700',
-            '人才': 'bg-pink-100 text-pink-700',
-            '产业扶持': 'bg-orange-100 text-orange-700',
-          };
-          return m[type] || 'bg-gray-100 text-gray-600';
-        }
-
-        function channelIcon(ch) {
-          return { mock: '🧪', feishu: '🦊', wecom: '🏢', wechat: '💬', webhook: '🔗', email: '📧' }[ch] || '❓';
-        }
-        function channelLabel(ch) {
-          return { mock: 'Mock', feishu: '飞书', wecom: '企微', wechat: '微信', webhook: 'Webhook', email: '邮件' }[ch] || ch;
-        }
-        function channelBadge(ch) {
-          return { feishu: 'bg-blue-100 text-blue-700', webhook: 'bg-amber-100 text-amber-700', wecom: 'bg-green-100 text-green-700', wechat: 'bg-green-100 text-green-700' }[ch] || 'bg-gray-100 text-gray-600';
-        }
-
-        onMounted(async () => {
-          if (!authed.value) return;
-          await loadHealth();
-          await loadAll();
-          await loadLLMConfig();
-          await loadLLMUsage(7);
-          await loadAuditLogs();
-          // 每 30s 健康检查
-          setInterval(loadHealth, 30000);
+    function openEditPolicy(p) {
+      policyModal.data = { ...p };
+      policyModal.show = true;
+    }
+    async function savePolicyModal() {
+      policyModal.saving = true;
+      try {
+        await api.patch(`/api/policies/${policyModal.data.id}`, {
+          summary_type: policyModal.data.summary_type || null,
+          summary_text: policyModal.data.summary || null,
+          amount: policyModal.data.amount || null,
+          deadline: policyModal.data.deadline || null,
         });
+        showToast('✓ 已保存');
+        policyModal.show = false;
+        await loadPolicies();
+      } catch (e) {
+        showToast('✕ 保存失败: ' + (e.response?.data?.detail || e.message));
+      } finally {
+        policyModal.saving = false;
+      }
+    }
+    async function deletePolicy(p) {
+      if (!confirm(`确定删除政策 #${p.id}「${p.title.slice(0, 30)}…」？\n（会级联删 push_logs + matches）`)) return;
+      await withLoading('删除中…', async () => {
+        await api.delete(`/api/policies/${p.id}`);
+        showToast('✓ 已删除');
+        await loadPolicies();
+      });
+    }
 
-        return {
-          authed, currentUser, loginForm, loginError, logging,
-          doLogin, doLogout,
-          tabs, currentTab,
-          health, funnel, companies, subs, policies, sources, pushLogs,
-          policyQuery, loading, loadingText, toast,
-          serverOnline, statCards,
-          loadHealth, loadAll, loadFunnel, loadCompanies, loadSubs, loadPolicies, loadSources, loadPushLogs,
-          toggleSub, deleteSub, triggerCrawl, badgeColor, channelIcon, channelLabel, channelBadge,
-          subModal, openEditSub, openNewSubModal, saveSubModal, pushNow,
-          testPushChannel, onChannelChange,
-          policyModal, openEditPolicy, savePolicyModal, deletePolicy,
-          openEditCompany, deleteCompany, pushSubscriptionByCompany,
-          crawlOne, toggleSource, deleteSource, setSourceFilter,
-          toggleCompanyDetail,
-          llmConfig, llmUsage, llmUsageDays, llmUsageBy, llmTestResult,
-          loadLLMConfig, saveLLMConfig, testLLMConfig, loadLLMUsage,
-          sourceFilter, pushFilter,
-          expandedCompany, companyPushLogs,
-          auditLogs, auditStats, auditFilter, loadAuditLogs, failedAuditCount, topAction,
-        };
-      },
-    }).mount('#app');
-  </script>
+    onMounted(async () => {
+      if (!authed.value) return;
+      await loadHealth();
+      await loadAll();
+      await loadLLMConfig();
+      await loadLLMUsage(7);
+      await loadAuditLogs();
+      setInterval(loadHealth, 30000);
+    });
+
+    return {
+      authed, currentUser, loginForm, loginError, logging,
+      doLogin, doLogout,
+      navGroups, currentTab, pageTitle, pageSubtitle,
+      health, funnel, companiesList, companiesCount, subscribedCount,
+      subs, policies, sources, pushLogs,
+      companyQuery, policyQuery, loading, loadingText, toast,
+      serverOnline, kpiCards, recentPushes, refreshCurrent,
+      loadHealth, loadAll, loadFunnel, loadCompanies, loadSubs, loadPolicies, loadSources, loadPushLogs,
+      toggleSub, deleteSub, triggerCrawl, scheduleLabel, statusLabel,
+      subModal, openEditSub, openNewSubModal, saveSubModal, pushNow,
+      testPushChannel, onChannelChange,
+      policyModal, openEditPolicy, savePolicyModal, deletePolicy,
+      openEditCompany, deleteCompany, pushSubscriptionByCompany,
+      crawlOne, toggleSource, deleteSource, setSourceFilter,
+      toggleCompanyDetail,
+      llmConfig, llmUsage, llmUsageDays, llmUsageBy, llmTestResult,
+      loadLLMConfig, saveLLMConfig, testLLMConfig, loadLLMUsage,
+      sourceFilter, expandedCompany, companyPushLogs,
+      auditLogs, auditStats, auditFilter, loadAuditLogs, failedAuditCount, topAction,
+      // 注册子组件供模板使用
+      StatusBadge, ChannelBadge, TypeBadge, MiniStat, FormField, FilterChip, PageToolbar,
+    };
+  }
+}).mount('#app');
+</script>
+
 </body>
 </html>

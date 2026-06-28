@@ -45,10 +45,20 @@ def upgrade() -> None:
     )
 
     # === PolicySource 加 region / department / tags ===
-    with op.batch_alter_table("policy_sources") as batch:
-        batch.add_column(sa.Column("region", sa.String(64), nullable=True))
-        batch.add_column(sa.Column("department", sa.String(64), nullable=True))
-        batch.add_column(sa.Column("tags", sa.JSON, nullable=True))
+    # 幂等 ADD COLUMN：兼容「DB 已被手工 ALTER 过列」的环境
+    for col in ("region", "department", "tags"):
+        try:
+            with op.batch_alter_table("policy_sources") as batch:
+                if col == "tags":
+                    batch.add_column(sa.Column(col, sa.JSON, nullable=True))
+                else:
+                    batch.add_column(sa.Column(col, sa.String(64), nullable=True))
+        except Exception as e:  # noqa: BLE001
+            msg = str(e).lower()
+            if "duplicate column" in msg or "already exists" in msg:
+                # 列已存在（被手工 ALTER 过），跳过
+                continue
+            raise
 
 
 def downgrade() -> None:

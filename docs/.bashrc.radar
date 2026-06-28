@@ -1,0 +1,98 @@
+# ============================================================
+# 服务器 Shell 别名（policy-radar 阿里云轻量服务器专用）
+# 复制到 ~/.bashrc 末尾，source ~/.bashrc 生效
+# ============================================================
+
+# ============== 基础 SSH ==============
+alias radar='ssh -i ~/.ssh/policy-radar-key -o LogLevel=ERROR -o ConnectTimeout=5 root@43.155.161.54'
+
+# ============== 服务器信息 ==============
+alias radar-info='radar "uname -a && cat /etc/os-release | head -3 && uptime"'
+alias radar-disk='radar "df -h /"'
+alias radar-mem='radar "free -h && nproc"'
+alias radar-full='radar-info && echo "" && radar-disk && echo "" && radar-mem'
+
+# ============== Docker ==============
+alias radar-docker='radar "docker --version && docker compose version"'
+alias radar-ps='radar "docker ps -a --format \"table {{.Names}}\t{{.Status}}\t{{.Ports}}\""'
+alias radar-images='radar "docker images --format \"table {{.Repository}}\t{{.Tag}}\t{{.Size}}\""'
+alias radar-df='radar "docker system df"'
+
+# ============== 端口 / 网络 ==============
+alias radar-ports='radar "ss -tlnp 2>/dev/null || netstat -tlnp"'
+alias radar-ip='radar "curl -s ifconfig.me && echo && ip addr show 2>/dev/null | grep -E \"inet |inet6\" | grep -v 127.0.0.1 | grep -v ::1"'
+
+# ============== 文件操作 ==============
+# 上传文件到服务器 /tmp/
+radar-upload() {
+    local src="$1"
+    local dst="${2:-/tmp/}"
+    scp -i ~/.ssh/policy-radar-key "$src" root@43.155.161.54:"$dst"
+}
+
+# 下载文件
+radar-download() {
+    local src="$1"
+    local dst="${2:-.}"
+    scp -i ~/.ssh/policy-radar-key root@43.155.161.54:"$src" "$dst"
+}
+
+# ============== 维护 ==============
+alias radar-hush='radar "touch ~/.hushlogin && echo banner 已屏蔽"'
+alias radar-prune='radar "docker system prune -af --filter \"until=72h\""'
+alias radar-shell='radar -t'
+
+# ============== 项目部署（项目无关，通用） ==============
+radar-clone() {
+    local repo="$1"
+    local dir="${2:-/opt/$(basename $repo .git)}"
+    radar "git clone $repo $dir"
+}
+
+radar-deploy() {
+    local dir="$1"
+    radar "cd $dir && docker compose up -d --build"
+}
+
+radar-restart() {
+    local dir="$1"
+    radar "cd $dir && docker compose restart"
+}
+
+radar-logs() {
+    local dir="$1"
+    local tail="${2:-80}"
+    local container=$(ssh -i ~/.ssh/policy-radar-key -o LogLevel=ERROR root@43.155.161.54 "cd $dir && docker compose ps --services 2>/dev/null | head -1")
+    if [ -z "$container" ]; then
+        echo "未找到运行中的容器（$dir 不在 docker compose 项目里？）"
+        return 1
+    fi
+    radar "cd $dir && docker compose logs $container --tail $tail -t 2>&1" | grep -vE "^[█ *]+$"
+}
+
+# ============== 帮助 ==============
+radar-help() {
+    cat <<'EOF'
+可用命令:
+  radar                 # SSH 上去
+  radar-info            # 系统信息
+  radar-disk            # 磁盘
+  radar-mem             # 内存
+  radar-full            # 完整系统报告
+  radar-docker          # Docker 版本
+  radar-ps              # docker ps
+  radar-images          # docker images
+  radar-df              # docker system df
+  radar-ports           # 监听端口
+  radar-ip              # 公网/内网 IP
+  radar-upload <f>      # 上传到 /tmp/
+  radar-download <f>    # 从服务器下载
+  radar-hush            # 屏蔽 banner
+  radar-prune           # 清理 docker 垃圾
+  radar-shell           # 交互式 SSH
+  radar-clone <repo>    # 拉项目到 /opt/
+  radar-deploy <dir>    # docker compose up -d --build
+  radar-restart <dir>   # docker compose restart
+  radar-logs <dir>      # 看项目日志（自动找容器）
+EOF
+}
