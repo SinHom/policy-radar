@@ -23,18 +23,21 @@ def upgrade() -> None:
     op.create_table(
         "llm_usage_logs",
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
-        sa.Column("model", sa.String(64), nullable=False, index=True),
+        sa.Column("model", sa.String(64), nullable=False),
         sa.Column("input_tokens", sa.Integer, default=0, nullable=False),
         sa.Column("output_tokens", sa.Integer, default=0, nullable=False),
         sa.Column("total_tokens", sa.Integer, default=0, nullable=False),
         sa.Column("cost_usd", sa.Integer, default=0, nullable=False),
         sa.Column("purpose", sa.String(32), default="summarize", nullable=False),
-        sa.Column("policy_id", sa.Integer, default=0, nullable=False, index=True),
+        sa.Column("policy_id", sa.Integer, default=0, nullable=False),
         sa.Column("status", sa.String(16), default="success", nullable=False),
         sa.Column("error_msg", sa.Text, default="", nullable=False),
         sa.Column("duration_ms", sa.Integer, default=0, nullable=False),
-        sa.Column("created_at", sa.DateTime, default=sa.func.now(), nullable=False, index=True),
+        sa.Column("created_at", sa.DateTime, default=sa.func.now(), nullable=False),
     )
+    op.create_index("ix_llm_usage_logs_model", "llm_usage_logs", ["model"])
+    op.create_index("ix_llm_usage_logs_policy_id", "llm_usage_logs", ["policy_id"])
+    op.create_index("ix_llm_usage_logs_created_at", "llm_usage_logs", ["created_at"])
 
     # === 系统配置（key-value） ===
     op.create_table(
@@ -67,4 +70,7 @@ def downgrade() -> None:
         batch.drop_column("department")
         batch.drop_column("region")
     op.drop_table("system_configs")
+    op.drop_index("ix_llm_usage_logs_created_at", table_name="llm_usage_logs")
+    op.drop_index("ix_llm_usage_logs_policy_id", table_name="llm_usage_logs")
+    op.drop_index("ix_llm_usage_logs_model", table_name="llm_usage_logs")
     op.drop_table("llm_usage_logs")

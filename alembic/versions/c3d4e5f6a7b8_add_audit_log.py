@@ -21,17 +21,23 @@ def upgrade() -> None:
     op.create_table(
         "audit_logs",
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
-        sa.Column("actor", sa.String(64), nullable=False, index=True),
-        sa.Column("action", sa.String(32), nullable=False, index=True),
+        sa.Column("actor", sa.String(64), nullable=False, default="anonymous"),
+        sa.Column("action", sa.String(32), nullable=False),
         sa.Column("target_type", sa.String(32), nullable=False, default=""),
         sa.Column("target_id", sa.String(64), nullable=False, default=""),
         sa.Column("detail", sa.Text, nullable=False, default=""),
         sa.Column("ip", sa.String(64), nullable=False, default=""),
         sa.Column("ua", sa.String(256), nullable=False, default=""),
         sa.Column("status", sa.String(16), nullable=False, default="success"),
-        sa.Column("created_at", sa.DateTime, nullable=False, server_default=sa.func.now(), index=True),
+        sa.Column("created_at", sa.DateTime, nullable=False, server_default=sa.func.now()),
     )
+    op.create_index("ix_audit_logs_actor", "audit_logs", ["actor"])
+    op.create_index("ix_audit_logs_action", "audit_logs", ["action"])
+    op.create_index("ix_audit_logs_created_at", "audit_logs", ["created_at"])
 
 
 def downgrade() -> None:
+    op.drop_index("ix_audit_logs_created_at", table_name="audit_logs")
+    op.drop_index("ix_audit_logs_action", table_name="audit_logs")
+    op.drop_index("ix_audit_logs_actor", table_name="audit_logs")
     op.drop_table("audit_logs")
