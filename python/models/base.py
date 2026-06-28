@@ -24,7 +24,31 @@ AsyncSessionLocal: async_sessionmaker[AsyncSession] | None = None
 
 
 class Base(DeclarativeBase):
-    """所有 ORM 模型的基类。"""
+    """所有 ORM 模型的基类。
+
+    ⚠️ 不要在本项目任何地方调用 ``Base.metadata.create_all``。
+    本项目以 alembic 迁移为唯一建表入口（见 ``entrypoint.sh``），
+    任何 ``create_all`` 调用都会绕过迁移，造成 schema drift
+    （已发生过一次：policy_sources.region 缺列）。
+    新增/修改表结构 → 改 ``alembic/versions/`` 下的迁移文件。
+    """
+
+
+# Lint-style 护栏：如果有人误调 create_all，提示正确做法
+_orig_create_all = Base.metadata.create_all
+
+
+def _create_all_blocked(*args, **kwargs):  # pragma: no cover
+    raise RuntimeError(
+        "Base.metadata.create_all 被禁止使用。\n"
+        "本项目以 alembic 迁移为唯一建表入口。\n"
+        "新增表/列 → 在 alembic/versions/ 写新迁移文件。\n"
+        "现有 schema 漂移 → alembic revision --autogenerate 生成修复迁移。"
+    )
+
+
+Base.metadata.create_all = _create_all_blocked  # type: ignore[assignment]
+"""全局拦截 create_all 调用。任何代码（包括 ORM 自动调用）尝试建表都会抛错。"""
 
 
 def _default_db_url() -> str:

@@ -8,6 +8,9 @@
 - subscriptions:     订阅规则（每企业一条，含推送设置）
 - matches:           匹配结果（subscription × policy 命中）
 - push_dead_letters: 推送死信（重试失败后入队，scheduler 周期重发）
+- llm_usage_logs:    LLM 调用记录（模型/成本/用途）
+- system_configs:    系统配置（key-value，存 API key 等敏感配置）
+- audit_logs:        审计日志（写操作记录）
 """
 
 from python.models.base import Base, make_engine, AsyncSessionLocal, get_session
@@ -18,6 +21,9 @@ from python.models.company import Company
 from python.models.subscription import Subscription
 from python.models.match import Match
 from python.models.push_dead_letter import PushDeadLetter
+from python.models.llm_usage_log import LLMUsageLog
+from python.models.system_config import SystemConfig
+from python.models.audit_log import AuditLog
 
 __all__ = [
     "Base",
@@ -31,4 +37,7 @@ __all__ = [
     "Subscription",
     "Match",
     "PushDeadLetter",
+    "LLMUsageLog",
+    "SystemConfig",
+    "AuditLog",
 ]
