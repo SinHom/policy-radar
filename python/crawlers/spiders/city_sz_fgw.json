@@ -2,19 +2,19 @@
   "source_id": "city_sz_fgw",
   "name": "深圳市发改委",
   "category": "市级",
-  "list_url": "http://fgw.sz.gov.cn/zwgk/zyzc/",
+  "list_url": "https://fgw.sz.gov.cn/zwgk/zcjzcjd/zc/index.html",
   "list_selectors": {
-    "item": "ul.list_con li a, .list-con li a, .list-news li a",
-    "title": "a::text",
+    "item": "a[href*='/zcjzcjd/zc/content/post_']",
+    "title": "a::attr(title)",
     "href": "a::attr(href)",
-    "date": "span.date, .date"
+    "date": "span.date::text"
   },
   "detail_selectors": {
     "title": "h1, .article-title",
     "content": "div.article-content, .content, article",
     "date": "span.date, .date"
   },
-  "render_js": false,
+  "render_js": true,
   "frequency": "daily",
   "request_interval_min": 3,
   "request_interval_max": 5,

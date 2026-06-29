@@ -1,13 +1,13 @@
 {
-  "source_id": "national_miit",
+  "source_id": "nat_miit",
   "name": "工信部",
   "category": "国家级",
-  "list_url": "https://www.miit.gov.cn/jgsj/zbys/wjfb/art/2024/art_b2ab7d7e8e3b4d4e8e7d2e6f4b9c0b1c2.html",
+  "list_url": "https://www.miit.gov.cn/search/wjfb.html",
   "list_selectors": {
-    "item": "ul.list_con li, .list_con li a, .article-list li a",
+    "item": "a[href*='/art/']",
     "title": "a::text",
     "href": "a::attr(href)",
-    "date": "span.date, .date, time"
+    "date": "span::text"
   },
   "detail_selectors": {
     "title": "h1, .article-title, h1.title",

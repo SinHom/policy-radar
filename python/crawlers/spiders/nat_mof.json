@@ -1,13 +1,13 @@
 {
-  "source_id": "national_mof",
+  "source_id": "nat_mof",
   "name": "财政部",
   "category": "国家级",
   "list_url": "http://www.mof.gov.cn/zhengwuxinxi/zhengcefabu/",
   "list_selectors": {
-    "item": "ul.gov-news-list li, .gov-news-list li a, .list_li li a",
-    "title": "a::text",
+    "item": "ul.xwfb_listbox li",
+    "title": "a::attr(title)",
     "href": "a::attr(href)",
-    "date": "span.time, .date"
+    "date": "span::text"
   },
   "detail_selectors": {
     "title": "h1, h1.article-title, h1.title",

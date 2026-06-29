@@ -1433,7 +1433,7 @@ createApp({
     async function triggerCrawl() {
       showToast('⏳ 爬取所有源中…');
       await withLoading('爬取所有源…', async () => {
-        const r = await api.post('/crawl/all');
+        const r = await api.post('/api/crawl/all');
         const total = r.data.reduce((sum, x) => sum + (x.new_crawled || 0), 0);
         showToast(`✓ 全部爬取完成，新增 ${total} 条`);
         await loadSources();
@@ -1456,7 +1456,7 @@ createApp({
     }
     async function crawlOne(s) {
       await withLoading(`爬取「${s.name}」…`, async () => {
-        const r = await api.post(`/crawl/${s.source_id}`);
+        const r = await api.post(`/api/crawl/${s.source_id}`);
         showToast(`✓ ${s.name}：列表 ${r.data.total_listed} / 新增 ${r.data.new_crawled}`);
         await loadSources();
       });

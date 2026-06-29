@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -30,13 +31,58 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """启动时初始化 DB session 工厂。"""
+    """启动时初始化 DB + 后台 scheduler 定时爬取。"""
     settings = get_settings()
     engine = make_engine(settings.database_url or None)
     init_session_factory(engine)
     logger.info("Policy Radar started on port %d", settings.app_port)
-    yield
-    await engine.dispose()
+
+    # ============== 后台定时爬取 ==============
+    # interval=0 关闭 scheduler(测试用)
+    interval = getattr(settings, "crawl_interval_seconds", 3600)
+
+    async def _crawl_tick() -> None:
+        """单次爬取(捕获异常,不让 scheduler 死)."""
+        try:
+            from python.crawlers.engine import run_crawler
+            logger.info("Scheduler: tick 开始,爬取所有 enabled 源")
+            results = await run_crawler()
+            total_new = sum(r.new_crawled for r in results)
+            logger.info(
+                "Scheduler: tick 完成,共 %d 源, 新增 %d 条",
+                len(results),
+                total_new,
+            )
+        except Exception as e:
+            logger.exception("Scheduler tick 失败: %s", e)
+
+    async def _scheduler_loop() -> None:
+        """循环:启动 30s 后跑第一次,之后每 interval 跑一次。"""
+        await asyncio.sleep(30)  # 给容器启动 30s 预热(避免 healthcheck 期间跑)
+        while True:
+            await _crawl_tick()
+            if interval <= 0:
+                logger.info("Scheduler: interval=0, 停止")
+                return
+            await asyncio.sleep(interval)
+
+    scheduler_task: asyncio.Task | None = None
+    if interval > 0:
+        scheduler_task = asyncio.create_task(_scheduler_loop())
+        logger.info("后台 scheduler 启动, interval=%ds", interval)
+    else:
+        logger.info("crawl_interval_seconds=0, scheduler 关闭")
+
+    try:
+        yield
+    finally:
+        if scheduler_task is not None:
+            scheduler_task.cancel()
+            try:
+                await scheduler_task
+            except asyncio.CancelledError:
+                pass
+        await engine.dispose()
 
 
 def create_app() -> FastAPI:
@@ -59,6 +105,11 @@ def create_app() -> FastAPI:
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(SafeErrorMiddleware)
 
+    # 静态资源 mount 在前(优先于 router 匹配,避免 SPA fallback 抢 assets)
+    from python.app.web.routes import static_app, frontend_assets_app
+    app.mount("/static", static_app, name="static")
+    app.mount("/assets", frontend_assets_app, name="frontend_assets")
+
     app.include_router(api_router, prefix="/api", tags=["api"])
     # auth_router 自身已带 prefix="/api/auth"，不要重复加
     app.include_router(auth_router, tags=["auth"])
@@ -78,9 +129,6 @@ def create_app() -> FastAPI:
     app.include_router(health_router, tags=["ops"])
     app.include_router(dashboard_router, prefix="/api", tags=["dashboard"])
     app.include_router(web_router, tags=["web"])
-    # 静态资源（Vue/axios/Tailwind）
-    from python.app.web.routes import static_app
-    app.mount("/static", static_app, name="static")
     return app
 
 

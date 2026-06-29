@@ -2,12 +2,12 @@
   "source_id": "city_bj_gxj",
   "name": "北京市经信局",
   "category": "市级",
-  "list_url": "http://www.jxj.beijing.gov.cn/zwgk/zyzc/",
+  "list_url": "https://jxj.beijing.gov.cn/zwgk/2024zcwj/",
   "list_selectors": {
-    "item": "ul.list_con li a, .list-con li a, .news-list li a",
-    "title": "a::text",
+    "item": "ul li",
+    "title": "a::attr(title)",
     "href": "a::attr(href)",
-    "date": "span.date, .date"
+    "date": "li::text"
   },
   "detail_selectors": {
     "title": "h1, .article-title, h1.title",

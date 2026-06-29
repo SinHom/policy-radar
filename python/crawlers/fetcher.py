@@ -16,10 +16,19 @@ import random
 from dataclasses import dataclass
 from typing import Optional
 
+import ssl
+
 import httpx
 from playwright.async_api import async_playwright
 
 logger = logging.getLogger(__name__)
+
+# 兼容部分政府站非常规椭圆曲线/证书（解决 OpenSSL3 BAD_ECPOINT）。
+# 爬虫层忽略证书校验（与 Playwright ignore_https_errors 对齐），数据完整性靠内容校验。
+SSL_CONTEXT = ssl.create_default_context()
+SSL_CONTEXT.set_ciphers("DEFAULT:@SECLEVEL=0")
+SSL_CONTEXT.check_hostname = False
+SSL_CONTEXT.verify_mode = ssl.CERT_NONE
 
 # 5 种真实桌面 User-Agent 轮换（Chrome / Edge / Firefox / Safari）
 USER_AGENTS = [
@@ -56,7 +65,7 @@ class Fetcher:
         user_agent: str = DEFAULT_USER_AGENT,
         request_interval_min: float = 3.0,
         request_interval_max: float = 5.0,
-        timeout: float = 30.0,
+        timeout: float = 60.0,
     ):
         self.user_agent = user_agent
         self.interval_min = request_interval_min
@@ -90,6 +99,7 @@ class Fetcher:
             headers=headers,
             timeout=self.timeout,
             follow_redirects=True,
+            verify=SSL_CONTEXT,
         ) as client:
             resp = await client.get(url)
             resp.raise_for_status()
@@ -128,9 +138,9 @@ class Fetcher:
                     "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
                 )
                 resp = await page.goto(url, wait_until="domcontentloaded", timeout=int(self.timeout * 1000))
-                # 等网络空闲但最多 5 秒（避免卡在 networkidle）
+                # 等网络空闲但最多 15 秒（避免卡在 networkidle）
                 try:
-                    await page.wait_for_load_state("networkidle", timeout=5000)
+                    await page.wait_for_load_state("networkidle", timeout=15000)
                 except Exception:
                     pass
                 html = await page.content()

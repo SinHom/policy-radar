@@ -2,12 +2,12 @@
   "source_id": "prov_gd_tax",
   "name": "广东省税务局",
   "category": "省级",
-  "list_url": "http://guangdong.chinatax.gov.cn/dssfg/zcfg/",
+  "list_url": "https://guangdong.chinatax.gov.cn/gdsw/zxwj/zxwj.shtml",
   "list_selectors": {
-    "item": "ul.list-con li a, .list-con li a, .list-news li a",
-    "title": "a::text",
-    "href": "a::attr(href)",
-    "date": "span.date, .date"
+    "item": "ul li",
+    "title": "h4 a::attr(title)",
+    "href": "h4 a::attr(href)",
+    "date": "h4::text"
   },
   "detail_selectors": {
     "title": "h1, .article-title, h1.title",
