@@ -26,22 +26,13 @@ FRONTEND_INDEX_HTML = FRONTEND_DIST / "index.html"
 
 @router.get("/", response_class=HTMLResponse)
 async def index() -> HTMLResponse:
-    """Vue 3 SPA 入口(stage D 部署的 dist/index.html)。"""
+    """Vue 3 SPA 入口(stage D 部署的 dist/index.html)。
+
+    所有非具体路径(/admin /sources /policies 等)由 vue-router history 接管,
+    命中下面 spa_fallback。/admin /min 老 admin.html 路由已删除,全部走 SPA。
+    """
     html = FRONTEND_INDEX_HTML.read_text(encoding="utf-8")
     return HTMLResponse(content=html)
-
-
-@router.get("/admin", response_class=HTMLResponse)
-async def admin() -> HTMLResponse:
-    """Vue 3 管理后台（5 tab,老 admin.html 留作回退）。"""
-    html = ADMIN_HTML.read_text(encoding="utf-8")
-    return HTMLResponse(content=html)
-
-
-@router.get("/min", response_class=HTMLResponse)
-async def min_test() -> HTMLResponse:
-    """最小 Vue 测试页（排查白屏用）。"""
-    return HTMLResponse(content=(WEB_DIR / "min.html").read_text(encoding="utf-8"))
 
 
 # SPA fallback:vue-router history 模式需要的 fallback。
