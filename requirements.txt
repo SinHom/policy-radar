@@ -23,5 +23,8 @@ lxml
 playwright
 tenacity
 
+# HTML → Markdown(政策详情转换用)
+markdownify
+
 # LLM（MiniMax 兼容 OpenAI 协议）
 openai

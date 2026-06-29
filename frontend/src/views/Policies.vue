@@ -72,6 +72,24 @@ function badgeColor(type) {
 }
 
 onMounted(search)
+
+// ============== 详情预览 modal(后端 /content 拿 markdown) ==============
+const preview = ref({ show: false, id: null, markdown: '', loading: false })
+async function openPreview(p) {
+  preview.value = { show: true, id: p.id, markdown: '加载中…', loading: true }
+  try {
+    const r = await api.get(`/policies/${p.id}/content`)
+    preview.value = { show: true, id: p.id, markdown: r.data.markdown, loading: false }
+  } catch (e) {
+    preview.value = {
+      show: true,
+      id: p.id,
+      markdown: '加载失败: ' + (e.response?.data?.detail || e.message),
+      loading: false,
+    }
+  }
+}
+function closePreview() { preview.value.show = false }
 </script>
 
 <template>
@@ -203,13 +221,49 @@ onMounted(search)
           <a :href="p.url" target="_blank" rel="noopener noreferrer" class="block">
             <h3 class="text-sm font-medium text-gray-900 hover:text-brand-600">{{ p.title }}</h3>
             <p class="text-xs text-gray-600 line-clamp-2 mt-1">
-              {{ p.summary_text || '(无摘要 — 等待 AI 摘要,可点 /api/policies/{id}/summarize)' }}
+              {{ p.summary_text || '(无摘要 — 等待 AI 摘要)' }}
             </p>
           </a>
+          <div class="mt-1.5 flex gap-1.5 flex-wrap">
+            <button @click="openPreview(p)"
+                    class="text-xs px-2.5 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100">
+              📖 查看详情
+            </button>
+            <a :href="`/api/policies/${p.id}/pdf`" target="_blank" rel="noopener noreferrer"
+               @click.stop
+               class="text-xs px-2.5 py-1 rounded bg-green-50 text-green-700 hover:bg-green-100">
+              📄 下载 PDF
+            </a>
+          </div>
         </div>
       </div>
 
       <div v-if="toast.show" class="fixed bottom-6 right-6 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg z-50 text-sm">{{ toast.msg }}</div>
+
+      <!-- 详情预览 modal -->
+      <div v-if="preview.show"
+           class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+           @click.self="closePreview">
+        <div class="bg-white rounded-xl max-w-4xl w-full max-h-[88vh] flex flex-col shadow-2xl">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <h3 class="text-base font-semibold text-gray-900">📖 政策详情 (Markdown)</h3>
+            <button @click="closePreview"
+                    class="text-gray-400 hover:text-gray-700 text-2xl leading-none">×</button>
+          </div>
+          <div class="flex-1 overflow-auto px-6 py-4">
+            <div v-if="preview.loading" class="text-sm text-brand-600">加载中…</div>
+            <pre v-else class="whitespace-pre-wrap text-xs text-gray-800 font-mono leading-relaxed">{{ preview.markdown }}</pre>
+          </div>
+          <div class="border-t border-gray-200 px-6 py-3 flex gap-2">
+            <a :href="`/api/policies/${preview.id}/pdf`" target="_blank" rel="noopener noreferrer"
+               class="text-sm px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700">📥 下载 PDF</a>
+            <a :href="policies.find(x => x.id === preview.id)?.url || '#'" target="_blank" rel="noopener noreferrer"
+               class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">🔗 原始链接</a>
+            <button @click="closePreview"
+                    class="ml-auto text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">关闭</button>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </template>

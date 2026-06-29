@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
@@ -406,3 +407,125 @@ async def search_policies(
         }
 
         return PoliciesSearchOut(policies=out_policies, facets=facets, total=len(out_policies))
+
+
+# ============== 政策详情:md / pdf 生成 ==============
+
+_MDS_DIR = Path("/app/data/mds")
+_PDFS_DIR = Path("/app/data/pdfs")
+_MDS_DIR.mkdir(parents=True, exist_ok=True)
+_PDFS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+async def _render_policy_markdown(pol: Policy) -> str:
+    """生成政策 markdown —— 用 policy 已有的 raw_content / summary,不再 fetch detail URL。
+
+    数据源(按优先级):
+    1. Policy.raw_content(HTML 或纯文本;RSS 模式可能有简略 description)
+    2. Policy.summary_text(AI 摘要,无原文时 fallback)
+    3. 两者都无就返回纯标题 + URL 占位
+
+    缓存:data/mds/{policy_id}.md
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    cache_path = _MDS_DIR / f"{pol.id}.md"
+    if cache_path.exists() and cache_path.stat().st_size > 0:
+        return cache_path.read_text(encoding="utf-8")
+
+    raw = pol.raw_content or ""
+    body_md = ""
+    # raw 看起来是 HTML → 转 md
+    if raw and ("<" in raw and ">" in raw and len(raw) > 50):
+        try:
+            from bs4 import BeautifulSoup
+            import markdownify as _md
+            soup = BeautifulSoup(raw, "html.parser")
+            for tag in soup.find_all(["script", "style", "nav", "header", "footer", "aside"]):
+                tag.decompose()
+            body_md = _md.markdownify(str(soup), heading_style="ATX", strip=["img"])
+        except Exception as e:
+            logger.warning("markdownify fail policy=%d fallback text: %s", pol.id, e)
+            body_md = raw  # fallback: 直接用 raw 文本
+    elif raw:
+        body_md = raw  # 纯文本
+    elif pol.summary_text:
+        body_md = pol.summary_text
+    else:
+        body_md = f"_详细内容请访问原始链接_\n"
+
+    crawled = pol.crawled_at.isoformat() if pol.crawled_at else "unknown"
+    published = pol.published_at.isoformat() if pol.published_at else "unknown"
+    md = (
+        f"# {pol.title}\n\n"
+        f"- **Source**: `{pol.source_id}`\n"
+        f"- **URL**: {pol.url}\n"
+        f"- **抓取时间**: {crawled}\n"
+        f"- **发布时间**: {published}\n"
+        f"\n---\n\n"
+        f"{body_md}\n"
+    )
+    cache_path.write_text(md, encoding="utf-8")
+    return md
+
+
+@router.get("/policies/{policy_id}/content")
+async def get_policy_content(policy_id: int) -> dict:
+    """返回政策 markdown(从 url 抓取并转 md,缓存 data/mds/{id}.md)。"""
+    async with get_session() as session:
+        pol = await session.get(Policy, policy_id)
+    if not pol:
+        raise HTTPException(status_code=404, detail="policy not found")
+    try:
+        md = await _render_policy_markdown(pol)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"render md failed: {e}")
+    return {"policy_id": pol.id, "title": pol.title, "url": pol.url, "markdown": md}
+
+
+@router.get("/policies/{policy_id}/pdf")
+async def get_policy_pdf(policy_id: int):
+    """生成并返回政策 PDF(用 playwright 渲染 markdown,缓存 data/pdfs/{id}.pdf)。
+
+    首次生成较慢(playwright 启动 ~3-5s);后续秒返 cached 文件。
+    """
+    from fastapi.responses import FileResponse
+    cache_path = _PDFS_DIR / f"{policy_id}.pdf"
+    async with get_session() as session:
+        pol = await session.get(Policy, policy_id)
+    if not pol:
+        raise HTTPException(status_code=404, detail="policy not found")
+    if cache_path.exists() and cache_path.stat().st_size > 0:
+        return FileResponse(
+            cache_path,
+            media_type="application/pdf",
+            filename=f"policy_{policy_id}.pdf",
+        )
+    md = await _render_policy_markdown(pol)
+    # playwright 渲染 markdown → PDF
+    try:
+        from playwright.async_api import async_playwright
+        html_doc = (
+            "<!doctype html><html><head><meta charset='utf-8'>"
+            "<style>body{font-family:Microsoft YaHei,Helvetica,Arial,sans-serif;"
+            "padding:30px;max-width:780px;margin:auto;line-height:1.7;font-size:14px;}"
+            "h1,h2,h3{color:#1e40af}</style></head>"
+            f"<body>{md}</body></html>"
+        )
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
+            page2 = await browser.new_page()
+            await page2.set_content(html_doc, wait_until="load")
+            await page2.pdf(
+                path=str(cache_path),
+                format="A4",
+                margin={"top": "15mm", "bottom": "15mm", "left": "15mm", "right": "15mm"},
+            )
+            await browser.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"playwright pdf failed: {e}")
+    return FileResponse(
+        cache_path,
+        media_type="application/pdf",
+        filename=f"policy_{policy_id}.pdf",
+    )
