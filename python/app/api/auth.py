@@ -17,7 +17,7 @@ import secrets
 import time
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from pydantic import BaseModel
 
 from python.app.config import get_settings
@@ -28,8 +28,9 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])  # 完整路径前缀在 r
 
 # 内存 token 存储：{token_hash: {"user": str, "expires_at": float}}
 _TOKENS: dict[str, dict] = {}
-# TTL：生产 2 小时，开发可放宽。生产前必须改成 7200。
-_TOKEN_TTL = int(os.environ.get("ADMIN_TOKEN_TTL", "7200"))  # 默认 2h
+# TTL：默认 7 天(604800s)。通过环境变量 ADMIN_TOKEN_TTL 覆盖。
+_TOKEN_TTL = int(os.environ.get("ADMIN_TOKEN_TTL", str(7 * 24 * 3600)))  # 默认 7 天
+COOKIE_NAME = "admin_token"
 _MAX_TOKENS_PER_USER = 5  # 同一用户最多 5 个有效 token，防滥用
 # 失败计数（按用户名）— 超过阈值要锁定
 _FAIL_COUNT: dict[str, int] = {}
@@ -71,8 +72,12 @@ class MeResponse(BaseModel):
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(req: LoginRequest, request: Request) -> LoginResponse:
-    """登录：验证 user/pass，返回 token。"""
+async def login(req: LoginRequest, request: Request, response: Response) -> LoginResponse:
+    """登录：验证 user/pass，返回 token。
+
+    同时把 token 设到 HttpOnly Cookie(7 天)—— 前端无需存 localStorage,
+    浏览器每次请求自动带上,由 require_admin 解析 Cookie 或 Authorization header。
+    """
     settings = get_settings()
     ip = request.client.host if request.client else ""
     # 用 constant-time compare 防时序攻击
@@ -128,43 +133,72 @@ async def login(req: LoginRequest, request: Request) -> LoginResponse:
         "user": req.username,
         "expires_at": expires_at,
     }
-    logger.info("admin login success: user=%s ttl=%d", req.username, _TOKEN_TTL)
+    # 设 HttpOnly Cookie(浏览器自动管理过期与同源策略)
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        max_age=_TOKEN_TTL,
+        httponly=True,
+        secure=False,  # 上线后用 https 必须改 True
+        samesite="lax",
+        path="/",
+    )
+    logger.info("admin login success: user=%s ttl=%d cookie=%s",
+                req.username, _TOKEN_TTL, COOKIE_NAME)
     return LoginResponse(token=token, expires_in=_TOKEN_TTL, user=req.username)
 
 
-@router.post("/logout")
-async def logout(authorization: Optional[str] = Header(None)) -> dict:
-    """登出：删除 token。"""
-    if not authorization or not authorization.lower().startswith("bearer "):
-        return {"ok": True}  # 幂等
-    token = authorization.split(" ", 1)[1]
-    h = _hash_token(token)
-    _TOKENS.pop(h, None)
-    return {"ok": True}
-
-
-@router.get("/me", response_model=MeResponse)
-async def me(user: str = Depends(lambda: None)) -> MeResponse:  # 占位
-    raise HTTPException(status_code=501, detail="use /verify instead")
-
-
 async def require_admin(
+    request: Request,
     authorization: Optional[str] = Header(None),
 ) -> str:
-    """FastAPI dependency：受保护端点用 Depends(require_admin)。"""
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
-    parts = authorization.split(" ", 1)
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(status_code=401, detail="Invalid Authorization header")
-    token = parts[1]
+    """FastAPI dependency:受保护端点用 Depends(require_admin)。
+
+    支持两种鉴权:
+    1. HttpOnly Cookie(浏览器自动带)— 用 cookie_name 取
+    2. Authorization: Bearer <token>(兼容 CLI/外部调用)
+    """
+    token: Optional[str] = None
+    # 1) Cookie(优先,浏览器场景)
+    if COOKIE_NAME in request.cookies:
+        token = request.cookies[COOKIE_NAME]
+    # 2) Authorization header(API 调用)
+    elif authorization:
+        parts = authorization.split(" ", 1)
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            token = parts[1]
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing auth (cookie or Authorization header)")
     info = _is_valid(token)
     if info is None:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return info["user"]
 
 
+@router.post("/logout")
+async def logout(request: Request, response: Response, authorization: Optional[str] = Header(None)) -> dict:
+    """登出:删除 token + 清除 Cookie。"""
+    token: Optional[str] = None
+    if COOKIE_NAME in request.cookies:
+        token = request.cookies[COOKIE_NAME]
+    elif authorization:
+        parts = authorization.split(" ", 1)
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            token = parts[1]
+    if token:
+        _TOKENS.pop(_hash_token(token), None)
+    # 清 Cookie
+    response.delete_cookie(COOKIE_NAME, path="/")
+    return {"ok": True}
+
+
+@router.get("/me", response_model=MeResponse)
+async def me(user: str = Depends(require_admin)) -> MeResponse:
+    """当前登录用户(用于前端初始化身份)。"""
+    return MeResponse(user=user)
+
+
 @router.get("/verify")
 async def verify(user: str = Depends(require_admin)) -> dict:
-    """verify endpoint（用于前端 axios 拦截器检查 token 是否还有效）。"""
+    """verify endpoint(用于前端 axios 拦截器检查 token 是否还有效)。"""
     return {"ok": True, "user": user}
