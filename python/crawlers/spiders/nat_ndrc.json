@@ -1,0 +1,13 @@
+{
+  "source_id": "nat_ndrc",
+  "name": "国家发改委",
+  "category": "国家级",
+  "list_url": "http://policy-radar-rsshub:1200/gov/ndrc/xwdt",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 5,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/ndrc/xwdt 发改委新闻动态(RSS feed)"
+}

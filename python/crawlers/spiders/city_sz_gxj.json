@@ -2,19 +2,19 @@
   "source_id": "city_sz_gxj",
   "name": "深圳市工信局",
   "category": "市级",
-  "list_url": "https://gxj.sz.gov.cn/zwgk/xxgkml/zfxxgkml/zfxxgkmlgkml/index.html",
+  "list_url": "https://gxj.sz.gov.cn/xxgk/xxgkml/zcfgjzcjd/index.html",
   "list_selectors": {
-    "item": "ul.news-list li a, .news-list li a, .list-news li a",
-    "title": "a::text",
+    "item": "div.Listcont div.ListconC",
+    "title": "a::attr(title)",
     "href": "a::attr(href)",
-    "date": "span.date, .date"
+    "date": "span::text"
   },
   "detail_selectors": {
     "title": "h1.article-title, h1, .title",
     "content": "div.article-content, .content, article",
     "date": ".pub-date, .date"
   },
-  "render_js": false,
+  "render_js": true,
   "frequency": "daily",
   "request_interval_min": 3,
   "request_interval_max": 5,

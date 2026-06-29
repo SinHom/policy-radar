@@ -1,0 +1,1012 @@
+[
+  {
+    "file": "ah/kjt.ts",
+    "path": "/kjt/:category{.+}?",
+    "example": "/gov/ah/kjt"
+  },
+  {
+    "file": "ah/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "beijing/bjedu/gh.ts",
+    "path": "/bjedu/gh/:urlPath?",
+    "example": "/gov/beijing/bjedu/gh"
+  },
+  {
+    "file": "beijing/bphc/index.ts",
+    "path": "/bphc/:caty",
+    "example": "/gov/beijing/bphc/announcement"
+  },
+  {
+    "file": "beijing/jw/tzgg.ts",
+    "path": "/jw/tzgg",
+    "example": "/gov/beijing/jw/tzgg"
+  },
+  {
+    "file": "beijing/kw/index.ts",
+    "path": "/kw/:channel",
+    "example": "/gov/beijing/kw/col736"
+  },
+  {
+    "file": "beijing/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "caac/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "cac/index.ts",
+    "path": "/:path{.+}",
+    "example": "/gov/cac/wxzw/xxh"
+  },
+  {
+    "file": "cac/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "ccdi/index.ts",
+    "path": "/:path{.+}?",
+    "example": "/gov/ccdi/yaowenn"
+  },
+  {
+    "file": "ccdi/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "ccdi/utils.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "chinamine-safety/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "chinamine-safety/util.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "chinamine-safety/xw.ts",
+    "path": "/xw/:category{.+}?",
+    "example": "/gov/chinamine-safety/xw"
+  },
+  {
+    "file": "chinamine-safety/zfxxgk.ts",
+    "path": "/zfxxgk/:category{.+}?",
+    "example": "/gov/chinamine-safety/zfxxgk"
+  },
+  {
+    "file": "chinatax/latest.ts",
+    "path": "/latest",
+    "example": "/gov/chinatax/latest"
+  },
+  {
+    "file": "chinatax/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "chongqing/gzw.ts",
+    "path": "/gzw/:category{.+}?",
+    "example": null
+  },
+  {
+    "file": "chongqing/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "chongqing/rsks.ts",
+    "path": "/rsks",
+    "example": "/gov/chongqing/rsks"
+  },
+  {
+    "file": "chongqing/sydwgkzp.ts",
+    "path": "/sydwgkzp/:year?",
+    "example": "/gov/chongqing/sydwgkzp"
+  },
+  {
+    "file": "cmse/fxrw-category.ts",
+    "path": "/fxrw/:id/:category",
+    "example": "/gov/cmse/fxrw/wtfx/rwdt"
+  },
+  {
+    "file": "cmse/fxrw.ts",
+    "path": "/fxrw",
+    "example": "/gov/cmse/fxrw"
+  },
+  {
+    "file": "cmse/gfgg.ts",
+    "path": "/gfgg",
+    "example": "/gov/cmse/gfgg"
+  },
+  {
+    "file": "cmse/gjhz.ts",
+    "path": "/gjhz",
+    "example": "/gov/cmse/gjhz"
+  },
+  {
+    "file": "cmse/hqsy.ts",
+    "path": "/hqsy/:id",
+    "example": "/gov/cmse/hqsy/zxdta"
+  },
+  {
+    "file": "cmse/index.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "cmse/kjkx.ts",
+    "path": "/kjkx/:id",
+    "example": "/gov/cmse/kjkx/kjkxyjyyy"
+  },
+  {
+    "file": "cmse/kpjy.ts",
+    "path": "/kpjy/:id",
+    "example": "/gov/cmse/kpjy/kphd"
+  },
+  {
+    "file": "cmse/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "cmse/xwzx-yzjz.ts",
+    "path": "/xwzx/yzjz",
+    "example": "/gov/cmse/xwzx/yzjz"
+  },
+  {
+    "file": "cmse/xwzx-zhxw.ts",
+    "path": "/xwzx/zhxw",
+    "example": "/gov/cmse/xwzx/zhxw"
+  },
+  {
+    "file": "cmse/ztbd.ts",
+    "path": "/ztbd/:id",
+    "example": "/gov/cmse/ztbd/xwfbh"
+  },
+  {
+    "file": "cn/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "cn/news/index.ts",
+    "path": "/news/:uid",
+    "example": "/gov/cn/news/bm"
+  },
+  {
+    "file": "cnnic/index.ts",
+    "path": "/:path{.+}?",
+    "example": "/gov/cnnic/11/39"
+  },
+  {
+    "file": "cnnic/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "csrc/auditstatus.ts",
+    "path": "/auditstatus/:apply_id",
+    "example": "/gov/csrc/auditstatus/9ce91cf2d750ee62de27fbbcb05fa483"
+  },
+  {
+    "file": "csrc/csrc.ts",
+    "path": "/zfxxgk_zdgk/:id?",
+    "example": "/gov/csrc/zfxxgk_zdgk/c101971"
+  },
+  {
+    "file": "csrc/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "customs/list.ts",
+    "path": "/list/:gchannel?",
+    "example": "/gov/customs/list/paimai"
+  },
+  {
+    "file": "customs/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "customs/utils.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "dianbai/dianbai.ts",
+    "path": "/:path{.+}",
+    "example": "/gov/dianbai/www/zwgk/zcjd"
+  },
+  {
+    "file": "dianbai/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "forestry/gjlckjdjt.ts",
+    "path": "/gjlckjdjt/:category?",
+    "example": "/gov/forestry/gjlckjdjt"
+  },
+  {
+    "file": "forestry/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "gaozhou/gaozhou.ts",
+    "path": "/:path{.+}",
+    "example": "/gov/gaozhou/www/zcjd"
+  },
+  {
+    "file": "gaozhou/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "general/general.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "guizhou/jyt.ts",
+    "path": "/jyt/tzgg",
+    "example": "/gov/guizhou/jyt/tzgg"
+  },
+  {
+    "file": "guizhou/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "gz/index.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "gz/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "gz/xw.ts",
+    "path": "/xw/:category",
+    "example": "/gov/gz/xw/gzyw"
+  },
+  {
+    "file": "gz/zwgk.ts",
+    "path": "/zwgk/:category",
+    "example": "/gov/gz/zwgk/zcjd"
+  },
+  {
+    "file": "hainan/iitb/tzgg.ts",
+    "path": "/iitb/tzgg",
+    "example": "/gov/hainan/iitb/tzgg"
+  },
+  {
+    "file": "hainan/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "hangzhou/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "hangzhou/zjzwfw.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "hebei/czt.ts",
+    "path": "/czt/xwdt/:category?",
+    "example": "/gov/hebei/czt/xwdt"
+  },
+  {
+    "file": "hebei/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "huazhou/huazhou.ts",
+    "path": "/:path{.+}",
+    "example": "/gov/huazhou/www/syzl/zcjd"
+  },
+  {
+    "file": "huazhou/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "huizhou/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "huizhou/zwgk/index.ts",
+    "path": "/zwgk/:category?",
+    "example": "/gov/huizhou/zwgk/jgdt"
+  },
+  {
+    "file": "hunan/changsha/major-email.ts",
+    "path": "/changsha/major-email",
+    "example": "/gov/hunan/changsha/major-email"
+  },
+  {
+    "file": "hunan/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "immiau/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "immiau/news.ts",
+    "path": "/news",
+    "example": "/gov/immiau/news"
+  },
+  {
+    "file": "jgjcndrc/index.ts",
+    "path": "/:columnId?/:subColumnId?",
+    "example": "/gov/jgjcndrc/1832739866673426433"
+  },
+  {
+    "file": "jgjcndrc/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "jiangsu/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "jinan/healthcommission/medical-exam-notice.ts",
+    "path": "/healthcommission/medical_exam_notice",
+    "example": "/gov/jinan/healthcommission/medical_exam_notice"
+  },
+  {
+    "file": "jinan/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "lswz/index.ts",
+    "path": "/:category{.+}?",
+    "example": "/gov/lswz"
+  },
+  {
+    "file": "lswz/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "maoming/maoming.ts",
+    "path": "/:path{.+}",
+    "example": "/gov/maoming/www/zwgk/zcjd/jd"
+  },
+  {
+    "file": "maoming/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "maonan/maonan.ts",
+    "path": "/:category",
+    "example": "/gov/maonan/zwgk"
+  },
+  {
+    "file": "maonan/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "mee/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "mee/nnsa.ts",
+    "path": "/nnsa/:category{.+}?",
+    "example": "/gov/mee/nnsa/ywdt/hjyw"
+  },
+  {
+    "file": "mee/ywdt.ts",
+    "path": "/ywdt/:category?",
+    "example": "/gov/mee/ywdt/hjywnews"
+  },
+  {
+    "file": "mem/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "mem/sgcc.ts",
+    "path": "/gk/sgcc/:category?",
+    "example": "/gov/mem/gk/sgcc/tbzdsgdcbg"
+  },
+  {
+    "file": "mem/zfxxgkpt.ts",
+    "path": "/gk/zfxxgkpt/fdzdgknr",
+    "example": "/gov/mem/gk/zfxxgkpt/fdzdgknr"
+  },
+  {
+    "file": "mfa/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "mfa/wjdt.ts",
+    "path": "/wjdt/:category?",
+    "example": null
+  },
+  {
+    "file": "mgs/mgs.ts",
+    "path": "/:path{.+}",
+    "example": "/gov/mgs/www/zwgk/zcjd"
+  },
+  {
+    "file": "mgs/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "miit/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "miit/wjfb.ts",
+    "path": "/wjfb/:ministry",
+    "example": "/gov/miit/wjfb/ghs"
+  },
+  {
+    "file": "miit/wjgs.ts",
+    "path": "/wjgs",
+    "example": "/gov/miit/wjgs"
+  },
+  {
+    "file": "miit/yjzj.ts",
+    "path": "/yjzj",
+    "example": "/gov/miit/yjzj"
+  },
+  {
+    "file": "miit/zcjd.ts",
+    "path": "/zcjd",
+    "example": "/gov/miit/zcjd"
+  },
+  {
+    "file": "miit/zcwj.ts",
+    "path": "/zcwj",
+    "example": "/gov/miit/zcwj"
+  },
+  {
+    "file": "mmht/mmht.ts",
+    "path": "/:path{.+}",
+    "example": "/gov/mmht/www/xwzx/zcjd"
+  },
+  {
+    "file": "mmht/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "moa/gjs.ts",
+    "path": "/gjs/:category{.+}?",
+    "example": "/gov/moa/gjs/gzdt"
+  },
+  {
+    "file": "moa/moa.ts",
+    "path": "/suburl/:suburl{.+}",
+    "example": "/gov/moa/suburl/gk/zcjd/"
+  },
+  {
+    "file": "moa/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "moa/szcpxx.ts",
+    "path": "/szcpxx",
+    "example": "/gov/moa/szcpxx"
+  },
+  {
+    "file": "moa/zdscxx.ts",
+    "path": "/zdscxx/:category{.+}?",
+    "example": "/gov/moa/zdscxx"
+  },
+  {
+    "file": "moe/moe.ts",
+    "path": "/:type",
+    "example": "/gov/moe/policy_anal"
+  },
+  {
+    "file": "moe/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "moe/s78.ts",
+    "path": "/s78/:column",
+    "example": "/gov/moe/s78/A13"
+  },
+  {
+    "file": "mof/bond.ts",
+    "path": "/bond/:category?",
+    "example": "/gov/mof/bond"
+  },
+  {
+    "file": "mof/gss.ts",
+    "path": "/gss/:category?",
+    "example": "/gov/mof/gss"
+  },
+  {
+    "file": "mof/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "mofcom/article.ts",
+    "path": "/article/:suffix{.+}",
+    "example": "/gov/mofcom/article/b"
+  },
+  {
+    "file": "mofcom/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "moj/aac/news.ts",
+    "path": "/aac/news/:type?",
+    "example": "/gov/moj/aac/news"
+  },
+  {
+    "file": "moj/lfyjzj.ts",
+    "path": "/lfyjzj",
+    "example": "/gov/moj/lfyjzj"
+  },
+  {
+    "file": "moj/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "mot/index.ts",
+    "path": "/:category{.+}?",
+    "example": "/gov/mot/jiaotongyaowen"
+  },
+  {
+    "file": "mot/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "ndrc/fggz.ts",
+    "path": "/fggz/:category{.+}?",
+    "example": "/gov/ndrc/fggz"
+  },
+  {
+    "file": "ndrc/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "ndrc/xwdt.ts",
+    "path": "/xwdt/:category{.+}?",
+    "example": "/gov/ndrc/xwdt"
+  },
+  {
+    "file": "ndrc/zfxxgk.ts",
+    "path": "/zfxxgk",
+    "example": "/gov/ndrc/zfxxgk"
+  },
+  {
+    "file": "nea/bureau.ts",
+    "path": "/sjzz/:bureau",
+    "example": "/gov/nea/sjzz/ghs"
+  },
+  {
+    "file": "nea/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "nfra/index.ts",
+    "path": "/:id?",
+    "example": "/gov/nfra/915"
+  },
+  {
+    "file": "nfra/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "nifdc/index.ts",
+    "path": "/:path{.+}?",
+    "example": "/gov/nifdc/bshff/ylqxbzhgl/qxggtzh"
+  },
+  {
+    "file": "nifdc/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "nmpa/generic.ts",
+    "path": "/:path{.+}",
+    "example": "/gov/nmpa/xxgk/ggtg"
+  },
+  {
+    "file": "nmpa/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "nopss/index.ts",
+    "path": "/:path{.+}?",
+    "example": "/gov/nopss/GB/219469"
+  },
+  {
+    "file": "nopss/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "npc/index.ts",
+    "path": "/:caty",
+    "example": "/gov/npc/c183"
+  },
+  {
+    "file": "npc/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "nppa/channels.ts",
+    "path": "/:path{.+}",
+    "example": "/gov/nppa/xxfb/ywxx"
+  },
+  {
+    "file": "nppa/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "nrta/dsj.ts",
+    "path": "/dsj/:category?",
+    "example": "/gov/nrta/dsj"
+  },
+  {
+    "file": "nrta/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "nrta/news.ts",
+    "path": "/news/:category?",
+    "example": "/gov/nrta/news"
+  },
+  {
+    "file": "nsfc/index.ts",
+    "path": "/:path{.+}?",
+    "example": "/gov/nsfc"
+  },
+  {
+    "file": "nsfc/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "nsfc/shortcuts.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "pbc/goutongjiaoliu.ts",
+    "path": "/goutongjiaoliu",
+    "example": "/gov/pbc/goutongjiaoliu"
+  },
+  {
+    "file": "pbc/gzlw.ts",
+    "path": "/gzlw",
+    "example": "/gov/pbc/gzlw"
+  },
+  {
+    "file": "pbc/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "pbc/trade-announcement.ts",
+    "path": "/tradeAnnouncement",
+    "example": "/gov/pbc/tradeAnnouncement"
+  },
+  {
+    "file": "pbc/utils.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "pbc/zcyj.ts",
+    "path": "/zcyj",
+    "example": "/gov/pbc/zcyj"
+  },
+  {
+    "file": "pudong/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "pudong/zwgk.ts",
+    "path": "/zwgk",
+    "example": "/gov/pudong/zwgk"
+  },
+  {
+    "file": "safe/business.ts",
+    "path": "/business/:site?",
+    "example": "/gov/safe/business/beijing"
+  },
+  {
+    "file": "safe/complaint.ts",
+    "path": "/complaint/:site?",
+    "example": "/gov/safe/complaint/beijing"
+  },
+  {
+    "file": "safe/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "samr/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "sasac/generic.ts",
+    "path": "/:path{.+}",
+    "example": "/gov/sasac/n2588030/n16436141"
+  },
+  {
+    "file": "sasac/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "sdb/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "sdb/sdb.ts",
+    "path": "/:path{.+}",
+    "example": "/gov/sdb/www/zwgk/zcjd"
+  },
+  {
+    "file": "sh/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "sh/wsjkw/yqtb/index.ts",
+    "path": "/wsjkw/yqtb",
+    "example": "/gov/sh/wsjkw/yqtb"
+  },
+  {
+    "file": "sh/yjj/index.ts",
+    "path": "/yjj/:path{.+}?",
+    "example": "/gov/sh/yjj/zh"
+  },
+  {
+    "file": "shaanxi/kjt.ts",
+    "path": "/kjt/:id?",
+    "example": "/gov/shaanxi/kjt"
+  },
+  {
+    "file": "shaanxi/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "shenzhen/hrss/szksy/index.ts",
+    "path": "/hrss/szksy/:caty/:page?",
+    "example": "/gov/shenzhen/hrss/szksy/bmxx/2"
+  },
+  {
+    "file": "shenzhen/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "shenzhen/szlh/index.ts",
+    "path": "/szlh/zwfw/zffw/:caty",
+    "example": "/gov/shenzhen/szlh/zwfw/zffw/tzgg"
+  },
+  {
+    "file": "shenzhen/xxgk/zfxxgj.ts",
+    "path": "/xxgk/zfxxgj/:caty",
+    "example": "/gov/shenzhen/xxgk/zfxxgj/tzgg"
+  },
+  {
+    "file": "shenzhen/zjj/index.ts",
+    "path": "/zjj/xxgk/:caty",
+    "example": "/gov/shenzhen/zjj/xxgk/tzgg"
+  },
+  {
+    "file": "shenzhen/zzb/index.ts",
+    "path": "/zzb/:caty/:page?",
+    "example": "/gov/shenzhen/zzb/tzgg"
+  },
+  {
+    "file": "sichuan/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "stats/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "suzhou/doc.ts",
+    "path": "/doc",
+    "example": "/gov/suzhou/doc"
+  },
+  {
+    "file": "suzhou/fg.ts",
+    "path": "/fg/:category{.+}?",
+    "example": "/gov/suzhou/fg/szfgw/ggl/nav_list"
+  },
+  {
+    "file": "suzhou/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "suzhou/news.ts",
+    "path": "/news/:uid",
+    "example": "/gov/suzhou/news/news"
+  },
+  {
+    "file": "taiyuan/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "taiyuan/rsj.ts",
+    "path": "/rsj/:caty/:page?",
+    "example": "/gov/taiyuan/rsj/gggs"
+  },
+  {
+    "file": "tianjin/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "tianjin/tjftz.ts",
+    "path": "/tjftz-notice/:channelId",
+    "example": "/gov/tianjin/tjftz-notice/6302"
+  },
+  {
+    "file": "tianjin/tjrcgzw.ts",
+    "path": "/tjrcgzw-notice/:cate/:subCate",
+    "example": "/gov/tianjin/tjrcgzw-notice/rczc/sjrczc/"
+  },
+  {
+    "file": "wuhan/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "wuhan/whyw.ts",
+    "path": "/sy/whyw",
+    "example": "/gov/wuhan/sy/whyw"
+  },
+  {
+    "file": "xinyi/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "xinyi/xinyi.ts",
+    "path": "/:path{.+}",
+    "example": "/gov/xinyi/www/zwgk/zcjd"
+  },
+  {
+    "file": "xuzhou/hrss.ts",
+    "path": "/hrss/:category?",
+    "example": "/gov/xuzhou/hrss"
+  },
+  {
+    "file": "xuzhou/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "zhejiang/gwy.ts",
+    "path": "/gwy/:category?/:column?",
+    "example": "/gov/zhejiang/gwy/1"
+  },
+  {
+    "file": "zhejiang/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "zhengce/govall.ts",
+    "path": "/govall/:advance?",
+    "example": "/gov/zhengce/govall/orpro=555&notpro=2&search_field=title"
+  },
+  {
+    "file": "zhengce/index.ts",
+    "path": "/:category{.+}?",
+    "example": "/gov/zhengce"
+  },
+  {
+    "file": "zhengce/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "zhengce/wenjian.ts",
+    "path": "/wenjian/:pcodeJiguan?",
+    "example": "/gov/zhengce/wenjian"
+  },
+  {
+    "file": "zhengce/zhengceku.ts",
+    "path": "/zhengceku/:department",
+    "example": "/gov/zhengce/zhengceku/bmwj"
+  },
+  {
+    "file": "zhengce/zuixin.ts",
+    "path": "/zuixin",
+    "example": "/gov/zhengce/zuixin"
+  },
+  {
+    "file": "zj/czt/utils.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "zj/czt/zfcg-helper.ts",
+    "path": "/zfcg-helper",
+    "example": "/gov/zj/zfcg-helper"
+  },
+  {
+    "file": "zj/czt/zfcg.ts",
+    "path": "/zfcg/:code?",
+    "example": "/gov/zj/zfcg/110-606633"
+  },
+  {
+    "file": "zj/namespace.ts",
+    "path": null,
+    "example": null
+  },
+  {
+    "file": "zj/ningbogzw-notice.ts",
+    "path": "/ningbogzw-notice/:colId?",
+    "example": "/gov/zj/ningbogzw-notice/1229116730"
+  },
+  {
+    "file": "zj/ningborsjnotice.ts",
+    "path": "/ningborsjnotice/:colId?",
+    "example": "/gov/zj/ningborsjnotice/1229676740"
+  },
+  {
+    "file": "zj/search.ts",
+    "path": "/search/:websiteid?/:word/:cateid?",
+    "example": "/gov/zj/search"
+  }
+]

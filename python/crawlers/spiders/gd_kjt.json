@@ -2,19 +2,19 @@
   "source_id": "gd_kjt",
   "name": "广东省科技厅",
   "category": "省级",
-  "list_url": "https://gdinfo.gd.gov.cn/zklyxxgkml/bmwj/zyzc/content/post_1.html",
+  "list_url": "http://gdstc.gd.gov.cn/zwgk_n/zcfg/gfwj/index.html",
   "list_selectors": {
-    "item": "li.list-item a, .article-list li a, ul.list li a",
+    "item": "ul li",
     "title": "a::text",
     "href": "a::attr(href)",
-    "date": ".date, .time, .pub-date"
+    "date": "li::text"
   },
   "detail_selectors": {
     "title": "h1.article-title, h1.title, h1",
     "content": "div.article-content, .article-content, .content, article",
     "date": ".pub-date, .date"
   },
-  "render_js": true,
+  "render_js": false,
   "frequency": "daily",
   "request_interval_min": 3,
   "request_interval_max": 5,

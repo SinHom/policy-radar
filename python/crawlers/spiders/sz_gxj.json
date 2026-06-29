@@ -14,7 +14,7 @@
     "content": "div.article-content, .article-content, .content, article",
     "date": ".pub-date, .date, .publish-time"
   },
-  "render_js": false,
+  "render_js": true,
   "frequency": "daily",
   "request_interval_min": 3,
   "request_interval_max": 5,

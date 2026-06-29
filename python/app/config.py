@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     admin_token_secret: str = "change-me-in-production"
 
     # Crawler
+    crawl_interval_seconds: int = 3600  # APScheduler 后台定时爬取 interval(秒); 0 = 关闭
     crawler_request_interval_min: float = 3.0
     crawler_request_interval_max: float = 5.0
     crawler_user_agent: str = (

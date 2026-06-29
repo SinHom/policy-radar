@@ -7,7 +7,9 @@ from datetime import datetime
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from collections import Counter
+
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import desc, select
 
@@ -269,3 +271,138 @@ def format_push_message(pol: Policy) -> str:
     lines.append("━━━━━━━━━━━━━━━")
     lines.append(f"🔗 {pol.url[:80]}")
     return "\n".join(lines)
+
+
+# === 前端多维筛选 endpoint(sidebar 用) ===
+
+class PolicyWithSourceOut(BaseModel):
+    """多维筛选返回的 policy,带 source 元数据(region/department/category)
+    让前端 sidebar 显示筛选项时不需额外请求。"""
+    id: int
+    title: str
+    url: str
+    source_id: str
+    region: Optional[str] = None
+    department: Optional[str] = None
+    category: Optional[str] = None
+    summary_type: Optional[str] = None
+    summary_text: Optional[str] = None
+    amount: Optional[str] = None
+    deadline: Optional[str] = None
+    keywords: list[str] = []
+    published_at: Optional[str] = None
+    summarized_at: Optional[str] = None
+
+
+class FacetItem(BaseModel):
+    """单条筛选项(供 sidebar 渲染 checkbox + count)。"""
+    value: str
+    count: int
+
+
+class PoliciesSearchOut(BaseModel):
+    policies: list[PolicyWithSourceOut] = []
+    facets: dict[str, list[FacetItem]] = {}
+    total: int = 0
+
+
+@router.get("/policies/search", response_model=PoliciesSearchOut)
+async def search_policies(
+    region: list[str] = Query(default_factory=list, description="国家级/省级/市级/区级(多选)"),
+    department: list[str] = Query(default_factory=list, description="委办部门(多选)"),
+    category: list[str] = Query(default_factory=list, description="类目(多选)"),
+    source_id: list[str] = Query(default_factory=list, description="具体源 ID(多选)"),
+    query: str = Query(default="", description="标题关键词搜索"),
+    limit: int = Query(default=100, ge=1, le=500),
+    summarized_only: bool = Query(default=False),
+) -> PoliciesSearchOut:
+    """多维筛选政策 + facets。
+
+    用法(前端 sidebar):
+    - region/department/category/source_id 都是数组,可多选
+    - facets 返回每个维度可选项 + count,直接渲染 checkbox + 数量
+
+    count 语义:每个 facet value 在当前 query 结果下命中的 policy 数。
+    """
+    async with get_session() as session:
+        # 1) 拉所有 PolicySource
+        src_rows = (await session.execute(select(PolicySource))).scalars().all()
+        src_by_id = {s.id: s for s in src_rows}
+
+        # 2) source-level filter:从 src_rows 中过滤候选
+        if region or department or category or source_id:
+            candidate_pkids = [
+                s.id for s in src_rows
+                if (not region or (s.region in region))
+                and (not department or (s.department in department))
+                and (not category or (s.category in category))
+                and (not source_id or (s.source_id in source_id))
+            ]
+        else:
+            candidate_pkids = list(src_by_id.keys())
+
+        if not candidate_pkids:
+            return PoliciesSearchOut(policies=[], facets={}, total=0)
+
+        # 3) 查 Policy
+        stmt = select(Policy).where(Policy.source_id.in_(candidate_pkids))
+        if query:
+            stmt = stmt.where(Policy.title.contains(query))
+        if summarized_only:
+            stmt = stmt.where(Policy.summary_text.isnot(None))
+        stmt = stmt.order_by(desc(Policy.id)).limit(limit)
+        rows = (await session.execute(stmt)).scalars().all()
+
+        # 4) 拼装 policy(带 source 元数据)
+        out_policies = []
+        for p in rows:
+            s = src_by_id.get(p.source_id)
+            out_policies.append(
+                PolicyWithSourceOut(
+                    id=p.id,
+                    title=p.title,
+                    url=p.url,
+                    source_id=s.source_id if s else "?",
+                    region=s.region if s else None,
+                    department=s.department if s else None,
+                    category=s.category if s else None,
+                    summary_type=p.summary_type,
+                    summary_text=p.summary_text,
+                    amount=(p.summary_data or {}).get("amount") if p.summary_data else None,
+                    deadline=(p.summary_data or {}).get("deadline") if p.summary_data else None,
+                    keywords=(p.summary_data or {}).get("keywords", []) if p.summary_data else [],
+                    published_at=p.published_at.isoformat() if p.published_at else None,
+                    summarized_at=p.summarized_at.isoformat() if p.summarized_at else None,
+                )
+            )
+
+        # 5) facets:当前结果下,每维度可选项 + count(命中 policy 数)
+        region_pol = Counter()
+        dept_pol = Counter()
+        cat_pol = Counter()
+        for p in rows:
+            s = src_by_id.get(p.source_id)
+            if not s:
+                continue
+            if s.region:
+                region_pol[s.region] += 1
+            if s.department:
+                dept_pol[s.department] += 1
+            if s.category:
+                cat_pol[s.category] += 1
+
+        # 全 dim 可选值(从 src_rows 去重;有序按 count 倒序)
+        regions_all = sorted({s.region for s in src_rows if s.region},
+                             key=lambda v: -region_pol.get(v, 0))
+        depts_all = sorted({s.department for s in src_rows if s.department},
+                           key=lambda v: -dept_pol.get(v, 0))
+        cats_all = sorted({s.category for s in src_rows if s.category},
+                          key=lambda v: -cat_pol.get(v, 0))
+
+        facets = {
+            "regions": [FacetItem(value=v, count=region_pol.get(v, 0)) for v in regions_all],
+            "departments": [FacetItem(value=v, count=dept_pol.get(v, 0)) for v in depts_all],
+            "categories": [FacetItem(value=v, count=cat_pol.get(v, 0)) for v in cats_all],
+        }
+
+        return PoliciesSearchOut(policies=out_policies, facets=facets, total=len(out_policies))

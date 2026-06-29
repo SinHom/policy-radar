@@ -57,10 +57,17 @@ async def crawl_source(
     fetcher: Optional[Fetcher] = None,
     max_new: int = 50,
 ) -> CrawlResult:
-    """爬取单个政策源。"""
+    """爬取单个政策源。支持 html(默认) 和 rss 两种模式(看 spider.json.mode)。"""
     cfg = load_spider_config(source_id)
     fetcher = fetcher or get_fetcher()
     result = CrawlResult(source_id=source_id)
+
+    if cfg.get("mode") == "rss":
+        # RSS 模式: 走 rss_crawler(feed → parse → 入库,无 detail 二次抓取)
+        from python.crawlers.rss_crawler import rss_crawl_source
+        return await rss_crawl_source(
+            source_id, cfg, fetcher=fetcher, max_new=max_new
+        )
 
     # 1. 抓列表页
     list_url = cfg["list_url"]
@@ -205,7 +212,7 @@ async def crawl_source(
 async def run_crawler(
     source_ids: Optional[list[str]] = None,
     *,
-    max_new_per_source: int = 50,
+    max_new_per_source: int = 10,
 ) -> list[CrawlResult]:
     """跑多个爬虫源。source_ids 为 None 时跑所有 enabled 源。"""
     # 初始化 session

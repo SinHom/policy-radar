@@ -2,12 +2,12 @@
   "source_id": "prov_gd_szr",
   "name": "广东省人社厅",
   "category": "省级",
-  "list_url": "http://hrss.gd.gov.cn/zwgk/zyzc/",
+  "list_url": "https://hrss.gd.gov.cn/zwgk/xxgkml/bmwj/gfxwj/index.html",
   "list_selectors": {
-    "item": "ul.list_con li a, .list_con li a, .list-news li a",
-    "title": "a::text",
+    "item": "ul li",
+    "title": "a::attr(title)",
     "href": "a::attr(href)",
-    "date": "span.date, .date"
+    "date": "li::text"
   },
   "detail_selectors": {
     "title": "h1, .article-title",

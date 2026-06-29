@@ -1,13 +1,13 @@
 {
-  "source_id": "national_gov_cn",
+  "source_id": "nat_gov_cn",
   "name": "国务院",
   "category": "国家级",
   "list_url": "https://www.gov.cn/zhengce/index.htm",
   "list_selectors": {
-    "item": "ul.list_li li, div.list.list_1 li, .news_list .list_item a",
+    "item": ".item.item03 .list ul li",
     "title": "a::text",
     "href": "a::attr(href)",
-    "date": ".date, .time, span.date"
+    "date": "span::text"
   },
   "detail_selectors": {
     "title": "h1#ti, h1.article-title, h1",

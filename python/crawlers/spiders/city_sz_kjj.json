@@ -2,19 +2,19 @@
   "source_id": "city_sz_kjj",
   "name": "深圳市科创委",
   "category": "市级",
-  "list_url": "http://stic.sz.gov.cn/zwgk/zyzc/",
+  "list_url": "https://stic.sz.gov.cn/xxgk/zcfg/index.html",
   "list_selectors": {
-    "item": "ul.list_con li a, .list-con li a, .news-list li a",
+    "item": "ul li",
     "title": "a::text",
     "href": "a::attr(href)",
-    "date": "span.date, .date"
+    "date": "li::text"
   },
   "detail_selectors": {
     "title": "h1, .article-title",
     "content": "div.article-content, .content, article",
     "date": "span.date, .date"
   },
-  "render_js": false,
+  "render_js": true,
   "frequency": "daily",
   "request_interval_min": 3,
   "request_interval_max": 5,
