@@ -285,7 +285,6 @@ async def _select_weekly_policies(
 
     # 过滤:region 匹配 OR (source_name 含河北/秦皇岛 + dept 匹配)
     filtered: list[Policy] = []
-    logger.info("DEBUG _select_weekly range: src_meta=%s", src_meta)
     for p in policies:
         src_name, src_region = src_meta.get(p.source_id, ("", ""))
         # policy 没有 department 列,直接用 source.name
@@ -294,11 +293,24 @@ async def _select_weekly_policies(
         dept_match = _dept_match(dept, src_name)
         if region_match and dept_match:
             filtered.append(p)
-            logger.info("DEBUG  matched policy=%d src_id=%d name=%s region=%s dept=%s",
-                        p.id, p.source_id, src_name, src_region, dept)
-        else:
-            logger.info("DEBUG  skipped policy=%d src_id=%d name=%s region=%s dept=%s (region_match=%s, dept_match=%s)",
-                        p.id, p.source_id, src_name, src_region, dept, region_match, dept_match)
+
+    # 如果上面没匹配上,fallback:看 source.department 字段(在源表单独存)
+    if not filtered:
+        # 取所有 source 的 id → (name, region, department)
+        src_ids_needed = {p.source_id for p in policies if p.source_id}
+        async with get_session() as session:
+            stmt_src = select(PolicySource).where(PolicySource.id.in_(src_ids_needed))
+            srcs = (await session.execute(stmt_src)).scalars().all()
+            src_dept_by_id = {s.id: (s.name or "", s.region or "", s.department or "") for s in srcs}
+        for p in policies:
+            if p in filtered:
+                continue
+            src_name, src_region, src_dept = src_dept_by_id.get(p.source_id, ("", "", ""))
+            region_match = _region_match(src_region) or "河北" in (src_name or "") or "秦皇岛" in (src_name or "")
+            # dept 字段也含部门名(例 "河北省文化和旅游厅" 含 "文旅" 关键词)
+            dept_match = _dept_match(src_dept, src_name) or _dept_match(src_dept, src_dept)
+            if region_match and dept_match:
+                filtered.append(p)
 
     # 限制返回数
     return filtered[:50]
