@@ -193,7 +193,7 @@ def _build_weekly_card(
             action_parts.append(f"[👉 阅读原文]({r['url']})")
         if r["pol_id"]:
             pdf_url = f"{public_base}/api/policies/{r['pol_id']}/pdf"
-            action_parts.append(f"[📄 下载 PDF]({pdf_url})")
+            action_parts.append(f"[📄 下载 MD]({pdf_url})")
         if action_parts:
             content_lines.append("  ·  ".join(action_parts))
 
