@@ -1,0 +1,26 @@
+{
+  "source_id": "pr_hebei_zfgb",
+  "name": "河北省政府公报",
+  "category": "省级",
+  "region": "河北",
+  "department": "河北省人民政府",
+  "list_url": "http://www.hebei.gov.cn/columns/34db8c86-ac4c-4774-9974-e7d88fd3bb1f/index.html",
+  "mode": "playwright",
+  "render_js": true,
+  "frequency": "weekly",
+  "request_interval_min": 5,
+  "request_interval_max": 10,
+  "max_pages": 1,
+  "list_selectors": {
+    "list": "a[istitle=\"true\"]",
+    "title": "@title",
+    "link": "@href",
+    "date": "..//span"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title",
+    "content": ".article-content, article p, main p",
+    "date": ".article-date, .date"
+  },
+  "notes": "河北省政府公报栏目(最权威正式政策原文)"
+}
