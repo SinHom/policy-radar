@@ -11,10 +11,13 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import logging
 import os
 import secrets
+import threading
 import time
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
@@ -26,8 +29,40 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])  # 完整路径前缀在 router 自身定好，main.py 不再加 /api
 
-# 内存 token 存储：{token_hash: {"user": str, "expires_at": float}}
+# 内存 token 存储 + 持久化到 data/admin_tokens.json(防止容器重启丢失)
 _TOKENS: dict[str, dict] = {}
+_TOKENS_LOCK = threading.Lock()
+_TOKENS_FILE = Path("/app/data/admin_tokens.json") if Path("/app").exists() else Path("data/admin_tokens.json")
+
+
+def _load_tokens_from_disk() -> None:
+    """启动时加载已持久化的 tokens。"""
+    if _TOKENS_FILE.exists():
+        try:
+            data = json.loads(_TOKENS_FILE.read_text(encoding="utf-8"))
+            now = time.time()
+            for h, info in data.items():
+                if info.get("expires_at", 0) > now:
+                    _TOKENS[h] = info
+            logger.info("loaded %d admin tokens from disk", len(_TOKENS))
+        except Exception as e:
+            logger.warning("load tokens from disk failed: %s", e)
+
+
+def _save_tokens_to_disk() -> None:
+    """持久化 tokens 到文件。"""
+    try:
+        _TOKENS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _TOKENS_FILE.write_text(
+            json.dumps(_TOKENS, ensure_ascii=False),
+            encoding="utf-8",
+        )
+    except Exception as e:
+        logger.warning("save tokens to disk failed: %s", e)
+
+
+# 启动加载
+_load_tokens_from_disk()
 # TTL：默认 7 天(604800s)。通过环境变量 ADMIN_TOKEN_TTL 覆盖。
 _TOKEN_TTL = int(os.environ.get("ADMIN_TOKEN_TTL", str(7 * 24 * 3600)))  # 默认 7 天
 COOKIE_NAME = "admin_token"
@@ -52,6 +87,7 @@ def _is_valid(token: str) -> Optional[dict]:
         return None
     if time.time() > info["expires_at"]:
         _TOKENS.pop(h, None)
+        _save_tokens_to_disk()
         return None
     return info
 
@@ -119,20 +155,22 @@ async def login(req: LoginRequest, request: Request, response: Response) -> Logi
     )
 
     # 限同用户 token 数（防 token 洪水）
-    user_tokens = [(k, v) for k, v in _TOKENS.items() if v.get("user") == req.username]
-    while len(user_tokens) >= _MAX_TOKENS_PER_USER:
-        # 删最早过期的
-        oldest = min(user_tokens, key=lambda x: x[1]["expires_at"])
-        _TOKENS.pop(oldest[0], None)
-        user_tokens = user_tokens[:-1]
+    with _TOKENS_LOCK:
+        user_tokens = [(k, v) for k, v in _TOKENS.items() if v.get("user") == req.username]
+        while len(user_tokens) >= _MAX_TOKENS_PER_USER:
+            # 删最早过期的
+            oldest = min(user_tokens, key=lambda x: x[1]["expires_at"])
+            _TOKENS.pop(oldest[0], None)
+            user_tokens = user_tokens[:-1]
 
-    # 生成 token
-    token = secrets.token_urlsafe(32)
-    expires_at = time.time() + _TOKEN_TTL
-    _TOKENS[_hash_token(token)] = {
-        "user": req.username,
-        "expires_at": expires_at,
-    }
+        # 生成 token
+        token = secrets.token_urlsafe(32)
+        expires_at = time.time() + _TOKEN_TTL
+        _TOKENS[_hash_token(token)] = {
+            "user": req.username,
+            "expires_at": expires_at,
+        }
+        _save_tokens_to_disk()
     # 设 HttpOnly Cookie(浏览器自动管理过期与同源策略)
     response.set_cookie(
         key=COOKIE_NAME,
@@ -186,7 +224,9 @@ async def logout(request: Request, response: Response, authorization: Optional[s
         if len(parts) == 2 and parts[0].lower() == "bearer":
             token = parts[1]
     if token:
-        _TOKENS.pop(_hash_token(token), None)
+        with _TOKENS_LOCK:
+            _TOKENS.pop(_hash_token(token), None)
+            _save_tokens_to_disk()
     # 清 Cookie
     response.delete_cookie(COOKIE_NAME, path="/")
     return {"ok": True}
