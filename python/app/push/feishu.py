@@ -61,17 +61,21 @@ def _signed_url(webhook_url: str, secret: str) -> str:
 
 def _build_card(content: PushContent) -> dict:
     """构造飞书交互式卡片。"""
+    # fields 必须是 list[dict],每个 dict 含 is_short + text.lark_md
     fields = []
-    if content.summary_type:
-        fields.append(f"**类型:** {content.summary_type}")
-    if content.amount:
-        fields.append(f"**金额:** {content.amount}")
-    if content.deadline:
-        fields.append(f"**截止:** {content.deadline}")
-    if content.source_name:
-        fields.append(f"**来源:** {content.source_name}")
-    if content.company_name:
-        fields.append(f"**接收:** {content.company_name}")
+    field_pairs = [
+        ("类型", content.summary_type),
+        ("金额", content.amount),
+        ("截止", content.deadline),
+        ("来源", content.source_name),
+        ("接收", content.company_name),
+    ]
+    for label, val in field_pairs:
+        if val:
+            fields.append({
+                "is_short": True,
+                "text": {"tag": "lark_md", "content": f"**{label}:** {val}"},
+            })
 
     elements = [
         # 摘要正文
