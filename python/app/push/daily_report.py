@@ -20,8 +20,7 @@ from typing import Optional
 
 from sqlalchemy import desc, select
 
-from python.app.push.dispatcher import PushContent, PushResult
-from python.models import Company, Policy, PolicySource, Subscription
+from python.models import Policy, PolicySource, Subscription
 from python.models.base import get_session
 
 logger = logging.getLogger(__name__)
@@ -49,15 +48,19 @@ def _fmt_dt(dt) -> str:
 
 
 def _build_daily_card(
-    policies: list[Policy],
-    sources_by_id: dict[int, PolicySource],
+    rows: list[dict],
     slot: str,
     date_str: str,
 ) -> dict:
-    """构造日报聚合卡片(最多 MAX_POLICIES_PER_CARD 条)。"""
+    """构造飞书交互式卡片。
+
+    rows: list[{pol_id, title, url, summary, advisory, dt_str, source_name}, ...]
+    (扁平化,避免 session 外访问 ORM 对象的 lazy attribute)
+    """
     slot_emoji = {"早间": "🌅", "午间": "☀️", "晚间": "🌙"}.get(slot, "📡")
     header_title = f"{slot_emoji} 政策雷达 · {slot}简报"
-    if len(policies) == 0:
+
+    if not rows:
         return {
             "msg_type": "interactive",
             "card": {
@@ -83,36 +86,26 @@ def _build_daily_card(
         "tag": "div",
         "text": {
             "tag": "lark_md",
-            "content": f"**{date_str}** · 共 **{len(policies)}** 篇新政策",
+            "content": f"**{date_str}** · 共 **{len(rows)}** 篇新政策",
         },
     })
     elements.append({"tag": "hr"})
 
-    for i, pol in enumerate(policies, 1):
-        title = pol.title or "无标题"
-        url = pol.url
-        summary = (pol.summary_text or "").strip()
-        advisory = (pol.advisory or "").strip()
-        dt_str = _fmt_dt(pol.published_at or pol.crawled_at)
-        src = sources_by_id.get(pol.source_id)
-        src_name = src.name if src else ""
-
-        content_lines: list[str] = [f"**{i}. [{title}]({url})**"]
-        if summary:
-            content_lines.append(summary)
-        # meta 行
+    for i, r in enumerate(rows, 1):
+        content_lines: list[str] = [f"**{i}. [{r['title']}]({r['url']})**"]
+        if r["summary"]:
+            content_lines.append(r["summary"])
         meta_parts: list[str] = []
-        if dt_str:
-            meta_parts.append(f"⏰ {dt_str}")
-        if src_name:
-            meta_parts.append(f"📌 {src_name}")
-        meta_parts.append(f"[👉 阅读原文]({url})")
-        if pol.id:
-            meta_parts.append(f"[📄 下载 PDF](/api/policies/{pol.id}/pdf)")
+        if r["dt_str"]:
+            meta_parts.append(f"⏰ {r['dt_str']}")
+        if r["source_name"]:
+            meta_parts.append(f"📌 {r['source_name']}")
+        meta_parts.append(f"[👉 阅读原文]({r['url']})")
+        if r["pol_id"]:
+            meta_parts.append(f"[📄 下载 PDF](/api/policies/{r['pol_id']}/pdf)")
         content_lines.append("  ·  ".join(meta_parts))
-        if advisory:
-            # 业务解读
-            content_lines.append(f"💡 _{advisory}_")
+        if r["advisory"]:
+            content_lines.append(f"💡 _{r['advisory']}_")
 
         elements.append({
             "tag": "div",
@@ -128,7 +121,6 @@ def _build_daily_card(
             "content": f"<font color='grey'>📡 政策雷达 · 早间/午间/晚间简报 · {datetime.now().strftime('%H:%M:%S')}</font>",
         },
     })
-    # 按钮:跳管理后台
     elements.append({
         "tag": "action",
         "actions": [
@@ -153,14 +145,46 @@ def _build_daily_card(
     }
 
 
-async def _select_policies_for_slot(slot: str, since_hours: int) -> list[Policy]:
-    """取最近 since_hours 小时抓取且未推送过的政策。
+async def _flatten_policies(policies: list) -> list[dict]:
+    """把 Policy 对象扁平化成 dict,在 session 内完成所有属性访问。"""
+    if not policies:
+        return []
+    src_ids = {p.source_id for p in policies if p.source_id}
+    sources_by_id: dict[int, str] = {}
+    if src_ids:
+        async with get_session() as session:
+            stmt = select(PolicySource).where(PolicySource.id.in_(src_ids))
+            srcs = (await session.execute(stmt)).scalars().all()
+            sources_by_id = {s.id: s.name for s in srcs}
+            # 同样在 session 内取所有字段(避免 lazy load)
+            return [
+                {
+                    "pol_id": p.id,
+                    "title": p.title or "无标题",
+                    "url": p.url or "",
+                    "summary": (p.summary_text or "").strip(),
+                    "advisory": (p.advisory or "").strip(),
+                    "dt_str": _fmt_dt(p.published_at or p.crawled_at),
+                    "source_name": sources_by_id.get(p.source_id, ""),
+                }
+                for p in policies
+            ]
+    return [
+        {
+            "pol_id": p.id,
+            "title": p.title or "无标题",
+            "url": p.url or "",
+            "summary": (p.summary_text or "").strip(),
+            "advisory": (p.advisory or "").strip(),
+            "dt_str": _fmt_dt(p.published_at or p.crawled_at),
+            "source_name": "",
+        }
+        for p in policies
+    ]
 
-    slot=早/午/晚 决定 since_hours:
-      早间:12  (昨晚 22:xx - 早 9:00)
-      午间:5   (早 9:00 - 午 12:00)
-      晚间:8   (午 12:00 - 晚 20:00)
-    """
+
+async def _select_policies_for_slot(slot: str, since_hours: int) -> list[Policy]:
+    """取最近 since_hours 小时抓取且已摘要的政策(返回 ORM 对象,后续在 session 内 flatten)。"""
     delta = {"早间": 12, "午间": 5, "晚间": 8}.get(slot, 6)
     cutoff = datetime.utcnow() - timedelta(hours=delta)
     async with get_session() as session:
@@ -177,25 +201,19 @@ async def _select_policies_for_slot(slot: str, since_hours: int) -> list[Policy]
 async def build_daily_report(slot: str = "早间") -> list[dict]:
     """构建日报聚合卡片列表(可能 1 张或 N 张,N = ceil(条数 / MAX_POLICIES_PER_CARD))。
 
-    包含每条政策的 PDF 链接,需要后端 /api/policies/{id}/pdf 在线生成。
-    PDF 应该在 daily report 之前预热(可由 scheduler 单独跑)。
+    所有数据访问都在 session 内完成,返回纯 dict 列表(session 外可安全使用)。
     """
     date_str = datetime.now().strftime("%Y-%m-%d")
     policies = await _select_policies_for_slot(slot, since_hours={"早间": 12, "午间": 5, "晚间": 8}.get(slot, 6))
     if not policies:
-        return [_build_daily_card([], {}, slot, date_str)]
+        return [_build_daily_card([], slot, date_str)]
 
-    # 拉 sources 一次
-    src_ids = {p.source_id for p in policies}
-    async with get_session() as session:
-        stmt = select(PolicySource).where(PolicySource.id.in_(src_ids))
-        srcs = (await session.execute(stmt)).scalars().all()
-        sources_by_id = {s.id: s for s in srcs}
+    rows = await _flatten_policies(policies)
 
     cards: list[dict] = []
-    for i in range(0, len(policies), MAX_POLICIES_PER_CARD):
-        chunk = policies[i : i + MAX_POLICIES_PER_CARD]
-        cards.append(_build_daily_card(chunk, sources_by_id, slot, date_str))
+    for i in range(0, len(rows), MAX_POLICIES_PER_CARD):
+        chunk = rows[i : i + MAX_POLICIES_PER_CARD]
+        cards.append(_build_daily_card(chunk, slot, date_str))
     return cards
 
 
@@ -213,12 +231,10 @@ async def send_daily_report(
         channel = sub.push_channel or "feishu"
         if channel != "feishu":
             return {"ok": False, "error": f"daily_report 目前只支持 feishu channel (got {channel})"}
-        # 准备 push_config
         config = sub.push_config or {}
         if not config.get("webhook_url"):
             return {"ok": False, "error": "push_config.webhook_url 未配置"}
         # 注意:SQLAlchemy 2.0 async 中,必须 session 内访问 relationship(sub.company)
-        # 否则触发 MissingGreenlet(IO outside async context)
         comp = sub.company
         company_name = comp.name if comp else None
 
@@ -226,6 +242,5 @@ async def send_daily_report(
     if not cards:
         return {"ok": False, "error": "no cards generated"}
 
-    # 用第一张卡片做"代表"创建 PushContent,实际上 daily_report 走特殊通道
-    from python.app.push.facade import push_daily_cards  # lazy import 避免循环
+    from python.app.push.facade import push_daily_cards
     return await push_daily_cards(cards, channel, config, company_name=company_name)
