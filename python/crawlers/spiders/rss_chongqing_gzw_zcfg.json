@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_chongqing_gzw_zcfg",
+  "name": "重庆市-国资委 gzw",
+  "category": "省级",
+  "region": "重庆",
+  "department": "重庆市-国资委",
+  "list_url": "http://policy-radar-rsshub:1200/gov/chongqing/gzw/zcfg",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/chongqing/gzw/zcfg (服务端 RSSHub,RSS mode)"
+}
