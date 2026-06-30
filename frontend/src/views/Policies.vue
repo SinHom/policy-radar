@@ -90,6 +90,50 @@ async function openPreview(p) {
   }
 }
 function closePreview() { preview.value.show = false }
+
+// ============== 操作(摘要 / 推送 / 删除) ==============
+const busyIds = ref([])
+
+async function summarizeOne(p) {
+  busyIds.value.push(p.id)
+  try {
+    showToast('🤖 AI 摘要中...')
+    const r = await api.post(`/policies/${p.id}/summarize`)
+    showToast('✅ 摘要完成')
+    await search()
+  } catch (e) {
+    showToast('❌ 摘要失败: ' + (e.response?.data?.detail || e.message))
+  } finally {
+    busyIds.value = busyIds.value.filter(x => x !== p.id)
+  }
+}
+
+async function pushOne(p) {
+  busyIds.value.push(p.id)
+  try {
+    showToast('📨 推送中...')
+    const r = await api.post(`/policies/${p.id}/push`)
+    showToast('✅ 推送成功')
+  } catch (e) {
+    showToast('❌ 推送失败: ' + (e.response?.data?.detail || e.message))
+  } finally {
+    busyIds.value = busyIds.value.filter(x => x !== p.id)
+  }
+}
+
+async function delOne(p) {
+  if (!confirm(`删除政策「${p.title.slice(0, 40)}...」?`)) return
+  busyIds.value.push(p.id)
+  try {
+    await api.delete(`/policies/${p.id}`)
+    showToast('✅ 已删除')
+    await search()
+  } catch (e) {
+    showToast('❌ 删除失败: ' + (e.response?.data?.detail || e.message))
+  } finally {
+    busyIds.value = busyIds.value.filter(x => x !== p.id)
+  }
+}
 </script>
 
 <template>
@@ -234,6 +278,18 @@ function closePreview() { preview.value.show = false }
                class="text-xs px-2.5 py-1 rounded bg-green-50 text-green-700 hover:bg-green-100">
               📄 下载 PDF
             </a>
+            <button @click="summarizeOne(p)" :disabled="busyIds.includes(p.id)"
+                    class="text-xs px-2.5 py-1 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50">
+              🤖 AI 摘要
+            </button>
+            <button @click="pushOne(p)" :disabled="busyIds.includes(p.id)"
+                    class="text-xs px-2.5 py-1 rounded bg-orange-50 text-orange-700 hover:bg-orange-100 disabled:opacity-50">
+              📨 推送
+            </button>
+            <button @click="delOne(p)" :disabled="busyIds.includes(p.id)"
+                    class="text-xs px-2.5 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50">
+              🗑
+            </button>
           </div>
         </div>
       </div>
