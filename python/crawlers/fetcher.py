@@ -137,7 +137,7 @@ class Fetcher:
                 await page.add_init_script(
                     "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
                 )
-                resp = await page.goto(url, wait_until="domcontentloaded", timeout=int(self.timeout * 1000))
+                resp = await page.goto(url, wait_until="commit", timeout=int(self.timeout * 1000))
                 # 等网络空闲但最多 15 秒（避免卡在 networkidle）
                 try:
                     await page.wait_for_load_state("networkidle", timeout=15000)
