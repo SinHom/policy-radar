@@ -285,12 +285,20 @@ async def _select_weekly_policies(
 
     # 过滤:region 匹配 OR (source_name 含河北/秦皇岛 + dept 匹配)
     filtered: list[Policy] = []
+    logger.info("DEBUG _select_weekly range: src_meta=%s", src_meta)
     for p in policies:
         src_name, src_region = src_meta.get(p.source_id, ("", ""))
         # policy 没有 department 列,直接用 source.name
         dept = src_name
-        if _dept_match(dept, src_name) and (_region_match(src_region) or "河北" in (src_name or "") or "秦皇岛" in (src_name or "")):
+        region_match = _region_match(src_region) or "河北" in (src_name or "") or "秦皇岛" in (src_name or "")
+        dept_match = _dept_match(dept, src_name)
+        if region_match and dept_match:
             filtered.append(p)
+            logger.info("DEBUG  matched policy=%d src_id=%d name=%s region=%s dept=%s",
+                        p.id, p.source_id, src_name, src_region, dept)
+        else:
+            logger.info("DEBUG  skipped policy=%d src_id=%d name=%s region=%s dept=%s (region_match=%s, dept_match=%s)",
+                        p.id, p.source_id, src_name, src_region, dept, region_match, dept_match)
 
     # 限制返回数
     return filtered[:50]
