@@ -95,13 +95,32 @@ class Fetcher:
             "Accept-Encoding": "gzip, deflate",
             "Referer": "https://www.google.com/",  # 部分站看 referer
         }
+        # 容器 IPv6 不可达,强制 IPv4 解析(否则 happy-eyeballs 优先 IPv6 卡 60s)
+        url_to_fetch = url
+        try:
+            import socket
+            from urllib.parse import urlparse
+            p = urlparse(url)
+            host = p.hostname
+            if host:
+                infos = socket.getaddrinfo(host, p.port or 80, socket.AF_INET, socket.SOCK_STREAM)
+                if infos:
+                    ip = infos[0][4][0]
+                    url_to_fetch = f"{p.scheme}://{ip}{p.path}"
+                    if p.query:
+                        url_to_fetch += "?" + p.query
+                    # 保留 Host 头,避免 SNI / 虚拟主机问题
+                    headers["Host"] = host
+        except Exception:
+            pass  # 解析失败 fallback 原 URL
+
         async with httpx.AsyncClient(
             headers=headers,
             timeout=self.timeout,
             follow_redirects=True,
             verify=SSL_CONTEXT,
         ) as client:
-            resp = await client.get(url)
+            resp = await client.get(url_to_fetch)
             resp.raise_for_status()
             encoding = resp.encoding or "utf-8"
             # 尝试用 apparent_encoding（特别是 GBK 老站）
