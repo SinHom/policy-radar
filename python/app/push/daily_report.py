@@ -222,8 +222,16 @@ async def send_daily_report(
     slot: str = "早间",
 ) -> dict:
     """对单条订阅生成日报并推送(feishu channel)。"""
+    from sqlalchemy import select
+    from sqlalchemy.orm import joinedload
     async with get_session() as session:
-        sub = await session.get(Subscription, subscription_id)
+        # joinedload 一次性加载 company,避免 session 外访问触发 lazy load
+        stmt = (
+            select(Subscription)
+            .where(Subscription.id == subscription_id)
+            .options(joinedload(Subscription.company))
+        )
+        sub = (await session.execute(stmt)).scalar_one_or_none()
         if not sub:
             return {"ok": False, "error": "subscription not found"}
         if not sub.enabled:
@@ -231,12 +239,10 @@ async def send_daily_report(
         channel = sub.push_channel or "feishu"
         if channel != "feishu":
             return {"ok": False, "error": f"daily_report 目前只支持 feishu channel (got {channel})"}
-        config = sub.push_config or {}
-        if not config.get("webhook_url"):
-            return {"ok": False, "error": "push_config.webhook_url 未配置"}
-        # 注意:SQLAlchemy 2.0 async 中,必须 session 内访问 relationship(sub.company)
-        comp = sub.company
-        company_name = comp.name if comp else None
+        # 复制字段到 local dict(避免 session 关闭后访问 ORM 对象)
+        config = dict(sub.push_config or {})
+        # company 已经在 joinedload 加载,安全访问
+        company_name = sub.company.name if sub.company else None
 
     cards = await build_daily_report(slot)
     if not cards:
