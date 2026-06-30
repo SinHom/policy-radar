@@ -253,9 +253,11 @@ async def _select_weekly_policies(
         pushed_ids = set((await session.execute(stmt_pushed)).scalars().all())
 
         # 2) 候选:近 180 天 + 已摘要 + 不在已推集合
+        # 用 ISO 字符串比较(SQLite 的 DATETIME 列存 ISO text,aioqlite 对 datetime 对象 bind 不可靠)
+        cutoff_iso = candidate_cutoff.isoformat()
         stmt = (
             select(Policy)
-            .where(Policy.crawled_at >= candidate_cutoff)
+            .where(Policy.crawled_at >= cutoff_iso)
             .where(Policy.summary_text.isnot(None))
             .where(not_(Policy.id.in_(pushed_ids)) if pushed_ids else None)
             .order_by(desc(Policy.id))
