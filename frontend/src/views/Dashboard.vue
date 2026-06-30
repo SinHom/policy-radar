@@ -16,6 +16,7 @@ onMounted(async () => {
   try {
     health.value = (await fetch('/health')).json()
   } catch {}
+  startAuto()
 })
 
 const stats = computed(() => {
@@ -28,6 +29,27 @@ const stats = computed(() => {
     { label: '成功率', value: `${(s.push_success_rate * 100).toFixed(0)}%`, color: 'text-gray-900' },
   ]
 })
+
+// auto-refresh 每 15s
+let timer = null
+function startAuto() {
+  stopAuto()
+  timer = setInterval(async () => {
+    try {
+      const [f, c] = await Promise.all([
+        api.get('/dashboard/funnel'),
+        api.get('/dashboard/companies'),
+      ])
+      funnel.value = f.data
+      companies.value = c.data
+    } catch {}
+  }, 15000)
+}
+function stopAuto() {
+  if (timer) { clearInterval(timer); timer = null }
+}
+import { onBeforeUnmount } from 'vue'
+onBeforeUnmount(stopAuto)
 </script>
 
 <template>
