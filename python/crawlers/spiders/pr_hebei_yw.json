@@ -7,6 +7,7 @@
   "list_url": "http://www.hebei.gov.cn/columns/580d0301-2e0b-4152-9dd1-7d7f4e0f4980/index.html",
   "mode": "playwright",
   "render_js": true,
+  "list_render_js": false,
   "frequency": "daily",
   "request_interval_min": 5,
   "request_interval_max": 8,
