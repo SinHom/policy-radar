@@ -92,7 +92,7 @@ async def summarize_one(
         pol.summary_data = data
         pol.summary_model = llm.model
         pol.summarized_at = datetime.utcnow()
-        pol.advisory = (advisory or "")[:1000]  # 截断兜底,理论 ≤200 字
+        pol.advisory = (advisory or "")[:2500]  # 截断兜底,理论 ≤2000 字
         # 顺便：把简化标题写回 title 字段（如果新标题更短）
         if title_simple and len(title_simple) < len(pol.title):
             pass  # 不覆盖原 title，避免丢失信息

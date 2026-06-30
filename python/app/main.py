@@ -66,32 +66,29 @@ async def lifespan(app: FastAPI):
                 return
             await asyncio.sleep(interval)
 
-    # ============== 日报推送 scheduler ==============
-    # 早 9:00 / 午 12:00 / 晚 20:00(北京时间 = UTC+8,服务器时区是 UTC → 北京时间 9:00 = UTC 1:00)
-    # 用 asyncio 简单模拟 cron:循环检查当前分钟/小时,匹配则触发
+    # ============== 周报推送 scheduler ==============
+    # 每周一/三/五 北京 9:00 (= UTC 1:00) 推一次
     async def _daily_report_loop() -> None:
-        """每日 3 个时段对所有 enabled+feishu channel subscription 推日报聚合卡片。"""
+        """周报:周一/三/五 UTC 1:00 触发,对所有 enabled+feishu/webhook 订阅推。"""
         from datetime import datetime
-        from python.app.push.daily_report_v2 import run_daily_report_all_subs
-        # UTC 1:00 = 北京 9:00 / UTC 4:00 = 北京 12:00 / UTC 12:00 = 北京 20:00
-        slot_hour_map = {1: "早间", 4: "午间", 12: "晚间"}
-        last_triggered: dict[str, str] = {}  # slot → "YYYY-MM-DD HH:MM" 防重复
-        await asyncio.sleep(60)  # 启动后 1min 再检查
+        from python.app.push.daily_report_v2 import run_weekly_all_subs
+        weekly_days = {0, 2, 4}  # 周一/三/五(weekday())
+        last_triggered_date: str | None = None
+        await asyncio.sleep(60)
         while True:
             try:
                 now = datetime.utcnow()
-                slot = slot_hour_map.get(now.hour)
-                if slot:
-                    key = f"{now.strftime('%Y-%m-%d')}-{slot}"
-                    if last_triggered.get(key) != now.strftime("%H:%M"):
-                        logger.info("Daily report: 触发 slot=%s", slot)
-                        sent = await run_daily_report_all_subs(slot=slot)
-                        logger.info("Daily report: %s 推送完成 sent=%d", slot, sent)
-                        last_triggered[key] = now.strftime("%H:%M")
+                # 周一/三/五 UTC 1:00 推
+                if now.weekday() in weekly_days and now.hour == 1 and now.minute < 5:
+                    today_key = now.strftime("%Y-%m-%d")
+                    if last_triggered_date != today_key:
+                        logger.info("Weekly: 触发 date=%s", today_key)
+                        sent = await run_weekly_all_subs()
+                        logger.info("Weekly: 推送完成 sent=%d", sent)
+                        last_triggered_date = today_key
             except Exception as e:
-                logger.exception("Daily report loop 异常(继续): %s", e)
-            # 每 60 秒检查一次
-            await asyncio.sleep(60)
+                logger.exception("Weekly loop 异常(继续): %s", e)
+            await asyncio.sleep(300)  # 5 分钟检查一次(不需要 60s 精度)
 
     scheduler_task: asyncio.Task | None = None
     daily_task: asyncio.Task | None = None
