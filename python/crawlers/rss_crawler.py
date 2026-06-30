@@ -104,6 +104,7 @@ async def rss_crawl_source(
                     crawled_at=datetime.utcnow(),
                 )
                 session.add(pol)
+                await session.commit()
             result.new_crawled += 1
             logger.info(
                 "[%s] RSS new: %s | %s",
@@ -117,12 +118,13 @@ async def rss_crawl_source(
             result.errors += 1
             result.error_messages.append(msg)
 
-    # 5) 更新 source.last_crawl_at
+    # 5) 更新 source.last_crawl_at(必须 commit)
     async with get_session() as session:
         stmt = select(PolicySource).where(PolicySource.source_id == source_id)
         source_obj = (await session.execute(stmt)).scalar_one_or_none()
         if source_obj:
             source_obj.last_crawl_at = datetime.utcnow()
             # last_status 不强求,后端如有 alerts 模块会用
+            await session.commit()
 
     return result

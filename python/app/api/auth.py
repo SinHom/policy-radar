@@ -116,6 +116,28 @@ async def login(req: LoginRequest, request: Request, response: Response) -> Logi
     """
     settings = get_settings()
     ip = request.client.host if request.client else ""
+
+    # 锁定检查(必须在 compare_digest 前,避免泄露用户名 + 在锁定窗口内仍消耗比较时间)
+    locked_until = _FAIL_LOCKED_UNTIL.get(req.username, 0)
+    if locked_until and time.time() < locked_until:
+        remaining = int(locked_until - time.time())
+        logger.warning("admin login REJECTED (locked): user=%s remaining=%ds",
+                       req.username, remaining)
+        from python.models.audit_log import write_audit
+        await write_audit(
+            req.username, "login_locked", "auth", req.username,
+            detail=f"locked remaining={remaining}s", ip=ip, status="failed",
+        )
+        raise HTTPException(
+            status_code=429,
+            detail=f"账户已锁定(剩余 {remaining}s),请稍后重试",
+            headers={"Retry-After": str(remaining)},
+        )
+    # 过期解锁(超时后清零,让用户重试)
+    if locked_until and time.time() >= locked_until:
+        _FAIL_COUNT.pop(req.username, None)
+        _FAIL_LOCKED_UNTIL.pop(req.username, None)
+
     # 用 constant-time compare 防时序攻击
     user_ok = hmac.compare_digest(req.username, settings.admin_user)
     pass_ok = hmac.compare_digest(req.password, settings.admin_password)
@@ -140,8 +162,6 @@ async def login(req: LoginRequest, request: Request, response: Response) -> Logi
             detail=f"fail_count={_FAIL_COUNT[req.username]} locked={locked}",
             ip=ip, status="failed",
         )
-        # 避免用户名枚举，加固定 sleep
-        time.sleep(0.5)
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
     # 成功 → 清失败计数 + 解锁

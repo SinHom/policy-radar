@@ -10,11 +10,12 @@ from typing import Optional
 import httpx
 from collections import Counter
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import desc, select
 
 from python.ai.summarizer import summarize_one
+from python.app.api.auth import require_admin
 from python.app.config import get_settings
 from python.crawlers.engine import crawl_source, run_crawler
 from python.models import Policy, PolicySource, PushLog
@@ -71,7 +72,7 @@ class PushLogOut(BaseModel):
 # === 端点 ===
 
 @router.get("/sources")
-async def list_sources(tag: str = None, region: str = None, category: str = None):
+async def list_sources(tag: str = None, region: str = None, category: str = None, _user: str = Depends(require_admin)):
     """列出政策源。支持按 tag/region/category 筛选（任一为空则不过滤）。"""
     async with get_session() as session:
         stmt = select(PolicySource).order_by(PolicySource.id)
@@ -103,7 +104,7 @@ async def list_sources(tag: str = None, region: str = None, category: str = None
 
 
 @router.post("/crawl/all", response_model=list[CrawlResultOut])
-async def crawl_all():
+async def crawl_all(_user: str = Depends(require_admin)):
     """爬取所有 enabled 源。"""
     results = await run_crawler()
     return [
@@ -120,7 +121,7 @@ async def crawl_all():
 
 
 @router.post("/crawl/{source_id}", response_model=CrawlResultOut)
-async def crawl_one(source_id: str):
+async def crawl_one(source_id: str, _user: str = Depends(require_admin)):
     """爬取单个源。"""
     r = await crawl_source(source_id)
     return CrawlResultOut(
@@ -134,7 +135,7 @@ async def crawl_one(source_id: str):
 
 
 @router.get("/policies", response_model=list[PolicyOut])
-async def list_policies(limit: int = 50, summarized_only: bool = True):
+async def list_policies(limit: int = 50, summarized_only: bool = True, _user: str = Depends(require_admin)):
     """列出政策。summarized_only=True 时只返回已摘要的。"""
     async with get_session() as session:
         stmt = select(Policy).order_by(desc(Policy.id)).limit(limit)
@@ -165,7 +166,7 @@ async def list_policies(limit: int = 50, summarized_only: bool = True):
 
 
 @router.post("/policies/{policy_id}/summarize")
-async def summarize_one_endpoint(policy_id: int):
+async def summarize_one_endpoint(policy_id: int, _user: str = Depends(require_admin)):
     """手动摘要单条政策。"""
     try:
         data = await summarize_one(policy_id)
@@ -175,7 +176,7 @@ async def summarize_one_endpoint(policy_id: int):
 
 
 @router.post("/policies/{policy_id}/push", response_model=PushResultOut)
-async def push_policy(policy_id: int, target: str = "mock-ctx-default"):
+async def push_policy(policy_id: int, target: str = "mock-ctx-default", _user: str = Depends(require_admin)):
     """推送单条政策到 Mock 微信。
 
     触发按需抓全文:推送前若 full_text_fetched_at IS NULL,先 playwright 抓 url 拿正文。
@@ -232,7 +233,7 @@ async def push_policy(policy_id: int, target: str = "mock-ctx-default"):
 
 
 @router.get("/push-logs", response_model=list[PushLogOut])
-async def list_push_logs(limit: int = 30, target: str = None):
+async def list_push_logs(limit: int = 30, target: str = None, _user: str = Depends(require_admin)):
     """列推送日志。可按 target 过滤（'sub-{id}' = 单订阅，'mock-ctx-default' = mock）。"""
     async with get_session() as session:
         stmt = select(PushLog).order_by(desc(PushLog.id))
@@ -326,6 +327,7 @@ async def search_policies(
     query: str = Query(default="", description="标题关键词搜索"),
     limit: int = Query(default=100, ge=1, le=500),
     summarized_only: bool = Query(default=False),
+    _user: str = Depends(require_admin),
 ) -> PoliciesSearchOut:
     """多维筛选政策 + facets。
 
@@ -481,6 +483,9 @@ async def _ensure_full_text(pol: Policy, session) -> bool:
         logger.warning("ensure_full_text failed for policy %d: %s", pol.id, e)
         return False
     return True
+
+
+async def _render_policy_markdown(pol: Policy) -> str:
     """生成政策 markdown —— 用 policy 已有的 raw_content / summary,不再 fetch detail URL。
 
     数据源(按优先级):
@@ -490,8 +495,6 @@ async def _ensure_full_text(pol: Policy, session) -> bool:
 
     缓存:data/mds/{policy_id}.md
     """
-    import logging
-    logger = logging.getLogger(__name__)
     cache_path = _MDS_DIR / f"{pol.id}.md"
     if cache_path.exists() and cache_path.stat().st_size > 0:
         return cache_path.read_text(encoding="utf-8")
@@ -533,7 +536,7 @@ async def _ensure_full_text(pol: Policy, session) -> bool:
 
 
 @router.get("/policies/{policy_id}/content")
-async def get_policy_content(policy_id: int) -> dict:
+async def get_policy_content(policy_id: int, _user: str = Depends(require_admin)) -> dict:
     """返回政策 markdown(从 url 抓取并转 md,缓存 data/mds/{id}.md)。
 
     按需拉:full_text_fetched_at IS NULL 时,先 playwright 抓全文再渲染。
@@ -558,7 +561,7 @@ async def get_policy_content(policy_id: int) -> dict:
 
 
 @router.get("/policies/{policy_id}/pdf")
-async def get_policy_pdf(policy_id: int):
+async def get_policy_pdf(policy_id: int, _user: str = Depends(require_admin)):
     """生成并返回政策 PDF(用 playwright 渲染 markdown,缓存 data/pdfs/{id}.pdf)。
 
     按需抓全文:full_text_fetched_at IS NULL 时,先 playwright 抓 url 拿到完整正文。

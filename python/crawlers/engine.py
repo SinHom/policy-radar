@@ -173,7 +173,7 @@ async def crawl_source(
             )
             pub_date = extract_date(detail_date_text)
 
-            # 入库
+            # 入库(必须 commit,否则 session 关闭时丢弃)
             async with get_session() as session:
                 pol = Policy(
                     source_id=db_source_id,
@@ -184,6 +184,7 @@ async def crawl_source(
                     crawled_at=datetime.utcnow(),
                 )
                 session.add(pol)
+                await session.commit()
             result.new_crawled += 1
             logger.info(
                 "[%s] New policy: %s | %s",
@@ -197,7 +198,7 @@ async def crawl_source(
             result.errors += 1
             result.error_messages.append(msg)
 
-    # 5. 更新 source.last_crawl_at / last_status
+    # 5. 更新 source.last_crawl_at / last_status(必须 commit)
     async with get_session() as session:
         from sqlalchemy import select
         stmt = select(PolicySource).where(PolicySource.source_id == source_id)
@@ -205,6 +206,7 @@ async def crawl_source(
         if source_obj:
             source_obj.last_crawl_at = datetime.utcnow()
             source_obj.last_status = "ok" if result.errors == 0 else "failed"
+            await session.commit()
 
     return result
 
