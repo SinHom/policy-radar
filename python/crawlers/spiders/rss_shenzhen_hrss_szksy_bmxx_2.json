@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_shenzhen_hrss_szksy_bmxx_2",
+  "name": "深圳 hrss/szksy/index",
+  "category": "市级",
+  "region": "深圳",
+  "department": "深圳政府",
+  "list_url": "http://policy-radar-rsshub:1200/gov/shenzhen/hrss/szksy/bmxx/2",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/shenzhen/hrss/szksy/bmxx/2 (服务端 RSSHub,RSS mode)"
+}

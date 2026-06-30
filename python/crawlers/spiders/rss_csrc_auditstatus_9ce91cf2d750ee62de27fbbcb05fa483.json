@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_csrc_auditstatus_9ce91cf2d750ee62de27fbbcb05fa483",
+  "name": "证监会 auditstatus",
+  "category": "国家级",
+  "region": "全国",
+  "department": "证监会",
+  "list_url": "http://policy-radar-rsshub:1200/gov/csrc/auditstatus/9ce91cf2d750ee62de27fbbcb05fa483",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/csrc/auditstatus/9ce91cf2d750ee62de27fbbcb05fa483 (服务端 RSSHub,RSS mode)"
+}

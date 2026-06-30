@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_pbc_goutongjiaoliu",
+  "name": "央行 goutongjiaoliu",
+  "category": "国家级",
+  "region": "全国",
+  "department": "央行",
+  "list_url": "http://policy-radar-rsshub:1200/gov/pbc/goutongjiaoliu",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/pbc/goutongjiaoliu (服务端 RSSHub,RSS mode)"
+}

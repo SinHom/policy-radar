@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_cmse_hqsy_zxdta",
+  "name": "证监会 hqsy",
+  "category": "国家级",
+  "region": "全国",
+  "department": "证监会",
+  "list_url": "http://policy-radar-rsshub:1200/gov/cmse/hqsy/zxdta",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/cmse/hqsy/zxdta (服务端 RSSHub,RSS mode)"
+}

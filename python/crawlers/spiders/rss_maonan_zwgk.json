@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_maonan_zwgk",
+  "name": "广东(茂南) maonan",
+  "category": "市级",
+  "region": "广东(茂南)",
+  "department": "广东(茂南)政府",
+  "list_url": "http://policy-radar-rsshub:1200/gov/maonan/zwgk",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/maonan/zwgk (服务端 RSSHub,RSS mode)"
+}

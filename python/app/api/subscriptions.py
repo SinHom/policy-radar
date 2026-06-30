@@ -37,12 +37,43 @@ class SubscriptionUpdate(BaseModel):
     push_time: Optional[str] = None  # "08:30"
     webhook_url: Optional[str] = None
     types: Optional[list[str]] = None
-    regions: Optional[list[str]] = None
+    regions: Optional[list[str]] = None  # 省级:["北京","广东","浙江"]
+    dept_codes: Optional[list[str]] = None  # 部委:["发改委","工信部"] — 与 policy_sources.department 对齐
+    city_codes: Optional[list[str]] = None  # 地市:["深圳","杭州"] — 与 policy_sources.region 对齐
     keywords: Optional[list[str]] = None
     enabled: Optional[bool] = None
     # === 多通道推送 ===
     push_channel: Optional[str] = None  # mock / wechat / feishu / wecom / email / webhook
     push_config: Optional[dict] = None  # 渠道特定配置（见 push 模块）
+
+
+async def _auto_enable_sources(session, regions: list[str], dept_codes: list[str], city_codes: list[str]) -> int:
+    """根据订阅选择的 region/dept/city 自动启用对应的 policy_sources。
+
+    匹配规则:source.region 在 regions 或 city_codes,或 source.department 在 dept_codes。
+    返回启用的源数。
+    """
+    from python.models.policy_source import PolicySource
+    from sqlalchemy import or_
+
+    conditions = []
+    if regions:
+        conditions.append(PolicySource.region.in_(regions))
+    if city_codes:
+        conditions.append(PolicySource.region.in_(city_codes))
+    if dept_codes:
+        conditions.append(PolicySource.department.in_(dept_codes))
+    if not conditions:
+        return 0
+
+    stmt = select(PolicySource).where(or_(*conditions))
+    rows = (await session.execute(stmt)).scalars().all()
+    enabled_count = 0
+    for s in rows:
+        if not s.enabled:
+            s.enabled = True
+            enabled_count += 1
+    return enabled_count
 
 
 @router.get("")
@@ -69,6 +100,8 @@ async def list_subscriptions(_user: str = Depends(require_admin)) -> dict:
                 "region": company.region if company else None,
                 "types": s.types or [],
                 "regions": s.regions or [],
+                "dept_codes": s.dept_codes or [],
+                "city_codes": s.city_codes or [],
                 "keywords": s.keywords or [],
                 "webhook_url": s.webhook_url,
                 "push_schedule": s.push_schedule,
@@ -81,6 +114,32 @@ async def list_subscriptions(_user: str = Depends(require_admin)) -> dict:
                 "created_at": s.created_at.isoformat() if s.created_at else None,
             })
     return {"subscriptions": out, "count": len(out)}
+
+
+# ===== source 候选清单(给前端多选用) =====
+
+@router.get("/sources/options")
+async def list_source_options(_user: str = Depends(require_admin)) -> dict:
+    """返回所有 source 的去重 region / department / category 列表,供订阅 modal 多选用。"""
+    async with get_session() as session:
+        from python.models.policy_source import PolicySource
+        rows = (await session.execute(select(PolicySource))).scalars().all()
+        regions = set()
+        departments = set()
+        categories = set()
+        for s in rows:
+            if s.region:
+                regions.add(s.region)
+            if s.department:
+                departments.add(s.department)
+            if s.category:
+                categories.add(s.category)
+    return {
+        "regions": sorted(regions),
+        "departments": sorted(departments),
+        "categories": sorted(categories),
+        "total_sources": len(rows),
+    }
 
 
 @router.patch("/{subscription_id}")
@@ -114,10 +173,23 @@ async def update_subscription(
             sub.types = body.types
         if body.regions is not None:
             sub.regions = body.regions
+        if body.dept_codes is not None:
+            sub.dept_codes = body.dept_codes
+        if body.city_codes is not None:
+            sub.city_codes = body.city_codes
         if body.keywords is not None:
             sub.keywords = body.keywords
         if body.enabled is not None:
             sub.enabled = body.enabled
+        # === 按需启用:用户选了 region/dept/city,自动开对应 source ===
+        auto_enabled = 0
+        if body.regions is not None or body.dept_codes is not None or body.city_codes is not None:
+            auto_enabled = await _auto_enable_sources(
+                session,
+                body.regions if body.regions is not None else (sub.regions or []),
+                body.dept_codes if body.dept_codes is not None else (sub.dept_codes or []),
+                body.city_codes if body.city_codes is not None else (sub.city_codes or []),
+            )
         if body.push_channel is not None:
             if body.push_channel not in ("mock", "wechat", "feishu", "wecom", "email", "webhook"):
                 raise HTTPException(status_code=400, detail=f"invalid push_channel: {body.push_channel}")
@@ -134,7 +206,11 @@ async def update_subscription(
                         raise HTTPException(status_code=400, detail=f"push_config.{k} invalid: {err}")
             sub.push_config = body.push_config
         await session.commit()
-    return {"ok": True, "subscription_id": subscription_id}
+    return {
+        "ok": True,
+        "subscription_id": subscription_id,
+        "auto_enabled_sources": auto_enabled,
+    }
 
 
 @router.post("/{subscription_id}/pause")

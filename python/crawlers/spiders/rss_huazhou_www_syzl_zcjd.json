@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_huazhou_www_syzl_zcjd",
+  "name": "广东(化州) huazhou",
+  "category": "市级",
+  "region": "广东(化州)",
+  "department": "广东(化州)政府",
+  "list_url": "http://policy-radar-rsshub:1200/gov/huazhou/www/syzl/zcjd",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/huazhou/www/syzl/zcjd (服务端 RSSHub,RSS mode)"
+}

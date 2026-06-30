@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_taiyuan_rsj_gggs",
+  "name": "太原 rsj",
+  "category": "市级",
+  "region": "太原",
+  "department": "太原政府",
+  "list_url": "http://policy-radar-rsshub:1200/gov/taiyuan/rsj/gggs",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/taiyuan/rsj/gggs (服务端 RSSHub,RSS mode)"
+}

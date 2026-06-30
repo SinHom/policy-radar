@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_suzhou_fg_szfgw_ggl_nav_list",
+  "name": "苏州 fg",
+  "category": "市级",
+  "region": "苏州",
+  "department": "苏州政府",
+  "list_url": "http://policy-radar-rsshub:1200/gov/suzhou/fg/szfgw/ggl/nav_list",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/suzhou/fg/szfgw/ggl/nav_list (服务端 RSSHub,RSS mode)"
+}

@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_sh_wsjkw_yqtb",
+  "name": "上海省 wsjkw/yqtb/index",
+  "category": "省级",
+  "region": "上海",
+  "department": "上海政府",
+  "list_url": "http://policy-radar-rsshub:1200/gov/sh/wsjkw/yqtb",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/sh/wsjkw/yqtb (服务端 RSSHub,RSS mode)"
+}

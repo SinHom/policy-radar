@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_maoming_www_zwgk_zcjd_jd",
+  "name": "广东(茂名) maoming",
+  "category": "市级",
+  "region": "广东(茂名)",
+  "department": "广东(茂名)政府",
+  "list_url": "http://policy-radar-rsshub:1200/gov/maoming/www/zwgk/zcjd/jd",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/maoming/www/zwgk/zcjd/jd (服务端 RSSHub,RSS mode)"
+}

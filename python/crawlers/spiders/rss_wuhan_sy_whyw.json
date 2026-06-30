@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_wuhan_sy_whyw",
+  "name": "武汉 whyw",
+  "category": "市级",
+  "region": "武汉",
+  "department": "武汉政府",
+  "list_url": "http://policy-radar-rsshub:1200/gov/wuhan/sy/whyw",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/wuhan/sy/whyw (服务端 RSSHub,RSS mode)"
+}

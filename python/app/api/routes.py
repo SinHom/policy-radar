@@ -176,10 +176,13 @@ async def summarize_one_endpoint(policy_id: int):
 
 @router.post("/policies/{policy_id}/push", response_model=PushResultOut)
 async def push_policy(policy_id: int, target: str = "mock-ctx-default"):
-    """推送单条政策到 Mock 微信。"""
+    """推送单条政策到 Mock 微信。
+
+    触发按需抓全文:推送前若 full_text_fetched_at IS NULL,先 playwright 抓 url 拿正文。
+    """
     settings = get_settings()
 
-    # 查 policy
+    # 查 policy + 按需抓全文
     async with get_session() as session:
         stmt = select(Policy).where(Policy.id == policy_id)
         pol = (await session.execute(stmt)).scalar_one_or_none()
@@ -187,6 +190,8 @@ async def push_policy(policy_id: int, target: str = "mock-ctx-default"):
             raise HTTPException(status_code=404, detail=f"Policy {policy_id} not found")
         if not pol.summary_text:
             raise HTTPException(status_code=400, detail="Policy not summarized yet")
+        # 按需抓全文(异步、不阻塞推送 — 失败也继续)
+        await _ensure_full_text(pol, session)
         # 格式化推送内容
         content = format_push_message(pol)
         title = pol.title
@@ -411,13 +416,38 @@ async def search_policies(
 
 # ============== 政策详情:md / pdf 生成 ==============
 
-_MDS_DIR = Path("/app/data/mds")
-_PDFS_DIR = Path("/app/data/pdfs")
+_MDS_DIR = Path("/app/data/mds") if Path("/app").exists() else Path("data/mds")
+_PDFS_DIR = Path("/app/data/pdfs") if Path("/app").exists() else Path("data/pdfs")
 _MDS_DIR.mkdir(parents=True, exist_ok=True)
 _PDFS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-async def _render_policy_markdown(pol: Policy) -> str:
+async def _ensure_full_text(pol: Policy, session) -> bool:
+    """按需抓正文:若 full_text_fetched_at IS NULL 且 url 可访问,playwright 抓 → 存 raw_content → 标时间。
+
+    返回 True=已拉过(无论本次是否新拉),False=失败。
+    用 try/except 包裹,失败不阻塞后续返回(RSS 摘要仍然能看)。
+    """
+    if pol.full_text_fetched_at is not None:
+        return True
+    if not pol.url or not pol.url.startswith(("http://", "https://")):
+        return False
+    try:
+        from python.crawlers.fetcher import fetch as _fetch
+        from bs4 import BeautifulSoup
+        # 政府网站往往要 JS 渲染 → 走 playwright 模式
+        fr = await _fetch(pol.url, render_js=True)
+        soup = BeautifulSoup(fr.html, "html.parser")
+        for tag in soup.find_all(["script", "style", "nav", "header", "footer", "aside", "noscript"]):
+            tag.decompose()
+        # 保留 HTML(给 markdownify) + 截断避免 DB 爆
+        pol.raw_content = str(soup)[:500_000]
+        pol.full_text_fetched_at = datetime.utcnow()
+        await session.commit()
+    except Exception as e:
+        logger.warning("ensure_full_text failed for policy %d: %s", pol.id, e)
+        return False
+    return True
     """生成政策 markdown —— 用 policy 已有的 raw_content / summary,不再 fetch detail URL。
 
     数据源(按优先级):
@@ -471,37 +501,51 @@ async def _render_policy_markdown(pol: Policy) -> str:
 
 @router.get("/policies/{policy_id}/content")
 async def get_policy_content(policy_id: int) -> dict:
-    """返回政策 markdown(从 url 抓取并转 md,缓存 data/mds/{id}.md)。"""
+    """返回政策 markdown(从 url 抓取并转 md,缓存 data/mds/{id}.md)。
+
+    按需拉:full_text_fetched_at IS NULL 时,先 playwright 抓全文再渲染。
+    """
     async with get_session() as session:
         pol = await session.get(Policy, policy_id)
-    if not pol:
-        raise HTTPException(status_code=404, detail="policy not found")
-    try:
-        md = await _render_policy_markdown(pol)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"render md failed: {e}")
-    return {"policy_id": pol.id, "title": pol.title, "url": pol.url, "markdown": md}
+        if not pol:
+            raise HTTPException(status_code=404, detail="policy not found")
+        # 先尝试按需抓全文(失败不阻塞)
+        await _ensure_full_text(pol, session)
+        try:
+            md = await _render_policy_markdown(pol)
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"render md failed: {e}")
+    return {
+        "policy_id": pol.id,
+        "title": pol.title,
+        "url": pol.url,
+        "markdown": md,
+        "full_text_fetched": pol.full_text_fetched_at is not None,
+    }
 
 
 @router.get("/policies/{policy_id}/pdf")
 async def get_policy_pdf(policy_id: int):
     """生成并返回政策 PDF(用 playwright 渲染 markdown,缓存 data/pdfs/{id}.pdf)。
 
+    按需抓全文:full_text_fetched_at IS NULL 时,先 playwright 抓 url 拿到完整正文。
     首次生成较慢(playwright 启动 ~3-5s);后续秒返 cached 文件。
     """
     from fastapi.responses import FileResponse
     cache_path = _PDFS_DIR / f"{policy_id}.pdf"
     async with get_session() as session:
         pol = await session.get(Policy, policy_id)
-    if not pol:
-        raise HTTPException(status_code=404, detail="policy not found")
-    if cache_path.exists() and cache_path.stat().st_size > 0:
-        return FileResponse(
-            cache_path,
-            media_type="application/pdf",
-            filename=f"policy_{policy_id}.pdf",
-        )
-    md = await _render_policy_markdown(pol)
+        if not pol:
+            raise HTTPException(status_code=404, detail="policy not found")
+        if cache_path.exists() and cache_path.stat().st_size > 0:
+            return FileResponse(
+                cache_path,
+                media_type="application/pdf",
+                filename=f"policy_{policy_id}.pdf",
+            )
+        # 按需抓全文(失败也不阻塞,只用 RSS 摘要)
+        await _ensure_full_text(pol, session)
+        md = await _render_policy_markdown(pol)
     # playwright 渲染 markdown → PDF
     try:
         from playwright.async_api import async_playwright

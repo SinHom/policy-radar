@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_hunan_changsha_major-email",
+  "name": "湖南省 changsha/major-email",
+  "category": "省级",
+  "region": "湖南",
+  "department": "湖南政府",
+  "list_url": "http://policy-radar-rsshub:1200/gov/hunan/changsha/major-email",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/hunan/changsha/major-email (服务端 RSSHub,RSS mode)"
+}

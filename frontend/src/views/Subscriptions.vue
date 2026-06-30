@@ -6,6 +6,7 @@ const subs = ref([])
 const toast = ref({ show: false, msg: '' })
 const editModal = ref({ show: false, sub: null })
 const testModal = ref({ show: false })
+const sourceOpts = ref({ regions: [], departments: [], categories: [], total_sources: 0 })
 
 function showToast(msg, ms = 2500) {
   toast.value = { show: true, msg }
@@ -15,6 +16,13 @@ function showToast(msg, ms = 2500) {
 async function load() {
   const r = await api.get('/subscriptions')
   subs.value = r.data.subscriptions || []
+  // 顺手加载 source 选项
+  try {
+    const r2 = await api.get('/subscriptions/sources/options')
+    sourceOpts.value = r2.data
+  } catch (e) {
+    console.warn('load source options failed', e)
+  }
 }
 
 async function toggle(s, enable) {
@@ -46,22 +54,38 @@ async function pushNow(s) {
 }
 
 async function openEdit(s) {
-  editModal.value = { show: true, sub: JSON.parse(JSON.stringify(s)) }
+  // 保证三个数组都存在
+  const copy = JSON.parse(JSON.stringify(s))
+  copy.regions = copy.regions || []
+  copy.dept_codes = copy.dept_codes || []
+  copy.city_codes = copy.city_codes || []
+  copy.types = copy.types || []
+  editModal.value = { show: true, sub: copy }
+}
+
+function toggleArr(obj, key, val) {
+  const arr = obj[key] || (obj[key] = [])
+  const i = arr.indexOf(val)
+  if (i >= 0) arr.splice(i, 1)
+  else arr.push(val)
 }
 async function saveEdit() {
   const s = editModal.value.sub
   try {
-    await api.patch(`/subscriptions/${s.subscription_id}`, {
+    const r = await api.patch(`/subscriptions/${s.subscription_id}`, {
       push_schedule: s.push_schedule,
       push_time: s.push_time,
       webhook_url: s.webhook_url || null,
       types: s.types,
       regions: s.regions,
+      dept_codes: s.dept_codes,
+      city_codes: s.city_codes,
       enabled: s.enabled,
       push_channel: s.push_channel,
     })
     editModal.value.show = false
-    showToast('✅ 已保存')
+    const autoN = r.data?.auto_enabled_sources || 0
+    showToast(autoN > 0 ? `✅ 已保存,自动启用 ${autoN} 个源` : '✅ 已保存')
     await load()
   } catch (e) { showToast('保存失败: ' + (e.response?.data?.detail || e.message)) }
 }
@@ -127,7 +151,7 @@ onMounted(load)
               <span v-if="s.push_channel" class="text-xs px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded font-mono">{{ s.push_channel }}</span>
             </div>
             <div class="text-xs text-gray-500">
-              关注：{{ (s.types || []).join('、') || '-' }} · 地区：{{ (s.regions || []).join('、') || '-' }} · 频率：{{ s.push_schedule }}{{ s.push_time ? ' ' + s.push_time : '' }}
+              关注：{{ (s.types || []).join('、') || '-' }} · 地区：{{ (s.regions || []).join('、') || '-' }} · 委办：{{ (s.dept_codes || []).join('、') || '-' }} · 地市：{{ (s.city_codes || []).join('、') || '-' }} · 频率：{{ s.push_schedule }}{{ s.push_time ? ' ' + s.push_time : '' }}
             </div>
             <div class="text-xs text-gray-400 mt-1 truncate">webhook: {{ s.webhook_url || '(无)' }}</div>
             <div v-if="s.last_push_at" class="text-xs text-gray-400 mt-0.5">最近推送: {{ s.last_push_at }}</div>
@@ -175,11 +199,47 @@ onMounted(load)
                    class="w-full px-2 py-1.5 border border-gray-200 rounded">
           </label>
           <label class="block">
-            <div class="text-xs text-gray-500 mb-1">地区(逗号分隔)</div>
+            <div class="text-xs text-gray-500 mb-1">省级地区(逗号分隔,自动启用对应源的爬取)</div>
             <input :value="(editModal.sub.regions || []).join(',')"
                    @change="e => editModal.sub.regions = e.target.value.split(',').map(s=>s.trim()).filter(Boolean)"
+                   placeholder="北京,广东,浙江,..."
                    class="w-full px-2 py-1.5 border border-gray-200 rounded">
           </label>
+          <label class="block">
+            <div class="text-xs text-gray-500 mb-1">委办部门(逗号分隔,自动启用对应委办源)</div>
+            <input :value="(editModal.sub.dept_codes || []).join(',')"
+                   @change="e => editModal.sub.dept_codes = e.target.value.split(',').map(s=>s.trim()).filter(Boolean)"
+                   placeholder="发改委,工信部,财政部,..."
+                   class="w-full px-2 py-1.5 border border-gray-200 rounded">
+          </label>
+          <label class="block">
+            <div class="text-xs text-gray-500 mb-1">地市(逗号分隔,自动启用对应市级源)</div>
+            <input :value="(editModal.sub.city_codes || []).join(',')"
+                   @change="e => editModal.sub.city_codes = e.target.value.split(',').map(s=>s.trim()).filter(Boolean)"
+                   placeholder="深圳,杭州,苏州,..."
+                   class="w-full px-2 py-1.5 border border-gray-200 rounded">
+          </label>
+          <div v-if="sourceOpts.regions.length || sourceOpts.departments.length" class="bg-blue-50 border border-blue-100 rounded p-2 text-xs text-blue-800">
+            <div class="font-semibold mb-1">📌 可选({{ sourceOpts.total_sources }} 源)</div>
+            <details class="mb-1">
+              <summary class="cursor-pointer">省级({{ sourceOpts.regions.length }})</summary>
+              <div class="flex flex-wrap gap-1 mt-1">
+                <button v-for="v in sourceOpts.regions" :key="'r-'+v" type="button"
+                        @click="toggleArr(editModal.sub, 'regions', v)"
+                        :class="(editModal.sub.regions||[]).includes(v) ? 'bg-blue-600 text-white' : 'bg-white border border-blue-200 text-blue-700'"
+                        class="text-xs px-1.5 py-0.5 rounded">{{ v }}</button>
+              </div>
+            </details>
+            <details>
+              <summary class="cursor-pointer">部委({{ sourceOpts.departments.length }})</summary>
+              <div class="flex flex-wrap gap-1 mt-1">
+                <button v-for="v in sourceOpts.departments" :key="'d-'+v" type="button"
+                        @click="toggleArr(editModal.sub, 'dept_codes', v)"
+                        :class="(editModal.sub.dept_codes||[]).includes(v) ? 'bg-blue-600 text-white' : 'bg-white border border-blue-200 text-blue-700'"
+                        class="text-xs px-1.5 py-0.5 rounded">{{ v }}</button>
+              </div>
+            </details>
+          </div>
           <label class="block">
             <div class="text-xs text-gray-500 mb-1">推送渠道</div>
             <select v-model="editModal.sub.push_channel" class="w-full px-2 py-1.5 border border-gray-200 rounded bg-white">

@@ -38,6 +38,14 @@ class Policy(Base):
     summary_model: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     summarized_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
+    # === 短字段(从 summary_data 提出来方便筛选/显示) ===
+    amount: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)  # "100万"
+    deadline: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)  # "2026-12-31"
+
+    # === 按需抓全文 ===
+    # NULL = 未抓(只存了 RSS 摘要);非空 = 已 playwright 抓过正文,缓存 data/mds/{id}.md
+    full_text_fetched_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, index=True)
+
     # 反向引用
     source: Mapped["PolicySource"] = relationship("PolicySource", back_populates="policies")  # type: ignore[name-defined]
     push_logs: Mapped[list["PushLog"]] = relationship(  # type: ignore[name-defined]
