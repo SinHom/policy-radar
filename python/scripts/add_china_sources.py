@@ -229,23 +229,29 @@ def main() -> None:
             skipped += 1
             print(f"  skip {sid:25s} {name}")
             continue
+        # region:去掉"省/市"后缀,用于筛选
+        region_short = name
+        for suffix in ("省", "市", "自治区"):
+            if region_short.endswith(suffix):
+                region_short = region_short[:-len(suffix)]
+                break
         full_dept = f"{name}政府"
         c.execute(
             """INSERT INTO policy_sources
                (source_id, name, url, category, region, department,
                 spider_config, frequency, enabled, last_status, created_at, tags)
                VALUES (?, ?, ?, ?, ?, ?, ?, 'daily', 0, 'pending', ?, ?)""",
-            (sid, f"{name}政府门户", url, "省级", name, full_dept,
+            (sid, f"{name}政府门户", url, "省级", region_short, full_dept,
              json.dumps({"mode": "playwright", "list_url": url,
                          "notes": f"{name}政府门户占位源,需要编辑 URL + CSS 选择器",
                          "placeholder": True}, ensure_ascii=False),
-             now, json.dumps(["省级", name, full_dept, "placeholder"], ensure_ascii=False)),
+             now, json.dumps(["省级", region_short, full_dept, "placeholder"], ensure_ascii=False)),
         )
         spider_path = spiders_dir / f"{sid}.json"
         if not spider_path.exists():
             spider_path.write_text(json.dumps({
                 "source_id": sid, "name": f"{name}政府门户", "category": "省级",
-                "region": name, "department": full_dept, "list_url": url,
+                "region": region_short, "department": full_dept, "list_url": url,
                 "mode": "playwright", "render_js": True, "frequency": "daily",
                 "request_interval_min": 5, "request_interval_max": 10, "max_pages": 1,
                 "notes": f"{name}政府门户占位源,需要编辑 URL + CSS 选择器",
@@ -265,31 +271,36 @@ def main() -> None:
             skipped += 1
             print(f"  skip {sid:25s} {name}")
             continue
-        full_dept = f"{name}政府"
+        # city name 已经含 "市"(如 "深圳市"),不要再加 "市" 前缀
+        full_dept = f"{name}政府"  # "深圳市政府"
+        # region 字段去掉 "市" 后缀(用于筛选)
+        region_short = name[:-1] if name.endswith("市") else name
+        # name 也用 "深圳市政府门户" 但不要重复"市"
+        display_name = f"{name}政府门户"
         c.execute(
             """INSERT INTO policy_sources
                (source_id, name, url, category, region, department,
                 spider_config, frequency, enabled, last_status, created_at, tags)
                VALUES (?, ?, ?, ?, ?, ?, ?, 'daily', 0, 'pending', ?, ?)""",
-            (sid, f"{name}市政府门户", url, "市级", name, full_dept,
+            (sid, display_name, url, "市级", region_short, full_dept,
              json.dumps({"mode": "playwright", "list_url": url,
-                         "notes": f"{name}市政府门户占位源,需要编辑 URL + CSS 选择器",
+                         "notes": f"{name}政府门户占位源,需要编辑 URL + CSS 选择器",
                          "placeholder": True}, ensure_ascii=False),
-             now, json.dumps(["市级", name, full_dept, "placeholder"], ensure_ascii=False)),
+             now, json.dumps(["市级", region_short, full_dept, "placeholder"], ensure_ascii=False)),
         )
         spider_path = spiders_dir / f"{sid}.json"
         if not spider_path.exists():
             spider_path.write_text(json.dumps({
-                "source_id": sid, "name": f"{name}市政府门户", "category": "市级",
-                "region": name, "department": full_dept, "list_url": url,
+                "source_id": sid, "name": display_name, "category": "市级",
+                "region": region_short, "department": full_dept, "list_url": url,
                 "mode": "playwright", "render_js": True, "frequency": "daily",
                 "request_interval_min": 5, "request_interval_max": 10, "max_pages": 1,
-                "notes": f"{name}市政府门户占位源,需要编辑 URL + CSS 选择器",
+                "notes": f"{name}政府门户占位源,需要编辑 URL + CSS 选择器",
                 "placeholder": True,
             }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             spider_new += 1
         inserted += 1
-        print(f"  + {sid:25s} {name}市政府门户")
+        print(f"  + {sid:25s} {display_name}")
 
     c.commit()
     c.close()
