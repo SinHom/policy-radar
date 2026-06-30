@@ -262,6 +262,11 @@ async def _select_weekly_policies(
             .limit(200)
         )
         policies = list((await session.execute(stmt)).scalars().all())
+    logger.info("DEBUG _select_weekly: candidate_cutoff=%s, pushed_ids=%s, returned %d policies",
+                candidate_cutoff, list(pushed_ids)[:5], len(policies))
+    for p in policies[:5]:
+        logger.info("DEBUG   policy id=%d crawled_at=%s src=%d summary=%s",
+                    p.id, p.crawled_at, p.source_id, bool(p.summary_text))
 
     # 3) 客户端过滤 region + department(必须在 session 内,统一做)
     src_ids_needed = {p.source_id for p in policies if p.source_id}
