@@ -164,7 +164,9 @@ async function delOne(p) {
                 @change="toggleFacet('region', f.value)"
                 class="rounded text-brand-600 focus:ring-brand-500">
               <span class="flex-1 truncate text-gray-700">{{ f.value }}</span>
-              <span class="text-xs text-gray-400 tabular-nums">{{ f.count }}</span>
+              <span class="text-xs text-gray-400 tabular-nums" :title="`${f.policy_count ?? f.count} 政策 / ${f.count} 源`">
+                <span :class="(f.policy_count ?? f.count) > 0 ? 'text-brand-600 font-medium' : ''">{{ f.policy_count ?? f.count }}</span><span class="text-gray-300">/{{ f.count }}</span>
+              </span>
             </label>
             <div v-if="!facets.regions.length" class="text-xs text-gray-400 px-2 py-1">暂无</div>
           </div>
@@ -187,7 +189,9 @@ async function delOne(p) {
                 @change="toggleFacet('department', f.value)"
                 class="rounded text-brand-600 focus:ring-brand-500">
               <span class="flex-1 truncate text-gray-700">{{ f.value }}</span>
-              <span class="text-xs text-gray-400 tabular-nums">{{ f.count }}</span>
+              <span class="text-xs text-gray-400 tabular-nums" :title="`${f.policy_count ?? f.count} 政策 / ${f.count} 源`">
+                <span :class="(f.policy_count ?? f.count) > 0 ? 'text-brand-600 font-medium' : ''">{{ f.policy_count ?? f.count }}</span><span class="text-gray-300">/{{ f.count }}</span>
+              </span>
             </label>
             <div v-if="!facets.departments.length" class="text-xs text-gray-400 px-2 py-1">暂无</div>
           </div>
@@ -210,7 +214,9 @@ async function delOne(p) {
                 @change="toggleFacet('category', f.value)"
                 class="rounded text-brand-600 focus:ring-brand-500">
               <span class="flex-1 truncate text-gray-700">{{ f.value }}</span>
-              <span class="text-xs text-gray-400 tabular-nums">{{ f.count }}</span>
+              <span class="text-xs text-gray-400 tabular-nums" :title="`${f.policy_count ?? f.count} 政策 / ${f.count} 源`">
+                <span :class="(f.policy_count ?? f.count) > 0 ? 'text-brand-600 font-medium' : ''">{{ f.policy_count ?? f.count }}</span><span class="text-gray-300">/{{ f.count }}</span>
+              </span>
             </label>
             <div v-if="!facets.categories.length" class="text-xs text-gray-400 px-2 py-1">暂无</div>
           </div>
