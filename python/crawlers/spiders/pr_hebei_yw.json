@@ -13,9 +13,9 @@
   "request_interval_max": 8,
   "max_pages": 1,
   "list_selectors": {
-    "list": "a[istitle=\"true\"]",
-    "title": "@title",
-    "link": "@href",
+    "item": "a[istitle=\"true\"]",
+    "title": "a::text",
+    "href": "a::attr(href)",
     "date": "..//span"
   },
   "detail_selectors": {
