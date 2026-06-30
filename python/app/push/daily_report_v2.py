@@ -20,6 +20,7 @@ async def run_daily_report_all_subs(slot: str = "早间") -> int:
     Returns: 成功推送数。
     """
     sent_count = 0
+    targets: list[tuple[int, str, dict, str | None]] = []
     async with get_session() as session:
         stmt = (
             select(Subscription)
@@ -27,14 +28,16 @@ async def run_daily_report_all_subs(slot: str = "早间") -> int:
             .where(Subscription.push_channel.in_(["feishu", "webhook"]))
         )
         subs = (await session.execute(stmt)).scalars().all()
-        # 准备 (sub_id, channel, config) 列表
-        targets = []
+        # 准备 (sub_id, channel, config, company_name) 列表 — 全在 session 内
         for s in subs:
             config = s.push_config or {}
             if not config.get("webhook_url"):
                 logger.info("Daily report: 跳过 sub=%s (无 webhook_url)", s.id)
                 continue
-            targets.append((s.id, s.push_channel, config, s.company.name if s.company else None))
+            # 必须 session 内访问 sub.company,否则 MissingGreenlet
+            comp = s.company
+            company_name = comp.name if comp else None
+            targets.append((s.id, s.push_channel, dict(config), company_name))
 
     # 卡片只生成 1 次(同样的 slot 推给所有订阅)
     cards = await build_daily_report(slot)
