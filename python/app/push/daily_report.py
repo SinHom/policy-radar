@@ -151,7 +151,7 @@ def _build_weekly_card(
                         "tag": "div",
                         "text": {
                             "tag": "lark_md",
-                            "content": f"<font color='grey'>推送时间: {push_time} (北京时间)</font>",
+                            "content": f"<font color='grey'>推送时间: {push_time}</font>",
                         },
                     },
                 ],
@@ -214,7 +214,7 @@ def _build_weekly_card(
         "tag": "div",
         "text": {
             "tag": "lark_md",
-            "content": f"<font color='grey'>推送时间: {push_time} (北京时间)</font>",
+            "content": f"<font color='grey'>推送时间: {push_time}</font>",
         },
     })
 
@@ -314,27 +314,9 @@ async def _select_weekly_policies(
             srcs = (await session.execute(stmt_src)).scalars().all()
             src_meta = {s.id: (s.name or "", s.region or "", s.department or "") for s in srcs}
 
-    # 第一道:name 匹配
-    filtered: list[Policy] = []
-    for p in policies:
-        src_name, src_region, _ = src_meta.get(p.source_id, ("", "", ""))
-        region_match = _region_match(src_region) or "河北" in (src_name or "") or "秦皇岛" in (src_name or "")
-        dept_match = _dept_match(src_name, src_name)
-        if region_match and dept_match:
-            filtered.append(p)
-
-    # Fallback:用 source.department 字段(例 "河北省文化和旅游厅" 含 "文旅")
-    if not filtered:
-        for p in policies:
-            if p in filtered:
-                continue
-            src_name, src_region, src_dept = src_meta.get(p.source_id, ("", "", ""))
-            region_match = _region_match(src_region) or "河北" in (src_name or "") or "秦皇岛" in (src_name or "")
-            dept_match = _dept_match(src_dept, src_name)
-            if region_match and dept_match:
-                filtered.append(p)
-
-    return filtered[:50]
+    # 用户 2026-07-01 决策:用国家级综合源覆盖所有政策,不再按 region/dept 过滤
+    # 直接返回所有 enabled 源近 30 天爬取的已摘要政策
+    return policies[:50]
 
 
 async def build_weekly_report(slot: str = "weekly") -> list[dict]:
