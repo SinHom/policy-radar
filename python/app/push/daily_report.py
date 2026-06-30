@@ -276,8 +276,8 @@ async def _select_weekly_policies(
     filtered: list[Policy] = []
     for p in policies:
         src_name, src_region = src_meta.get(p.source_id, ("", ""))
-        # dept 从 policy.department 取,fallback source.name
-        dept = p.department or src_name
+        # policy 没有 department 列,直接用 source.name
+        dept = src_name
         if _dept_match(dept, src_name) and (_region_match(src_region) or "河北" in (src_name or "") or "秦皇岛" in (src_name or "")):
             filtered.append(p)
 
