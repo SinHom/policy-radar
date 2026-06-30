@@ -259,10 +259,11 @@ async def _select_weekly_policies(
             select(Policy)
             .where(Policy.crawled_at >= cutoff_iso)
             .where(Policy.summary_text.isnot(None))
-            .where(not_(Policy.id.in_(pushed_ids)) if pushed_ids else None)
             .order_by(desc(Policy.id))
             .limit(200)
         )
+        if pushed_ids:
+            stmt = stmt.where(Policy.id.notin_(pushed_ids))
         policies = list((await session.execute(stmt)).scalars().all())
     from sqlalchemy.dialects import sqlite as sa_sqlite
     compiled = str(stmt.compile(dialect=sa_sqlite.dialect(), compile_kwargs={"literal_binds": True}))
