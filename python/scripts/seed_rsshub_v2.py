@@ -127,7 +127,9 @@ def extract_region(file_top: str) -> str:
     if file_top in PROVINCE_FULL:
         return PROVINCE_FULL[file_top].replace("省", "").replace("市", "").replace("市", "")
     if file_top in CITY:
-        return CITY[file_top]
+        # 去掉"市"后缀但保留括号注释(例:广东(电白) → 广东(电白))
+        v = CITY[file_top]
+        return v.rstrip("市") if v.endswith("市") and "(" not in v else v
     return file_top
 
 # ============== Department 提取(改进版) ==============
