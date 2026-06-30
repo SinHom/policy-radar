@@ -217,6 +217,8 @@ async def send_daily_report(
         config = sub.push_config or {}
         if not config.get("webhook_url"):
             return {"ok": False, "error": "push_config.webhook_url 未配置"}
+        # 注意:SQLAlchemy 2.0 async 中,必须 session 内访问 relationship(sub.company)
+        # 否则触发 MissingGreenlet(IO outside async context)
         comp = sub.company
         company_name = comp.name if comp else None
 
