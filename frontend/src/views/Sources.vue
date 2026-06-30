@@ -43,6 +43,15 @@ const facets = computed(() => {
   }
 })
 
+const statusCount = computed(() => {
+  let ok = 0, failed = 0
+  sources.value.forEach(s => {
+    if (s.last_status === 'ok') ok++
+    else if (s.last_status === 'failed') failed++
+  })
+  return { ok, failed }
+})
+
 const filtered = computed(() => {
   const q = filters.value.q.trim().toLowerCase()
   return sources.value.filter(s => {
@@ -240,6 +249,10 @@ onMounted(load)
     </div>
 
     <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <div v-if="statusCount.failed > 0" class="px-4 py-2 bg-red-50 border-b border-red-100 text-xs text-red-700 flex items-center justify-between">
+        <span>⚠️ 探测失败 {{ statusCount.failed }} / {{ sources.length }} 个源(RSSHub 上游 503)— 这些源暂时拉不到内容,不影响其他源</span>
+        <span class="text-red-500">建议: 定期重跑 <code class="bg-white px-1 rounded">seed_rsshub_v2.py --probe</code></span>
+      </div>
       <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-200">
           <tr>
@@ -252,6 +265,7 @@ onMounted(load)
             <th class="px-3 py-2.5 text-left font-medium text-gray-700">部门</th>
             <th class="px-3 py-2.5 text-left font-medium text-gray-700">Source ID</th>
             <th class="px-3 py-2.5 text-left font-medium text-gray-700">状态</th>
+            <th class="px-3 py-2.5 text-left font-medium text-gray-700">探测</th>
             <th class="px-3 py-2.5 text-left font-medium text-gray-700">操作</th>
           </tr>
         </thead>
@@ -273,6 +287,11 @@ onMounted(load)
               </span>
             </td>
             <td class="px-3 py-2.5">
+              <span v-if="s.last_status === 'ok'" class="text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700">✓ OK</span>
+              <span v-else-if="s.last_status === 'failed'" class="text-xs px-2 py-0.5 rounded-full font-medium bg-red-50 text-red-600" :title="s.last_status">✗ 失败</span>
+              <span v-else class="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500">?</span>
+            </td>
+            <td class="px-3 py-2.5">
               <div class="flex gap-1">
                 <button @click="openEdit(s)" class="text-xs px-2 py-1 rounded border border-gray-200 hover:bg-gray-50">编辑</button>
                 <button @click="delSource(s)" class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">删</button>
@@ -280,7 +299,7 @@ onMounted(load)
             </td>
           </tr>
           <tr v-if="!filtered.length && !loading">
-            <td colspan="8" class="px-5 py-12 text-center text-gray-400 text-sm">
+            <td colspan="9" class="px-5 py-12 text-center text-gray-400 text-sm">
               没有匹配的源 — <button @click="clearFilters" class="text-brand-600 hover:underline">清除筛选</button>
             </td>
           </tr>
