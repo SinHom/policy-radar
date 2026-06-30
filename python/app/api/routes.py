@@ -561,12 +561,12 @@ async def get_policy_content(policy_id: int, _user: str = Depends(require_admin)
 
 
 @router.get("/policies/{policy_id}/pdf")
-async def get_policy_pdf(policy_id: int, _user: str = Depends(require_admin)):
-    """生成并返回政策 PDF。
+async def get_policy_pdf(policy_id: int):
+    """生成并返回政策 PDF/MD。
 
-    用户 2026-07-01 反馈:飞书 app 内置 webview 不能直接预览 application/pdf。
-    改为生成 markdown 文件(.md)— 任何 webview/编辑器都能打开。
-    缓存路径 data/pdfs/{id}.md(命名沿用 PDF 旧目录)。
+    用户 2026-07-01 反馈:飞书 app webview 不能预览 PDF,改返回 .md 文件(任何 webview/编辑器都能打开)。
+    公开端点(政策内容是公开的),不需鉴权 — 否则飞书 webview 跳到绝对 URL 时没 cookie,会 401。
+    缓存路径 data/pdfs/{id}.md(目录名沿用 PDF 旧目录)。
     """
     from fastapi.responses import FileResponse
     cache_path = _PDFS_DIR / f"{policy_id}.md"
@@ -583,7 +583,6 @@ async def get_policy_pdf(policy_id: int, _user: str = Depends(require_admin)):
         # 按需抓全文(失败也不阻塞,只用 RSS 摘要)
         await _ensure_full_text(pol, session)
         md = await _render_policy_markdown(pol)
-    # 写 md 文件(下次秒返)
     cache_path.write_text(md, encoding="utf-8")
     return FileResponse(
         cache_path,
