@@ -301,9 +301,14 @@ class PolicyWithSourceOut(BaseModel):
 
 
 class FacetItem(BaseModel):
-    """单条筛选项(供 sidebar 渲染 checkbox + count)。"""
+    """单条筛选项(供 sidebar 渲染 checkbox + count)。
+
+    count = source 数(用户筛选用:这个维度下有几个 source 可选)
+    policy_count = 已爬政策数(参考)
+    """
     value: str
-    count: int
+    count: int = 0
+    policy_count: int = 0
 
 
 class PoliciesSearchOut(BaseModel):
@@ -337,15 +342,16 @@ async def search_policies(
 
         # 2) source-level filter:从 src_rows 中过滤候选
         if region or department or category or source_id:
-            candidate_pkids = [
-                s.id for s in src_rows
+            candidate_srcs = [
+                s for s in src_rows
                 if (not region or (s.region in region))
                 and (not department or (s.department in department))
                 and (not category or (s.category in category))
                 and (not source_id or (s.source_id in source_id))
             ]
         else:
-            candidate_pkids = list(src_by_id.keys())
+            candidate_srcs = list(src_rows)
+        candidate_pkids = [s.id for s in candidate_srcs]
 
         if not candidate_pkids:
             return PoliciesSearchOut(policies=[], facets={}, total=0)
@@ -382,10 +388,21 @@ async def search_policies(
                 )
             )
 
-        # 5) facets:当前结果下,每维度可选项 + count(命中 policy 数)
+        # 5) facets:显示「在当前 source 候选集下,每个维度的可选项 + 该维度下有几个 source + 该 source 有几条 policy」
+        # 维度值按 source 数倒序;count 显示 source 数(用户筛选用);policy_count 给前端显示"该 source 有几篇"
+        region_src = Counter()
+        dept_src = Counter()
+        cat_src = Counter()
         region_pol = Counter()
         dept_pol = Counter()
         cat_pol = Counter()
+        for s in candidate_srcs:
+            if s.region:
+                region_src[s.region] += 1
+            if s.department:
+                dept_src[s.department] += 1
+            if s.category:
+                cat_src[s.category] += 1
         for p in rows:
             s = src_by_id.get(p.source_id)
             if not s:
@@ -397,18 +414,34 @@ async def search_policies(
             if s.category:
                 cat_pol[s.category] += 1
 
-        # 全 dim 可选值(从 src_rows 去重;有序按 count 倒序)
-        regions_all = sorted({s.region for s in src_rows if s.region},
-                             key=lambda v: -region_pol.get(v, 0))
-        depts_all = sorted({s.department for s in src_rows if s.department},
-                           key=lambda v: -dept_pol.get(v, 0))
-        cats_all = sorted({s.category for s in src_rows if s.category},
-                          key=lambda v: -cat_pol.get(v, 0))
+        # 可选值:只显示 candidate 范围内的(保证勾选后一定有结果)
+        regions_all = sorted(
+            [v for v in {s.region for s in candidate_srcs if s.region}],
+            key=lambda v: (-region_src.get(v, 0), v),
+        )
+        depts_all = sorted(
+            [v for v in {s.department for s in candidate_srcs if s.department}],
+            key=lambda v: (-dept_src.get(v, 0), v),
+        )
+        cats_all = sorted(
+            [v for v in {s.category for s in candidate_srcs if s.category}],
+            key=lambda v: (-cat_src.get(v, 0), v),
+        )
 
         facets = {
-            "regions": [FacetItem(value=v, count=region_pol.get(v, 0)) for v in regions_all],
-            "departments": [FacetItem(value=v, count=dept_pol.get(v, 0)) for v in depts_all],
-            "categories": [FacetItem(value=v, count=cat_pol.get(v, 0)) for v in cats_all],
+            # count = source 数(用户选这个维度能覆盖的源数);policy_count = 已爬政策数(参考)
+            "regions": [
+                FacetItem(value=v, count=region_src.get(v, 0), policy_count=region_pol.get(v, 0))
+                for v in regions_all
+            ],
+            "departments": [
+                FacetItem(value=v, count=dept_src.get(v, 0), policy_count=dept_pol.get(v, 0))
+                for v in depts_all
+            ],
+            "categories": [
+                FacetItem(value=v, count=cat_src.get(v, 0), policy_count=cat_pol.get(v, 0))
+                for v in cats_all
+            ],
         }
 
         return PoliciesSearchOut(policies=out_policies, facets=facets, total=len(out_policies))
