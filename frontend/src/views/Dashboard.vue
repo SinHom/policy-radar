@@ -48,6 +48,12 @@ function startAuto() {
 function stopAuto() {
   if (timer) { clearInterval(timer); timer = null }
 }
+
+// 公司详情行展开
+function toggleCompanyDetail(c) {
+  c.expanded = !c.expanded
+  companies.value = [...companies.value]
+}
 import { onBeforeUnmount } from 'vue'
 onBeforeUnmount(stopAuto)
 </script>
@@ -80,13 +86,30 @@ onBeforeUnmount(stopAuto)
         <tr><th class="text-left">企业</th><th>行业</th><th>地区</th><th>订阅</th><th>匹配</th><th>推送</th></tr>
       </thead>
       <tbody>
-        <tr v-for="c in companies.companies" :key="c.company_id" class="border-t border-gray-100">
-          <td class="py-2 font-medium">{{ c.name }}</td>
+        <tr v-for="c in companies.companies" :key="c.company_id" @click="toggleCompanyDetail(c)"
+            class="border-t border-gray-100 cursor-pointer hover:bg-gray-50">
+          <td class="py-2 font-medium flex items-center gap-1">
+            <span class="text-gray-400 text-xs">{{ c.expanded ? '▼' : '▶' }}</span>
+            {{ c.name }}
+          </td>
           <td class="text-center">{{ c.industry || '-' }}</td>
           <td class="text-center">{{ c.region || '-' }}</td>
           <td class="text-center">{{ c.subscriptions }}</td>
           <td class="text-center">{{ c.matches }}</td>
           <td class="text-center">{{ c.pushed }}</td>
+        </tr>
+        <tr v-if="c.expanded" :key="c.company_id + '-d'">
+          <td colspan="6" class="bg-gray-50 p-3 text-xs text-gray-600">
+            <div class="grid grid-cols-3 gap-3">
+              <div><b>行业:</b> {{ c.industry || '-' }}</div>
+              <div><b>规模:</b> {{ c.scale || '-' }}</div>
+              <div><b>地区:</b> {{ c.region || '-' }}</div>
+              <div><b>订阅:</b> {{ c.subscriptions }} 条 ({{ c.enabled ? '启用' : '停用' }})</div>
+              <div><b>匹配政策:</b> {{ c.matches }} 条</div>
+              <div><b>已推送:</b> {{ c.pushed }} 次</div>
+              <div class="col-span-3"><b>标签:</b> {{ (c.tags || []).join('、') || '-' }}</div>
+            </div>
+          </td>
         </tr>
       </tbody>
     </table>
