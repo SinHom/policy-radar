@@ -7,6 +7,8 @@ const tabs = [
   { name: 'policies',      label: '政策库',   icon: '📜' },
   { name: 'sources',       label: '政策源',   icon: '🕷️' },
   { name: 'push-logs',     label: '推送历史', icon: '📤' },
+  { name: 'llm-config',    label: 'LLM 配置', icon: '🤖' },
+  { name: 'audit-logs',    label: '审计日志', icon: '📜' },
 ]
 
 defineProps({ open: Boolean })
