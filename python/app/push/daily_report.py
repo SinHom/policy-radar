@@ -262,10 +262,13 @@ async def _select_weekly_policies(
             .limit(200)
         )
         policies = list((await session.execute(stmt)).scalars().all())
-    logger.info("DEBUG _select_weekly: candidate_cutoff=%s, pushed_ids=%s, returned %d policies",
+    from sqlalchemy.dialects import sqlite as sa_sqlite
+    compiled = str(stmt.compile(dialect=sa_sqlite.dialect(), compile_kwargs={"literal_binds": True}))
+    logger.info("DEBUG _select_weekly SQL: %s", compiled[:500])
+    logger.info("DEBUG _select_weekly: candidate_cutoff=%r, pushed_ids=%s, returned %d policies",
                 candidate_cutoff, list(pushed_ids)[:5], len(policies))
     for p in policies[:5]:
-        logger.info("DEBUG   policy id=%d crawled_at=%s src=%d summary=%s",
+        logger.info("DEBUG   policy id=%d crawled_at=%r src=%d summary=%s",
                     p.id, p.crawled_at, p.source_id, bool(p.summary_text))
 
     # 3) 客户端过滤 region + department(必须在 session 内,统一做)
