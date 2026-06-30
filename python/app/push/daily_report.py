@@ -1,17 +1,15 @@
 """政策聚合卡片(每周推送,range=week/month/all 三种粒度)。
 
-过滤规则(用户 2026-06-30 需求):
-- 范围:region ∈ {河北, 秦皇岛, 秦皇岛市} OR region LIKE '%河北%' OR region LIKE '%秦皇岛%'
-- 部门:department LIKE '%文旅%' OR department LIKE '%商务%' OR department LIKE '%旅游%' OR department LIKE '%招商%'
-- 候选池:crawled_at >= (近 180 天)
-- 推送池:已 success 推送过的不重推(从 push_logs 查,近 30 天窗口)
-- AI 解读:200-300 字(最多 500),首句给"重点词/要点"
-- 卡片 UI:
-  - header 标题不带"早间简报",只用日期
-  - 底部只显示北京时间(2026-06-30 15:32 北京)
-  - 时间格式 2026年6月15日
-  - 每条政策 标题 [title](url) 是可点击的(md 链接)
-  - 不带"政策雷达管理"按钮
+用户 2026-07-01 决策:用国家级综合源覆盖所有政策(不再按 region/dept 过滤),
+让 advisory 由 LLM 通用生成,用户在卡片中自己看 + 判断。
+
+卡片 UI:
+- header: 政策雷达 · X月X日周报(无"早间简报")
+- 标题 [title](原文 URL) 是可点击的 md 链接
+- PDF 按钮用绝对 URL(BACKEND_PUBLIC_URL) — 飞书 app 才能正确跳转下载
+- 底部只有"推送时间: 2026-06-30 15:32 (北京时间)"
+- 时间格式 2026年6月15日(发布日期,转北京时区)
+- 摘要 200-300 字最多 500,首句"重点词"
 """
 from __future__ import annotations
 
@@ -21,6 +19,7 @@ from typing import Optional
 
 from sqlalchemy import and_, desc, not_, select
 
+from python.app.config import get_settings
 from python.models import Policy, PolicySource, PushLog, Subscription
 from python.models.base import get_session
 
@@ -187,12 +186,14 @@ def _build_weekly_card(
         if meta_parts:
             content_lines.append("  ·  ".join(meta_parts))
 
-        # 操作链接
+        # 操作链接 — 飞书 app 跳绝对 URL(相对路径会跳到 feishu.cn 域)
+        public_base = get_settings().public_base_url.rstrip("/")
         action_parts: list[str] = []
         if r["url"]:
             action_parts.append(f"[👉 阅读原文]({r['url']})")
         if r["pol_id"]:
-            action_parts.append(f"[📄 下载 PDF](/api/policies/{r['pol_id']}/pdf)")
+            pdf_url = f"{public_base}/api/policies/{r['pol_id']}/pdf"
+            action_parts.append(f"[📄 下载 PDF]({pdf_url})")
         if action_parts:
             content_lines.append("  ·  ".join(action_parts))
 

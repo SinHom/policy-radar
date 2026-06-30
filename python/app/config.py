@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     # DB
     database_url: str = ""
 
+    # 飞书卡片等对外推送的绝对 URL base(用户点 PDF 链接时需要绝对地址)
+    # 默认 http://host:port,生产改成 https 域名
+    public_base_url: str = "http://43.155.161.54:8000"
+
     # LLM
     minimax_api_key: str = ""
     minimax_base_url: str = "https://api.minimaxi.com/v1"
