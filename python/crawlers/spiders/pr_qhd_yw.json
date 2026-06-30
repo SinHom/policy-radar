@@ -1,0 +1,26 @@
+{
+  "source_id": "pr_qhd_yw",
+  "name": "秦皇岛市政府·要闻",
+  "category": "市级",
+  "region": "秦皇岛",
+  "department": "秦皇岛市人民政府",
+  "list_url": "http://www.qhd.gov.cn/",
+  "mode": "playwright",
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 5,
+  "request_interval_max": 8,
+  "max_pages": 1,
+  "list_selectors": {
+    "list": "a[title]",
+    "title": "@title",
+    "link": "@href",
+    "date": "..//span"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .title",
+    "content": ".article-content, .content, article p, main p",
+    "date": ".article-date, .date"
+  },
+  "notes": "秦皇岛市政府门户首页(占位 — 需测试 list 选择器)"
+}
