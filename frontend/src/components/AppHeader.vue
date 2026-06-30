@@ -22,8 +22,8 @@ async function doLogout() {
   try {
     await api.post('/auth/logout')
   } catch (e) {}
-  // 清 cookie:失效的 cookie 已由后端 delete,直接刷新让 require_admin 重定向
-  location.reload()
+  // 清 cookie:失效的 cookie 已由后端 delete,直接跳登录页
+  window.location.href = '/login'
 }
 </script>
 
