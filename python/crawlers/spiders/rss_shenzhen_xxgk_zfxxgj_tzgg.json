@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_shenzhen_xxgk_zfxxgj_tzgg",
+  "name": "深圳 xxgk/zfxxgj",
+  "category": "市级",
+  "region": "深圳",
+  "department": "深圳政府",
+  "list_url": "http://policy-radar-rsshub:1200/gov/shenzhen/xxgk/zfxxgj/tzgg",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/shenzhen/xxgk/zfxxgj/tzgg (服务端 RSSHub,RSS mode)"
+}

@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_chongqing_sydwgkzp",
+  "name": "重庆省 sydwgkzp",
+  "category": "省级",
+  "region": "重庆",
+  "department": "重庆政府",
+  "list_url": "http://policy-radar-rsshub:1200/gov/chongqing/sydwgkzp",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/chongqing/sydwgkzp (服务端 RSSHub,RSS mode)"
+}

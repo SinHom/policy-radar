@@ -25,7 +25,9 @@ class Subscription(Base):
         index=True,
     )
     types: Mapped[list] = mapped_column(JSON, nullable=False, default=list)  # ["补贴", "贷款"]
-    regions: Mapped[list] = mapped_column(JSON, nullable=False, default=list)  # ["深圳", "广东"]
+    regions: Mapped[list] = mapped_column(JSON, nullable=False, default=list)  # 省级:["北京","广东","浙江"]
+    dept_codes: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)  # 委办:["发改委","工信部","财政部"] — 与 policy_sources.department 对齐
+    city_codes: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)  # 地市:["深圳","杭州","苏州"] — 与 policy_sources.region 对齐
     keywords: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)  # ["专精特新"]
     push_schedule: Mapped[str] = mapped_column(String(16), default="daily", nullable=False)
     # realtime / daily / weekly / manual

@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_chinamine-safety_xw",
+  "name": "矿山安全监察局 xw",
+  "category": "国家级",
+  "region": "全国",
+  "department": "矿山安全监察局",
+  "list_url": "http://policy-radar-rsshub:1200/gov/chinamine-safety/xw",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/chinamine-safety/xw (服务端 RSSHub,RSS mode)"
+}

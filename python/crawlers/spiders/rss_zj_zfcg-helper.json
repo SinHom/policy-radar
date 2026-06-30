@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_zj_zfcg-helper",
+  "name": "浙江省 czt/zfcg-helper",
+  "category": "省级",
+  "region": "浙江",
+  "department": "浙江政府",
+  "list_url": "http://policy-radar-rsshub:1200/gov/zj/zfcg-helper",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/zj/zfcg-helper (服务端 RSSHub,RSS mode)"
+}

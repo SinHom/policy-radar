@@ -1,0 +1,15 @@
+{
+  "source_id": "rss_jinan_healthcommission_medical_exam_notice",
+  "name": "济南 healthcommission/medical-exam-notice",
+  "category": "市级",
+  "region": "济南",
+  "department": "济南政府",
+  "list_url": "http://policy-radar-rsshub:1200/gov/jinan/healthcommission/medical_exam_notice",
+  "mode": "rss",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "notes": "RSSHub /gov/jinan/healthcommission/medical_exam_notice (服务端 RSSHub,RSS mode)"
+}
