@@ -76,7 +76,12 @@ async def crawl_source(
 
     logger.info("[%s] Fetching list: %s", source_id, list_url)
     try:
-        list_page = await fetcher.fetch(list_url, render_js=render_js)
+        # 列表页优先用 httpx(快),只在 render_js=True 且 list 需 JS 才走 Playwright
+        # 详情页(下面 detail = await fetcher.fetch(url, render_js=render_js))保留原逻辑
+        if render_js and cfg.get("list_render_js", True):
+            list_page = await fetcher.fetch(list_url, render_js=True)
+        else:
+            list_page = await fetcher.fetch(list_url, render_js=False)
         from python.crawlers.alerts import record_success
         record_success(source_id)
     except Exception as e:
