@@ -562,13 +562,14 @@ async def get_policy_content(policy_id: int, _user: str = Depends(require_admin)
 
 @router.get("/policies/{policy_id}/pdf")
 async def get_policy_pdf(policy_id: int, _user: str = Depends(require_admin)):
-    """生成并返回政策 PDF(用 playwright 渲染 markdown,缓存 data/pdfs/{id}.pdf)。
+    """生成并返回政策 PDF。
 
-    按需抓全文:full_text_fetched_at IS NULL 时,先 playwright 抓 url 拿到完整正文。
-    首次生成较慢(playwright 启动 ~3-5s);后续秒返 cached 文件。
+    用户 2026-07-01 反馈:飞书 app 内置 webview 不能直接预览 application/pdf。
+    改为生成 markdown 文件(.md)— 任何 webview/编辑器都能打开。
+    缓存路径 data/pdfs/{id}.md(命名沿用 PDF 旧目录)。
     """
     from fastapi.responses import FileResponse
-    cache_path = _PDFS_DIR / f"{policy_id}.pdf"
+    cache_path = _PDFS_DIR / f"{policy_id}.md"
     async with get_session() as session:
         pol = await session.get(Policy, policy_id)
         if not pol:
@@ -576,36 +577,16 @@ async def get_policy_pdf(policy_id: int, _user: str = Depends(require_admin)):
         if cache_path.exists() and cache_path.stat().st_size > 0:
             return FileResponse(
                 cache_path,
-                media_type="application/pdf",
-                filename=f"policy_{policy_id}.pdf",
+                media_type="text/markdown; charset=utf-8",
+                filename=f"policy_{policy_id}.md",
             )
         # 按需抓全文(失败也不阻塞,只用 RSS 摘要)
         await _ensure_full_text(pol, session)
         md = await _render_policy_markdown(pol)
-    # playwright 渲染 markdown → PDF
-    try:
-        from playwright.async_api import async_playwright
-        html_doc = (
-            "<!doctype html><html><head><meta charset='utf-8'>"
-            "<style>body{font-family:Microsoft YaHei,Helvetica,Arial,sans-serif;"
-            "padding:30px;max-width:780px;margin:auto;line-height:1.7;font-size:14px;}"
-            "h1,h2,h3{color:#1e40af}</style></head>"
-            f"<body>{md}</body></html>"
-        )
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
-            page2 = await browser.new_page()
-            await page2.set_content(html_doc, wait_until="load")
-            await page2.pdf(
-                path=str(cache_path),
-                format="A4",
-                margin={"top": "15mm", "bottom": "15mm", "left": "15mm", "right": "15mm"},
-            )
-            await browser.close()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"playwright pdf failed: {e}")
+    # 写 md 文件(下次秒返)
+    cache_path.write_text(md, encoding="utf-8")
     return FileResponse(
         cache_path,
-        media_type="application/pdf",
-        filename=f"policy_{policy_id}.pdf",
+        media_type="text/markdown; charset=utf-8",
+        filename=f"policy_{policy_id}.md",
     )
