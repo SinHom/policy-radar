@@ -342,6 +342,9 @@ def main() -> None:
             for sid, success, code in results:
                 if success:
                     ok += 1
+                    c2.execute(
+                        "UPDATE policy_sources SET last_status = 'ok' WHERE source_id = ?", (sid,)
+                    )
                 else:
                     fail += 1
                     c2.execute(
