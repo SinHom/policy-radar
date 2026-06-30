@@ -319,6 +319,32 @@ async def manual_push(subscription_id: int, _user: str = Depends(require_admin))
     }
 
 
+@router.post("/{subscription_id}/daily-report")
+async def push_daily_report(
+    subscription_id: int,
+    slot: str = "早间",
+    _user: str = Depends(require_admin),
+) -> dict:
+    """生成并推送日报聚合卡片(早/午/晚 3 个时段之一)。"""
+    if slot not in ("早间", "午间", "晚间"):
+        raise HTTPException(status_code=400, detail="slot 必须是 早间/午间/晚间")
+    from python.app.push.daily_report import send_daily_report as _send
+    return await _send(subscription_id, slot=slot)
+
+
+@router.get("/daily-report/preview")
+async def preview_daily_report(
+    slot: str = "早间",
+    _user: str = Depends(require_admin),
+) -> dict:
+    """预览日报卡片 JSON(不推送),用于前端展示 / 调试。"""
+    if slot not in ("早间", "午间", "晚间"):
+        raise HTTPException(status_code=400, detail="slot 必须是 早间/午间/晚间")
+    from python.app.push.daily_report import build_daily_report
+    cards = await build_daily_report(slot)
+    return {"slot": slot, "card_count": len(cards), "cards": cards}
+
+
 @router.delete("/{subscription_id}")
 async def delete_subscription(subscription_id: int, _user: str = Depends(require_admin)) -> dict:
     """删除订阅（关联推送日志按 policy_id CASCADE 由 DB 处理）。"""

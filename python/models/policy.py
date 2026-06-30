@@ -42,6 +42,9 @@ class Policy(Base):
     amount: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)  # "100万"
     deadline: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)  # "2026-12-31"
 
+    # === AI 业务解读(200字内,直接给企业看的"这政策对你怎么用") ===
+    advisory: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     # === 按需抓全文 ===
     # NULL = 未抓(只存了 RSS 摘要);非空 = 已 playwright 抓过正文,缓存 data/mds/{id}.md
     full_text_fetched_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, index=True)
