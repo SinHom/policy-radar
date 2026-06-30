@@ -5,15 +5,13 @@
 - 部门:department LIKE '%文旅%' OR department LIKE '%商务%' OR department LIKE '%旅游%' OR department LIKE '%招商%'
 - 候选池:crawled_at >= (近 180 天)
 - 推送池:已 success 推送过的不重推(从 push_logs 查,近 30 天窗口)
-- AI 解读:500-600 字,结构化(适用对象/申报要点/时间窗口/对企业的具体价值)
+- AI 解读:200-300 字(最多 500),首句给"重点词/要点"
 - 卡片 UI:
   - header 标题不带"早间简报",只用日期
-  - 底部不带"早间/午间/晚间" 写推送时间
+  - 底部只显示北京时间(2026-06-30 15:32 北京)
   - 时间格式 2026年6月15日
   - 每条政策 标题 [title](url) 是可点击的(md 链接)
   - 不带"政策雷达管理"按钮
-
-爬数据:用户 sub 用真 webhook 的话直接走真 URL;测试用 mock:// 是 ok 的但点击"原文"会 404。
 """
 from __future__ import annotations
 
@@ -27,6 +25,37 @@ from python.models import Policy, PolicySource, PushLog, Subscription
 from python.models.base import get_session
 
 logger = logging.getLogger(__name__)
+
+# ============== 北京时间工具 ==============
+# 容器时区是 UTC,所有用户可见时间(卡片 / 推送时间 / 推送日的"周报"日期)
+# 一律转 Asia/Shanghai 显示。
+try:
+    from zoneinfo import ZoneInfo  # py 3.9+
+    BJ_TZ = ZoneInfo("Asia/Shanghai")
+except ImportError:
+    BJ_TZ = None  # fallback 退回到 +8h 偏移
+
+
+def _now_bj() -> datetime:
+    """当前北京时间(naive datetime,值是上海时区的 wall clock)。"""
+    if BJ_TZ:
+        return datetime.now(BJ_TZ).replace(tzinfo=None)
+    return datetime.utcnow() + timedelta(hours=8)
+
+
+def _to_bj(dt) -> datetime:
+    """UTC datetime → 北京时间 naive(若 dt 无 tzinfo,视作 UTC)。"""
+    if dt is None:
+        return None  # type: ignore
+    if dt.tzinfo is None:
+        # naive → 视作 UTC
+        if BJ_TZ:
+            from datetime import timezone
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            return dt + timedelta(hours=8)
+    return dt.astimezone(BJ_TZ).replace(tzinfo=None)
+
 
 # 卡片最大支持 50 个 element,每条政策占 4-5 个,实际 8-10 条政策
 MAX_POLICIES_PER_CARD = 10
@@ -42,26 +71,35 @@ CANDIDATE_WINDOW_DAYS = 180
 
 
 def _fmt_date(dt) -> str:
-    """datetime → 2026年6月15日 风格,空/None 返空串。"""
+    """datetime → 2026年6月15日 风格,空/None 返空串。
+
+    若 dt 是 naive,视作 UTC,转北京时区后输出(因为 DB 存的是 UTC 字符串)。
+    """
     if not dt:
         return ""
     try:
         if isinstance(dt, str):
-            # ISO 字符串解析
             dt = datetime.fromisoformat(dt.replace("Z", ""))
-        return f"{dt.year}年{dt.month}月{dt.day}日"
+        if dt is None:
+            return ""
+        # 转到北京时间
+        dt_bj = _to_bj(dt)
+        return f"{dt_bj.year}年{dt_bj.month}月{dt_bj.day}日"
     except Exception:
         return str(dt)[:10] if dt else ""
 
 
 def _fmt_time(dt) -> str:
-    """datetime → HH:MM"""
+    """datetime → HH:MM(北京时间)"""
     if not dt:
         return ""
     try:
         if isinstance(dt, str):
             dt = datetime.fromisoformat(dt.replace("Z", ""))
-        return dt.strftime("%H:%M")
+        if dt is None:
+            return ""
+        dt_bj = _to_bj(dt)
+        return dt_bj.strftime("%H:%M")
     except Exception:
         return ""
 
@@ -114,7 +152,7 @@ def _build_weekly_card(
                         "tag": "div",
                         "text": {
                             "tag": "lark_md",
-                            "content": f"<font color='grey'>推送时间: {push_time}</font>",
+                            "content": f"<font color='grey'>推送时间: {push_time} (北京时间)</font>",
                         },
                     },
                 ],
@@ -133,16 +171,15 @@ def _build_weekly_card(
     elements.append({"tag": "hr"})
 
     for i, r in enumerate(rows, 1):
-        # 注意:md 链接 [text](url) 在飞书 interactive card 里是可点击的
-        # 标题必须用 [title](url) 形式
+        # 标题可点击 md 链接
         content_lines: list[str] = [f"**{i}. [{r['title']}]({r['url']})**"]
         if r["summary"]:
             content_lines.append(f"> {r['summary']}")
 
-        # 元信息行
+        # 元信息
         meta_parts: list[str] = []
         if r["pub_date"]:
-            meta_parts.append(f"📅 {r['pub_date']}")  # 2026年6月15日
+            meta_parts.append(f"📅 {r['pub_date']}")
         if r["source_name"]:
             meta_parts.append(f"📌 {r['source_name']}")
         if r["region"]:
@@ -159,7 +196,7 @@ def _build_weekly_card(
         if action_parts:
             content_lines.append("  ·  ".join(action_parts))
 
-        # AI 解读(500-600 字,结构化)
+        # AI 解读(200-300 字)
         if r["advisory"]:
             content_lines.append("")
             content_lines.append(f"💡 **AI 解读**")
@@ -171,12 +208,12 @@ def _build_weekly_card(
         })
         elements.append({"tag": "hr"})
 
-    # 底部:只显示推送时间(去掉"早间/午间/晚间")
+    # 底部:北京时间
     elements.append({
         "tag": "div",
         "text": {
             "tag": "lark_md",
-            "content": f"<font color='grey'>推送时间: {push_time}</font>",
+            "content": f"<font color='grey'>推送时间: {push_time} (北京时间)</font>",
         },
     })
 
@@ -197,12 +234,12 @@ async def _flatten_policies(policies: list) -> list[dict]:
     if not policies:
         return []
     src_ids = {p.source_id for p in policies if p.source_id}
-    sources_by_id: dict[int, tuple[str, str]] = {}
+    sources_by_id: dict[int, tuple[str, str, str]] = {}
     if src_ids:
         async with get_session() as session:
             stmt = select(PolicySource).where(PolicySource.id.in_(src_ids))
             srcs = (await session.execute(stmt)).scalars().all()
-            sources_by_id = {s.id: (s.name or "", s.region or "") for s in srcs}
+            sources_by_id = {s.id: (s.name or "", s.region or "", s.department or "") for s in srcs}
             return [
                 {
                     "pol_id": p.id,
@@ -211,8 +248,8 @@ async def _flatten_policies(policies: list) -> list[dict]:
                     "summary": (p.summary_text or "").strip(),
                     "advisory": (p.advisory or "").strip(),
                     "pub_date": _fmt_date(p.published_at or p.crawled_at),
-                    "source_name": sources_by_id.get(p.source_id, ("", ""))[0],
-                    "region": sources_by_id.get(p.source_id, ("", ""))[1],
+                    "source_name": sources_by_id.get(p.source_id, ("", "", ""))[0],
+                    "region": sources_by_id.get(p.source_id, ("", "", ""))[1],
                 }
                 for p in policies
             ]
@@ -236,25 +273,26 @@ async def _select_weekly_policies(
     window_days: int = 30,
 ) -> list[Policy]:
     """选近 window_days 天爬取 + 范围匹配 + 已成功推送过的不重推 的政策。"""
-    # 候选池:近 180 天
-    candidate_cutoff = datetime.utcnow() - timedelta(days=CANDIDATE_WINDOW_DAYS)
-    # 推送去重:近 window_days 天已成功推过的 policy_id
-    dedup_cutoff = datetime.utcnow() - timedelta(days=DEDUP_WINDOW_DAYS)
+    # cutoff 用北京时间计算(用户认知一致),然后转 UTC ISO 跟 DB 比
+    now_bj = _now_bj()
+    now_utc = datetime.utcnow()
+    # 用 UTC 比较(因为 DB crawled_at 是 UTC 字符串)
+    candidate_cutoff_utc = now_utc - timedelta(days=CANDIDATE_WINDOW_DAYS)
+    dedup_cutoff_utc = now_utc - timedelta(days=DEDUP_WINDOW_DAYS)
 
     async with get_session() as session:
         # 1) 已推过的 policy_id 集合
         stmt_pushed = (
             select(PushLog.policy_id)
             .where(PushLog.status == "success")
-            .where(PushLog.created_at >= dedup_cutoff)
+            .where(PushLog.created_at >= dedup_cutoff_utc)
             .where(PushLog.policy_id.isnot(None))
             .distinct()
         )
         pushed_ids = set((await session.execute(stmt_pushed)).scalars().all())
 
         # 2) 候选:近 180 天 + 已摘要 + 不在已推集合
-        # 用 ISO 字符串比较(SQLite 的 DATETIME 列存 ISO text,aioqlite 对 datetime 对象 bind 不可靠)
-        cutoff_iso = candidate_cutoff.isoformat()
+        cutoff_iso = candidate_cutoff_utc.isoformat()
         stmt = (
             select(Policy)
             .where(Policy.crawled_at >= cutoff_iso)
@@ -266,53 +304,43 @@ async def _select_weekly_policies(
             stmt = stmt.where(Policy.id.notin_(pushed_ids))
         policies = list((await session.execute(stmt)).scalars().all())
 
-    # 3) 客户端过滤 region + department(必须在 session 内,统一做)
+    # 3) 客户端过滤 region + department
     src_ids_needed = {p.source_id for p in policies if p.source_id}
-    src_meta: dict[int, tuple[str, str]] = {}  # id -> (name, region)
+    src_meta: dict[int, tuple[str, str, str]] = {}
     if src_ids_needed:
         async with get_session() as session:
             stmt_src = select(PolicySource).where(PolicySource.id.in_(src_ids_needed))
             srcs = (await session.execute(stmt_src)).scalars().all()
-            src_meta = {s.id: (s.name or "", s.region or "") for s in srcs}
+            src_meta = {s.id: (s.name or "", s.region or "", s.department or "") for s in srcs}
 
-    # 过滤:region 匹配 OR (source_name 含河北/秦皇岛 + dept 匹配)
+    # 第一道:name 匹配
     filtered: list[Policy] = []
     for p in policies:
-        src_name, src_region = src_meta.get(p.source_id, ("", ""))
-        # policy 没有 department 列,直接用 source.name
-        dept = src_name
+        src_name, src_region, _ = src_meta.get(p.source_id, ("", "", ""))
         region_match = _region_match(src_region) or "河北" in (src_name or "") or "秦皇岛" in (src_name or "")
-        dept_match = _dept_match(dept, src_name)
+        dept_match = _dept_match(src_name, src_name)
         if region_match and dept_match:
             filtered.append(p)
 
-    # 如果上面没匹配上,fallback:看 source.department 字段(在源表单独存)
+    # Fallback:用 source.department 字段(例 "河北省文化和旅游厅" 含 "文旅")
     if not filtered:
-        # 取所有 source 的 id → (name, region, department)
-        src_ids_needed = {p.source_id for p in policies if p.source_id}
-        async with get_session() as session:
-            stmt_src = select(PolicySource).where(PolicySource.id.in_(src_ids_needed))
-            srcs = (await session.execute(stmt_src)).scalars().all()
-            src_dept_by_id = {s.id: (s.name or "", s.region or "", s.department or "") for s in srcs}
         for p in policies:
             if p in filtered:
                 continue
-            src_name, src_region, src_dept = src_dept_by_id.get(p.source_id, ("", "", ""))
+            src_name, src_region, src_dept = src_meta.get(p.source_id, ("", "", ""))
             region_match = _region_match(src_region) or "河北" in (src_name or "") or "秦皇岛" in (src_name or "")
-            # dept 字段也含部门名(例 "河北省文化和旅游厅" 含 "文旅" 关键词)
-            dept_match = _dept_match(src_dept, src_name) or _dept_match(src_dept, src_dept)
+            dept_match = _dept_match(src_dept, src_name)
             if region_match and dept_match:
                 filtered.append(p)
 
-    # 限制返回数
     return filtered[:50]
 
 
 async def build_weekly_report(slot: str = "weekly") -> list[dict]:
-    """构建周报卡片(目前 range 固定近 30 天,可扩展为 week=7)。"""
-    now = datetime.now()
-    week_label = f"{now.month}月{now.day}日周报"
-    push_time = now.strftime("%Y-%m-%d %H:%M")
+    """构建周报卡片(范围近 30 天,按北京时区算"周报日")。"""
+    now_bj = _now_bj()
+    week_label = f"{now_bj.month}月{now_bj.day}日周报"
+    push_time = now_bj.strftime("%Y-%m-%d %H:%M")
 
     policies = await _select_weekly_policies(slot=slot, window_days=DEDUP_WINDOW_DAYS)
     if not policies:
