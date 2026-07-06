@@ -1,0 +1,26 @@
+{
+  "source_id": "prov_hebei_scjg",
+  "name": "河北省市监局",
+  "category": "省级",
+  "region": "河北",
+  "department": "市监局",
+  "list_url": "https://scjg.hebei.gov.cn/node/919",
+  "mode": "html",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 3,
+  "list_selectors": {
+    "item": "a[href^=\"/info/\"]",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "a::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
+    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+  },
+  "notes": "市监局(特殊结构:裸a标签,含知识产权局内容,1952条)"
+}

@@ -1,0 +1,26 @@
+{
+  "source_id": "prov_hebei_nync",
+  "name": "河北省农业农村厅",
+  "category": "省级",
+  "region": "河北",
+  "department": "农业农村厅",
+  "list_url": "http://nync.hebei.gov.cn/html/www//tzgg/index.html",
+  "mode": "html",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 3,
+  "list_selectors": {
+    "item": "ul li",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text"
+  },
+  "detail_selectors": {
+    "title": "h1",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .zw_content",
+    "date": "meta[name=\"PubDate\"]"
+  },
+  "notes": "河北省农业农村厅-通知公告，SSR可直抓。政策文件URL: /html/www//xxgkzl/zhengcfg/index.html"
+}

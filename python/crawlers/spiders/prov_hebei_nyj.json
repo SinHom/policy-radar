@@ -1,0 +1,26 @@
+{
+  "source_id": "prov_hebei_nyj",
+  "name": "河北省能源局(发改委)",
+  "category": "省级",
+  "region": "河北",
+  "department": "能源局",
+  "list_url": "https://hbdrc.hebei.gov.cn/xxgk_2232/zc/wgfxwj/",
+  "mode": "html",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "list_selectors": {
+    "item": "ul li",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "li::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
+    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+  },
+  "notes": "能源局无独立域名,挂发改委下抓规范性文件"
+}

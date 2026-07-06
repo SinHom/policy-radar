@@ -1,0 +1,26 @@
+{
+  "source_id": "prov_hebei_lycy",
+  "name": "河北省林业草原局",
+  "category": "省级",
+  "region": "河北",
+  "department": "林业草原局",
+  "list_url": "http://lycy.hebei.gov.cn/list_news_241.html",
+  "mode": "html",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "list_selectors": {
+    "item": "ul li",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
+    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+  },
+  "notes": "林业草原局(域名lycy非lcj)"
+}

@@ -1,0 +1,26 @@
+{
+  "source_id": "city_qhd_swj",
+  "name": "秦皇岛市商务局",
+  "category": "市级",
+  "region": "秦皇岛",
+  "department": "商务局",
+  "list_url": "http://swj.qhd.gov.cn/",
+  "mode": "html",
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 5,
+  "request_interval_max": 10,
+  "max_pages": 2,
+  "list_selectors": {
+    "item": "ul li",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
+    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+  },
+  "notes": "秦皇岛市级·商务局·需从服务器抓取(qhd.gov.cn封锁非大陆IP)"
+}
