@@ -50,7 +50,10 @@ def extract_by_selector(
             return default
         return el.get(attr_name, default) or default
 
-    el = soup.select_one(selector)
+    # 去掉 ::text 尾缀（BeautifulSoup 不支持伪元素）
+    clean_selector = re.sub(r"::text$", "", selector.strip()).strip()
+
+    el = soup.select_one(clean_selector)
     if el is None:
         return default
 

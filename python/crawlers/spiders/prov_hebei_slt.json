@@ -4,7 +4,7 @@
   "category": "省级",
   "region": "河北",
   "department": "水利厅",
-  "list_url": "http://slt.hebei.gov.cn/a/ZX/tzgg/",
+  "list_url": "http://slt.hebei.gov.cn/",
   "mode": "html",
   "render_js": false,
   "frequency": "daily",

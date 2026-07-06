@@ -96,20 +96,20 @@ class Fetcher:
             "Referer": "https://www.google.com/",  # 部分站看 referer
         }
         # 容器 IPv6 不可达,强制 IPv4 解析(否则 happy-eyeballs 优先 IPv6 卡 60s)
+        # 仅对 HTTP 做 IP 替换;HTTPS 保留域名避免 SNI 不匹配导致 TLS 握手失败
         url_to_fetch = url
         try:
             import socket
             from urllib.parse import urlparse
             p = urlparse(url)
             host = p.hostname
-            if host:
+            if host and p.scheme == "http":
                 infos = socket.getaddrinfo(host, p.port or 80, socket.AF_INET, socket.SOCK_STREAM)
                 if infos:
                     ip = infos[0][4][0]
                     url_to_fetch = f"{p.scheme}://{ip}{p.path}"
                     if p.query:
                         url_to_fetch += "?" + p.query
-                    # 保留 Host 头,避免 SNI / 虚拟主机问题
                     headers["Host"] = host
         except Exception:
             pass  # 解析失败 fallback 原 URL
