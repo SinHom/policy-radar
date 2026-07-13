@@ -98,7 +98,8 @@ def parse_tags(raw) -> list:
     if isinstance(raw, list):
         return raw
     try:
-        return json.loads(raw)
+        result = json.loads(raw)
+        return result if isinstance(result, list) else []
     except (TypeError, ValueError):
         return []
 
