@@ -1,0 +1,27 @@
+{
+  "source_id": "city_qhd_fn",
+  "name": "秦皇岛市抚宁区",
+  "category": "区县级",
+  "region": "秦皇岛",
+  "department": "抚宁区政府",
+  "list_url": "https://www.chinafuning.gov.cn/",
+  "mode": "html",
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "list_selectors": {
+    "item": "a[href*='content'], a[href*='single'], ul li a, table tr a",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text, td::text, .date"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .wzy_wzzw, .entry, .xxgk_gfxwjk-detail, article, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span"
+  },
+  "list_url_secondary": "https://www.chinafuning.gov.cn/single/251/list.html",
+  "notes": "2026-07-13 新增 | 抚宁区 | render_js true | 标签:文旅_政策"
+}
