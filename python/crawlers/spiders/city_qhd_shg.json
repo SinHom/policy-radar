@@ -1,0 +1,27 @@
+{
+  "source_id": "city_qhd_shg",
+  "name": "秦皇岛市山海关区",
+  "category": "区县级",
+  "region": "秦皇岛",
+  "department": "山海关区政府",
+  "list_url": "http://info.shanhaiguan.gov.cn/index.jsp",
+  "mode": "html",
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "list_selectors": {
+    "item": "a[href*='details'], a[href*='content'], ul li a",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text, .date"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry, article",
+    "date": "meta[name=\"PubDate\"], meta[name=\"createDate\"], .date, .info span"
+  },
+  "list_url_secondary": "http://www.shanhaiguan.gov.cn/home/list?code=c2hncXpmeHhna21s&pcode=emhlbmd3dWdvbmdrYWk%CE%B3",
+  "notes": "2026-07-13 新增 | 山海关文旅重镇 | 主站+信息公开子站双 URL | render_js true 因 JSP 动态 | 标签:文旅_政策"
+}
