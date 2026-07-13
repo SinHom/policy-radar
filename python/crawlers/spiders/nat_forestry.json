@@ -1,0 +1,27 @@
+{
+  "source_id": "nat_forestry",
+  "name": "国家林业和草原局",
+  "category": "国家级",
+  "region": "国家",
+  "department": "林草局",
+  "list_url": "https://www.forestry.gov.cn/main/5461/index.html",
+  "mode": "html",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "list_selectors": {
+    "item": "ul.list li, .list li, a[href*='/lyj/'], a[href*='forestry.gov.cn']",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span.date, .date, td:last-child::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, article, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], meta[name=\"createDate\"], .date"
+  },
+  "list_url_secondary": "https://www.forestry.gov.cn/c/www/gsgg.jhtml",
+  "notes": "2026-07-13 新增 | 林草政策+公示公告双源 | 国家公园/自然遗产相关 | 标签:文旅_政策"
+}
