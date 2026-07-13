@@ -1,0 +1,27 @@
+{
+  "source_id": "nat_mct",
+  "name": "文化和旅游部",
+  "category": "国家级",
+  "region": "国家",
+  "department": "文旅部",
+  "list_url": "https://www.mct.gov.cn/whzx/ggtz/",
+  "mode": "html",
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "list_selectors": {
+    "item": "table tr, .list li, a[href*='/whzx/']",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "td:last-child::text, span.date, .date"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, article, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], meta[name=\"createDate\"], .date, .info span"
+  },
+  "list_url_secondary": "https://zwgk.mct.gov.cn/zfxxgkml/zcfg/",
+  "notes": "2026-07-13 新增 | 文旅产品核心源 | 含十五五旅游强国规划 | 标签:文旅_政策/文物/非遗 | mct.gov.cn 为 ASP/JSP 混合站，列表可能需 render_js，验证失败改 true"
+}
