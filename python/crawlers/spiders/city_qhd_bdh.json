@@ -1,0 +1,26 @@
+{
+  "source_id": "city_qhd_bdh",
+  "name": "秦皇岛市北戴河区",
+  "category": "区县级",
+  "region": "秦皇岛",
+  "department": "北戴河区政府",
+  "list_url": "https://www.beidaihe.gov.cn/xxgk/list/orgczyjs_list.jsp?psn=1&classId=44&orgCode=001001176",
+  "mode": "html",
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "list_selectors": {
+    "item": "a[href*='single'], a[href*='content'], ul li a, table tr a",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text, td::text, .date"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .wzy_wzzw, .entry, .xxgk_gfxwjk-detail, article, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span"
+  },
+  "notes": "2026-07-13 新增 | 北戴河文旅重镇 | ≠北戴河新区(bdhxq) | 含十四五/国土空间规划 | 标签:文旅_规划/政策"
+}
