@@ -1,0 +1,26 @@
+{
+  "source_id": "city_qhd_ll",
+  "name": "卢龙县",
+  "category": "区县级",
+  "region": "秦皇岛",
+  "department": "卢龙县政府",
+  "list_url": "https://www.lulong.gov.cn/xxgk/list/list.jsp?classId=26&pn=",
+  "mode": "html",
+  "render_js": true,
+  "frequency": "weekly",
+  "request_interval_min": 5,
+  "request_interval_max": 8,
+  "max_pages": 1,
+  "list_selectors": {
+    "item": "a[href*='content'], a[href*='detail'], ul li a, table tr a",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text, td::text, .date"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .wzy_wzzw, .entry, .xxgk_gfxwjk-detail, article, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span"
+  },
+  "notes": "2026-07-13 新增 | 县级产出少 weekly | 标签:文旅_政策"
+}
