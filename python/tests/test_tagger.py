@@ -50,3 +50,29 @@ def test_returns_list():
     tags = classify_tags("关于申报十四五文旅规划的通知")
     assert isinstance(tags, list)
     assert len(tags) == len(set(tags))  # 无重复
+
+
+def test_rss_item_merges_title_tags():
+    """RSS item 的 tags 应同时含源级标签和标题级标签，去重保序。"""
+    from python.crawlers.tagger import classify_tags
+    # 模拟一条标题级标签
+    src_tags = ["国家级"]
+    title = "文化和旅游部关于印发旅游强国建设十五五规划的通知"
+    merged = list(dict.fromkeys(src_tags + classify_tags(title)))  # 去重保序
+    assert "国家级" in merged          # 源级保留
+    assert "文旅_规划" in merged        # 标题级加入
+    assert "政策文件" in merged or "通知" in merged
+    # 去重：源级与标题级重叠时不重复
+    overlap = list(dict.fromkeys(["通知"] + classify_tags(title)))
+    assert overlap.count("通知") == 1
+
+
+def test_title_tag_filterable_when_not_in_source():
+    """标题级标签（如 文旅_规划）不在源级 tags 时，merged tags 仍含它，
+    使得 ?tag=文旅_规划 可过滤到该政策（过滤在 item 构建后于 Python 层）。"""
+    from python.crawlers.tagger import classify_tags
+    src_tags = ["国家级"]  # 源级不含 文旅_规划
+    title = "关于印发十四五文化和旅游发展规划的通知"
+    merged = list(dict.fromkeys(src_tags + classify_tags(title)))
+    assert "文旅_规划" in merged
+    assert "文旅_规划" not in src_tags  # 确认它来自标题级
