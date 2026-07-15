@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -19,6 +20,7 @@ from python.crawlers.fetcher import Fetcher, get_fetcher
 from python.crawlers.parser import (
     extract_all,
     extract_by_selector,
+    extract_content_html,
     extract_date,
     parse_html,
 )
@@ -149,10 +151,43 @@ async def crawl_source(
 
     # 4. 去重 + 抓详情 + 入库
     detail_selectors = cfg.get("detail_selectors", {})
-    for cand in candidates[: max_new * 2]:  # 多取一些以弥补去重
+    # 2026-07-09 优化: 同一源内候选 URL 去重,避免重复抓/入库触发 UNIQUE 错误
+    seen_urls: set[str] = set()
+    # 2026-07-09 优化: 跳过明显是列表/索引/栏目页的 URL (非具体政策文)
+    LIST_URL_SKIP_PATTERNS = [
+        r'/index[._]?\d*\.html?$',         # index.html, index_1234.html
+        r'/list[._]?\d*\.html?$',
+        r'/index\.s?html?$',
+        r'/\d+/$',                          # 纯数字结尾如 /6700/
+        r'/\d{4}/\d{2}/$',                  # 年/月结尾
+        r'/\d{4}-\d{2}-\d{2}/$',            # 日期结尾
+        r'category[_/=]',
+        r'cid[_/=]',
+        r'classid[_/=]',
+        r'[?&]page=\d+',                    # 分页
+        r'/chnl\d+/',                        # mee 频道
+        r'/col/col\d+/index',                # 通用 col/index
+        r'/(home|main|index|portal)/?$',     # 首页
+    ]
+    list_skip_re = re.compile('|'.join(LIST_URL_SKIP_PATTERNS), re.I)
+    skipped_list = 0
+
+    for cand in candidates[: max_new * 6]:  # 多取一些以弥补去重
         if result.new_crawled >= max_new:
             break
         url = cand["url"]
+        # 2026-07-09 优化: 跳过 javascript:void(0) 等无效 URL
+        if not url or not url.startswith(("http://", "https://")):
+            logger.debug("[%s] Skipping invalid URL: %s", source_id, url)
+            continue
+        # 2026-07-09 优化: 跳过明显是列表/索引/栏目页的 URL
+        if list_skip_re.search(url):
+            skipped_list += 1
+            logger.debug("[%s] Skipping list/index URL: %s", source_id, url)
+            continue
+        if url in seen_urls:
+            continue
+        seen_urls.add(url)
         try:
             async with get_session() as session:
                 if await is_duplicate(session, url):
@@ -169,8 +204,10 @@ async def crawl_source(
                 extract_by_selector(detail_soup, detail_selectors.get("title", "h1"))
                 or cand["title"]
             )
-            detail_content = extract_by_selector(
-                detail_soup, detail_selectors.get("content", "body")
+            detail_content = extract_content_html(
+                detail_soup,
+                detail_selectors.get("content", "body"),
+                base_url=detail.final_url or url,
             )
             detail_date_text = (
                 extract_by_selector(detail_soup, detail_selectors.get("date", ""))
