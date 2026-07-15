@@ -4,23 +4,21 @@
   "category": "省级",
   "region": "河北",
   "department": "生态环境厅",
-  "list_url": "http://hbepb.hebei.gov.cn/hbhjt/zwgk/fdzdgknr/tongzhigonggao/index.html",
-  "mode": "html",
-  "render_js": false,
-  "frequency": "daily",
-  "request_interval_min": 3,
-  "request_interval_max": 6,
-  "max_pages": 3,
+  "list_url": "https://hbepb.hebei.gov.cn/hbhjt/zwgk/fdzdgknr/tongzhigonggao/",
   "list_selectors": {
-    "item": "ul li, table tr",
+    "item": "a[href*='/hbhjt/']",
     "title": "a::text",
     "href": "a::attr(href)",
     "date": "span::text"
   },
   "detail_selectors": {
-    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
-    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+    "title": "h1, .article-title, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .Custom_UnionStyle, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span"
   },
-  "notes": "生态环境厅(zycms CMS,24页)"
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 2
 }

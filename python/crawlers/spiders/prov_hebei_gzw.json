@@ -19,7 +19,7 @@
   },
   "detail_selectors": {
     "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
     "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
   },
   "notes": "国资委(域名hbsa非gzw)"

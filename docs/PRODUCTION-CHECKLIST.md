@@ -3,6 +3,7 @@
 > 状态：v0.2 demo 完成，距离正式给客户使用还差关键能力
 > 评估时间：2026-06-27
 > 完整度：~40%
+> **最近更新 2026-06-30**：修复文档与代码事实不一致（源数 5→12，tab 数 7→仍 7 但名字对齐）
 
 ---
 
@@ -97,10 +98,10 @@
 ## 📊 当前已有能力（✅）
 
 ### 核心
-- 5 个政策源已 seed 完毕（58 个官方源：国家级 20 / 省级 21 / 市级 11 / 区级 6）
+- 58 个官方源已 seed 入 DB（国家级 20 / 省级 21 / 市级 11 / 区级 6），启用 12 个、实测能出数据 7 个；详见 `docs/CRAWLER-FIX-TODO.md`
 - 爬虫引擎（httpx + Playwright，支持反爬）
 - LLM 摘要（MiniMax M3，可热切换其他模型）
-- 政策库（SQLite，已建表，支持 PATCH/DELETE 编辑）
+- 政策库（SQLite，10 张表，支持 PATCH/DELETE 编辑）
 - 推送通道（mock 已通，可手动触发）
 
 ### MCP
@@ -109,13 +110,14 @@
 - iLink mock 长轮询 + 消息路由
 
 ### 管理后台
-- 7 个 tab：概览 / MCP 用户 / 订阅 / 政策库 / 政策源 / 推送历史 / LLM & 统计
-- 登录鉴权（admin/admin_token）
+- 7 个 tab（Vue 3 SPA）：Dashboard / Subscriptions / Policies / Sources / PushLogs / LLMConfig / AuditLogs
+- 登录鉴权（admin/admin_token，require_admin dependency）
 - 订阅/公司/政策的完整 CRUD
-- 手动推送测试
-- 政策源启用/停用 + 标签筛选
+- 手动推送测试 + 周报推送 + 预览
+- 政策源启用/停用 + 标签筛选 + 批量启用
 - LLM token 消耗统计（按天/按模型/按用途）
 - LLM 配置热切换（不重启）
+- 审计日志（admin 操作留痕，至少 90 天）
 
 ### DevOps
 - GitHub Actions 自动部署到 1Panel

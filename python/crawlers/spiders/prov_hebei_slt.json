@@ -4,23 +4,21 @@
   "category": "省级",
   "region": "河北",
   "department": "水利厅",
-  "list_url": "http://slt.hebei.gov.cn/",
-  "mode": "html",
-  "render_js": false,
-  "frequency": "daily",
-  "request_interval_min": 3,
-  "request_interval_max": 6,
-  "max_pages": 2,
+  "list_url": "http://slt.hebei.gov.cn/a/zc/",
   "list_selectors": {
-    "item": "ul li",
+    "item": "a[href*='/a/']",
     "title": "a::text",
     "href": "a::attr(href)",
     "date": "span::text"
   },
   "detail_selectors": {
-    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
-    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+    "title": "h1, .article-title, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span"
   },
-  "notes": "水利厅(http, https自签证书)"
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 2
 }

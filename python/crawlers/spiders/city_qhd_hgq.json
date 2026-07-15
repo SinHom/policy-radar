@@ -1,0 +1,26 @@
+{
+  "source_id": "city_qhd_hgq",
+  "name": "秦皇岛市海港区",
+  "category": "区级",
+  "region": "秦皇岛",
+  "department": "海港区",
+  "list_url": "https://www.qhdhgq.gov.cn/",
+  "mode": "html",
+  "list_selectors": {
+    "item": "a[href*='zwgk_show.aspx'], a[href*='/content/'], a[href*='/info/']",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": ".list-auto span::text, span::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .list-auto",
+    "content": ".entry, .TRS_Editor, .article-content, .content, .nr, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .list-auto"
+  },
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "notes": "海港区政府·主页直接列政策文(政府文件/政府公告/政策解读等子区)·2026-07-09 验证 | URL 模式:详情 /zwgk_show.aspx?id={id} | 详情页 .entry 为正文容器, .list-auto 含标题+日期+浏览次数+来源"
+}

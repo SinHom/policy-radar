@@ -2,12 +2,24 @@
   "source_id": "nat_ndrc",
   "name": "国家发改委",
   "category": "国家级",
-  "list_url": "http://policy-radar-rsshub:1200/gov/ndrc/xwdt",
-  "mode": "rss",
+  "region": "全国",
+  "department": "发改委",
+  "list_url": "https://www.ndrc.gov.cn/xxgk/zcfb/tz/",
+  "list_selectors": {
+    "item": "ul.u-list li, .list li",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span.date::text, .time::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .title",
+    "content": ".TRS_Editor, .article-content, .content, .article_con, #UCAP-CONTENT, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .time, .article-time"
+  },
   "render_js": false,
   "frequency": "daily",
-  "request_interval_min": 3,
-  "request_interval_max": 5,
+  "request_interval_min": 4,
+  "request_interval_max": 6,
   "max_pages": 1,
-  "notes": "RSSHub /gov/ndrc/xwdt 发改委新闻动态(RSS feed)"
+  "notes": "国家发改委通知页面 (HTML 静态)"
 }

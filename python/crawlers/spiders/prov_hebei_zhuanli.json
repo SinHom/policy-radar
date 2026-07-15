@@ -1,0 +1,26 @@
+{
+  "source_id": "prov_hebei_zhuanli",
+  "name": "河北省知识产权保护中心",
+  "category": "省级",
+  "region": "河北",
+  "department": "省知识产权/版权",
+  "list_url": "http://www.hebippc.com/",
+  "mode": "html",
+  "list_selectors": {
+    "item": "ul li, .list li, table tr, a[href*='content']",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text, .date, td:last-child::text"
+  },
+  "detail_selectors": {
+    "title": "h1, h1#ti, .article-title",
+    "content": ".TRS_Editor, #UCAP-CONTENT, div#UCAP-CONTENT, .article-content, .content, .pages_content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry, article",
+    "date": "meta[name='PubDate'], meta[name='createDate'], .date, span.date, .pub-date, .pages_print"
+  },
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "notes": "河北省知识产权/版权 2026-07-09 新增 | 标签:惠企_知识产权 / 文旅_版权 | 需找正确政策栏目 URL"
+}

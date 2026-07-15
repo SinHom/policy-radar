@@ -19,7 +19,7 @@
   },
   "detail_selectors": {
     "title": "h1",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
     "date": "meta[name=\"PubDate\"]"
   },
   "notes": "河北省工信厅-通知公告，SSR可直抓"

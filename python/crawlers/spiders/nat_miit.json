@@ -11,7 +11,7 @@
   },
   "detail_selectors": {
     "title": "h1, .article-title, h1.title",
-    "content": "div#con, .article-content, .content, article",
+    "content": "#con_con, div#con, .article-content, .content, .w980.center.cmain, article, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
     "date": ".date, span.date"
   },
   "render_js": true,
@@ -19,5 +19,5 @@
   "request_interval_min": 4,
   "request_interval_max": 6,
   "max_pages": 1,
-  "notes": "工信部；JS 渲染，使用 Playwright"
+  "notes": "工信部；2026-07-09 修复:加 #con_con + div.w980.center.cmain (正文+元数据一体容器) | 公告 /zwgk/zcwj/wjfb/gg/, 通知 /zwgk/zcwj/wjfb/tz/"
 }

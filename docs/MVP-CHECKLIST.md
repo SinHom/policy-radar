@@ -1,5 +1,13 @@
 # 第一期 MVP 验收清单
 
+> **状态（2026-06-30 更新）**：MVP 已完成，项目已演进到 v0.2（含 MCP Server 13 Tool、Vue 3 admin 7 tab、周报推送、审计日志等）
+> 本清单保留作为**历史档案**，新工作请看 [`PRODUCTION-CHECKLIST.md`](PRODUCTION-CHECKLIST.md)（上线清单）和 [`CRAWLER-FIX-TODO.md`](CRAWLER-FIX-TODO.md)（爬虫源修复）
+> 真正的端到端验证命令见 `README.md` "端到端测试" 节（用 `python -m scripts.mcp_e2e`，非本文件的 `scripts.e2e`）
+
+---
+
+## Step 0 — 脚手架 + CLAUDE.md
+
 ## Step 0 — 脚手架 + CLAUDE.md
 
 - [x] `policy-radar/` 目录创建

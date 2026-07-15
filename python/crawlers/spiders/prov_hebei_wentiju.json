@@ -1,0 +1,28 @@
+{
+  "source_id": "prov_hebei_wentiju",
+  "name": "河北省文化和旅游厅",
+  "category": "省级",
+  "region": "河北",
+  "department": "河北省文旅厅",
+  "list_url": "https://wlt.hebei.gov.cn/zfxxgk/zfgb/",
+  "mode": "html",
+  "list_selectors": {
+    "item": "ul li, .list li, table tr, a[href*='content']",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text, .date, td:last-child::text"
+  },
+  "detail_selectors": {
+    "title": "h1, h1#ti, .article-title",
+    "content": ".TRS_Editor, #UCAP-CONTENT, div#UCAP-CONTENT, .article-content, .content, .pages_content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry, article",
+    "date": "meta[name='PubDate'], meta[name='createDate'], .date, span.date, .pub-date, .pages_print"
+  },
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "list_url_secondary": "https://wlt.hebei.gov.cn/zfxxgk/zfxxgkml/",
+  "list_url_type": "政府信息公开",
+  "notes": "河北省文化和旅游厅 2026-07-09 新增 | 标签:文旅_政策/文物/广电/非遗 | 现有 1 篇命中, 需扩"
+}

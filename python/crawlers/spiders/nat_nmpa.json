@@ -1,0 +1,26 @@
+{
+  "source_id": "nat_nmpa",
+  "name": "国家药品监督管理局",
+  "category": "国家级",
+  "region": "全国",
+  "department": "药监局",
+  "list_url": "https://www.nmpa.gov.cn/xxgk/fgwj/gzwj/gzwjyp/",
+  "mode": "html",
+  "list_selectors": {
+    "item": "ul li, .list li, table tr, a[href*='content'], a[href*='art/']",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text, .date, td:last-child::text"
+  },
+  "detail_selectors": {
+    "title": "h1, h1#ti, .article-title",
+    "content": ".TRS_Editor, #UCAP-CONTENT, div#UCAP-CONTENT, .article-content, .content, .pages_content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry, article",
+    "date": "meta[name='PubDate'], meta[name='createDate'], .date, span.date, .pub-date, .pages_print"
+  },
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "notes": "药监局·药品法规 2026-07-09 新增"
+}

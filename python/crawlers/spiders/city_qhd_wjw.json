@@ -19,8 +19,10 @@
   },
   "detail_selectors": {
     "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
     "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
   },
-  "notes": "秦皇岛市级·卫健委·需从服务器抓取(qhd.gov.cn封锁非大陆IP)"
+  "notes": "2026-07-08 禁用: 死站+JS反爬严, Playwright 0 链接, 全部列表页空白",
+  "disabled_reason": "dead_site",
+  "is_enabled": false
 }

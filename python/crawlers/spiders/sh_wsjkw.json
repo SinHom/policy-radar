@@ -1,0 +1,26 @@
+{
+  "source_id": "sh_wsjkw",
+  "name": "上海市卫健委",
+  "category": "市级",
+  "region": "上海",
+  "department": "卫健委",
+  "list_url": "https://wsjkw.sh.gov.cn/tzgg/",
+  "mode": "html",
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "list_selectors": {
+    "item": "ul li",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article, .info-content, .xxgk_content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+  },
+  "notes": "上海市市级·卫健委·通知公告·需服务器端（封锁非大陆IP） | 修正:sh.gov.cn"
+}

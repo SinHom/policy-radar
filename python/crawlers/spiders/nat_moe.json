@@ -1,0 +1,24 @@
+{
+  "source_id": "nat_moe",
+  "name": "教育部",
+  "category": "国家级",
+  "region": "全国",
+  "department": "教育部",
+  "list_url": "https://www.moe.gov.cn/jyb_xxgk/moe_1777/moe_307/",
+  "list_selectors": {
+    "item": ".moe_list li, ul li",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text"
+  },
+  "detail_selectors": {
+    "title": "h1, #artibodyTitle, .article-title",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date"
+  },
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 1
+}

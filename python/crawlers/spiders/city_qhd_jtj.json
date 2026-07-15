@@ -4,23 +4,23 @@
   "category": "市级",
   "region": "秦皇岛",
   "department": "交通局",
-  "list_url": "http://jtj.qhd.gov.cn/",
+  "list_url": "http://jtj.qhd.gov.cn/home/list?pcode=emNmZw&code=emNmZ183",
   "mode": "html",
-  "render_js": true,
+  "render_js": false,
   "frequency": "daily",
-  "request_interval_min": 5,
-  "request_interval_max": 10,
-  "max_pages": 2,
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 1,
   "list_selectors": {
-    "item": "ul li",
+    "item": "a[href*='/home/details']",
     "title": "a::text",
     "href": "a::attr(href)",
     "date": "span::text"
   },
   "detail_selectors": {
     "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
-    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .nr, .Custom_UnionStyle, .zw_content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span"
   },
-  "notes": "秦皇岛市级·交通局·需从服务器抓取(qhd.gov.cn封锁非大陆IP)"
+  "notes": "2026-07-08 修复: 通知公告→法律法规栏目(pcode=emNmZw&code=emNmZ183), 原ul li 抓到台风新闻和庆祝大会"
 }

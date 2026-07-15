@@ -1,0 +1,24 @@
+{
+  "source_id": "prov_hebei_gov_jd",
+  "name": "河北省政策解读",
+  "category": "省级",
+  "region": "河北",
+  "department": "省政府",
+  "list_url": "https://www.hebei.gov.cn/columns/b4515201-74c2-4866-ba74-70199fee1a67/index.html",
+  "list_selectors": {
+    "item": "li a[href*='/columns/'], a[href*='/content/']",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span.date::text, .time::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .time"
+  },
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 5,
+  "request_interval_max": 8,
+  "max_pages": 1
+}

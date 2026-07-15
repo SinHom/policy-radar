@@ -30,13 +30,23 @@ SSL_CONTEXT.set_ciphers("DEFAULT:@SECLEVEL=0")
 SSL_CONTEXT.check_hostname = False
 SSL_CONTEXT.verify_mode = ssl.CERT_NONE
 
-# 5 种真实桌面 User-Agent 轮换（Chrome / Edge / Firefox / Safari）
+# 5 种真实桌面 User-Agent 轮换（Chrome 136 / Edge / Firefox / Safari）
+# 优化参考.md P3: UA 升级到 Chrome 136, 防 WAF 标记老版本
 USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+]
+
+# 5 种配套的 Sec-Ch-Ua 头（必须与 UA 主版本号一致）
+SEC_CH_UA = [
+    '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
+    '"Chromium";v="135", "Google Chrome";v="135", "Not.A/Brand";v="99"',
+    '',  # Safari 不发 Sec-Ch-Ua
+    '"Chromium";v="136", "Microsoft Edge";v="136", "Not.A/Brand";v="99"',
+    '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
 ]
 
 DEFAULT_USER_AGENT = USER_AGENTS[0]
@@ -63,8 +73,9 @@ class Fetcher:
     def __init__(
         self,
         user_agent: str = DEFAULT_USER_AGENT,
-        request_interval_min: float = 3.0,
-        request_interval_max: float = 5.0,
+        # 优化参考 P4: 默认间隔 3-5s 太短易被 WAF 识别, 提到 4-8s
+        request_interval_min: float = 4.0,
+        request_interval_max: float = 8.0,
         timeout: float = 60.0,
     ):
         self.user_agent = user_agent
@@ -88,12 +99,25 @@ class Fetcher:
 
     async def _fetch_httpx(self, url: str, ua: str = None) -> FetchResult:
         ua = ua or self.user_agent
+        # 优化参考 P3: 完整 Chrome 136 指纹头（防 WAF 标记老版本）
+        # Sec-Ch-Ua 与 UA 主版本号必须一致
+        ua_index = USER_AGENTS.index(ua) if ua in USER_AGENTS else 0
+        sec_ch_ua = SEC_CH_UA[ua_index] if ua_index < len(SEC_CH_UA) else SEC_CH_UA[0]
         headers = {
             "User-Agent": ua,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
             "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
             "Accept-Encoding": "gzip, deflate",
-            "Referer": "https://www.google.com/",  # 部分站看 referer
+            "Referer": "https://www.baidu.com/",  # 政府站通常拒 google referer, baidu 通过率高
+            "Cache-Control": "max-age=0",
+            **({"Sec-Ch-Ua": sec_ch_ua} if sec_ch_ua else {}),
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Upgrade-Insecure-Requests": "1",
         }
         # 容器 IPv6 不可达,强制 IPv4 解析(否则 happy-eyeballs 优先 IPv6 卡 60s)
         # 仅对 HTTP 做 IP 替换;HTTPS 保留域名避免 SNI 不匹配导致 TLS 握手失败
@@ -140,13 +164,22 @@ class Fetcher:
 
     async def _fetch_playwright(self, url: str, ua: str = None) -> FetchResult:
         ua = ua or self.user_agent
+        # 第 9 轮 v5: QHD 域直接用代理 URL (launch proxy 在容器内不生效)
+        _pw_url = url
+        try:
+            from urllib.parse import urlparse as _up3
+            _h3 = _up3(url).hostname or ""
+            if _h3.endswith("qhd.gov.cn") or _h3.endswith("hebei.gov.cn"):
+                import urllib.parse as _u4
+                _pw_url = f"http://172.18.0.4:8888/fetch?url={_u4.quote(url, safe='')}"
+        except Exception:
+            pass
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             try:
                 ctx = await browser.new_context(
                     user_agent=ua,
-                    ignore_https_errors=True,  # 绕过公司代理的 SSL 中断
-                    # 隐藏 webdriver 痕迹
+                    ignore_https_errors=True,
                     extra_http_headers={
                         "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
                     },
@@ -156,15 +189,20 @@ class Fetcher:
                 await page.add_init_script(
                     "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
                 )
-                resp = await page.goto(url, wait_until="commit", timeout=int(self.timeout * 1000))
+                resp = await page.goto(_pw_url, wait_until="commit", timeout=int(self.timeout * 1000))
                 # 等网络空闲但最多 15 秒（避免卡在 networkidle）
                 try:
                     await page.wait_for_load_state("networkidle", timeout=15000)
                 except Exception:
                     pass
+                # 第 9 轮 v6: kjj 等列表里的详情链接出现 (JS 异步渲染)
+                try:
+                    await page.wait_for_selector("a[href*='/home/details']", timeout=10000)
+                except Exception:
+                    pass
                 html = await page.content()
                 status = resp.status if resp else 200
-                final_url = page.url
+                final_url = url  # 第 9 轮 v5: 用原始 URL 让 urljoin 正确
                 return FetchResult(
                     url=url,
                     html=html,

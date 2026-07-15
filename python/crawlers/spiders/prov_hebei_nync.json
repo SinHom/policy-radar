@@ -4,7 +4,7 @@
   "category": "省级",
   "region": "河北",
   "department": "农业农村厅",
-  "list_url": "http://nync.hebei.gov.cn/html/www//tzgg/index.html",
+  "list_url": "http://nync.hebei.gov.cn/html/www//xxgkzl/zhengcfg/index.html",
   "mode": "html",
   "render_js": false,
   "frequency": "daily",
@@ -12,15 +12,15 @@
   "request_interval_max": 6,
   "max_pages": 3,
   "list_selectors": {
-    "item": "ul li",
+    "item": "ul li a, .list a, a[href*='/html/']",
     "title": "a::text",
     "href": "a::attr(href)",
     "date": "span::text"
   },
   "detail_selectors": {
-    "title": "h1",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .zw_content",
-    "date": "meta[name=\"PubDate\"]"
+    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .zw_content, .TRS_PreAppend, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span"
   },
-  "notes": "河北省农业农村厅-通知公告，SSR可直抓。政策文件URL: /html/www//xxgkzl/zhengcfg/index.html"
+  "notes": "2026-07-08 修复: 通知公告 → 政策文件 /html/www//xxgkzl/zhengcfg/index.html; 原tzgg混大量招标采购"
 }

@@ -6,7 +6,7 @@
   "department": "科技厅",
   "list_url": "https://kjt.hebei.gov.cn/hebkjt/ztzllb/cxyycjfb/289019/index.html",
   "mode": "html",
-  "render_js": false,
+  "render_js": true,
   "frequency": "daily",
   "request_interval_min": 3,
   "request_interval_max": 6,
@@ -19,8 +19,8 @@
   },
   "detail_selectors": {
     "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
     "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
   },
-  "notes": "科技厅创新应用场景栏目(有平行栏目可配多个源)"
+  "notes": "科技厅创新应用场景栏目(有平行栏目可配多个源) | 自动修复:render_js=true"
 }

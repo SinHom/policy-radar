@@ -1,0 +1,28 @@
+{
+  "source_id": "nat_mnr",
+  "name": "自然资源部",
+  "category": "国家级",
+  "region": "全国",
+  "department": "自然资源部",
+  "list_url": "https://www.mnr.gov.cn/gk/tzgg/",
+  "mode": "html",
+  "list_selectors": {
+    "item": "ul li, .list li, table tr, a[href*='content'], a[href*='art/']",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text, .date, td:last-child::text"
+  },
+  "detail_selectors": {
+    "title": "h1, h1#ti, .article-title",
+    "content": ".TRS_Editor, #UCAP-CONTENT, div#UCAP-CONTENT, .article-content, .content, .pages_content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry, article",
+    "date": "meta[name='PubDate'], meta[name='createDate'], .date, span.date, .pub-date, .pages_print"
+  },
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "list_url_secondary": "https://gk.mnr.gov.cn/",
+  "list_url_type": "政策",
+  "notes": "自然资源部·通知公告 2026-07-09 新增 | URL 模式:通知 /gk/tzgg/, 政策 https://gk.mnr.gov.cn/, 法规库 https://f.mnr.gov.cn/"
+}

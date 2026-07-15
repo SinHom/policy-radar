@@ -1,0 +1,24 @@
+{
+  "source_id": "nat_mca",
+  "name": "民政部",
+  "category": "国家级",
+  "region": "全国",
+  "department": "民政部",
+  "list_url": "https://www.mca.gov.cn/n152/n165/",
+  "list_selectors": {
+    "item": ".list_tit ul li, ul li",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date"
+  },
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 1
+}

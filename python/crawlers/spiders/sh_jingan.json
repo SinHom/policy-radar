@@ -1,0 +1,26 @@
+{
+  "source_id": "sh_jingan",
+  "name": "静安区",
+  "category": "区级",
+  "region": "上海",
+  "department": "区政府",
+  "list_url": "https://www.jingan.gov.cn/tzgg/",
+  "mode": "html",
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "list_selectors": {
+    "item": "ul li",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article, .info-content, .xxgk_content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+  },
+  "notes": "上海市区级·区政府·通知公告·需服务器端（封锁非大陆IP）"
+}

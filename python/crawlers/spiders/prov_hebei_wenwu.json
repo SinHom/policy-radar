@@ -4,7 +4,7 @@
   "category": "省级",
   "region": "河北",
   "department": "文物局",
-  "list_url": "http://wenwu.hebei.gov.cn/",
+  "list_url": "http://wenwu.hebei.gov.cn/tzgg/",
   "mode": "html",
   "render_js": true,
   "frequency": "daily",
@@ -19,8 +19,8 @@
   },
   "detail_selectors": {
     "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
     "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
   },
-  "notes": "文物局(需验证)"
+  "notes": "文物局(需验证) | 自动修复:首页→通知公告"
 }

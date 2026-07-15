@@ -1,0 +1,27 @@
+{
+  "source_id": "nat_mee",
+  "name": "生态环境部",
+  "category": "国家级",
+  "region": "全国",
+  "department": "生态环境部",
+  "list_url": "https://www.mee.gov.cn/xxgk2018/xxgk/xxgk01/gswj/",
+  "list_url_secondary": "https://www.mee.gov.cn/xxgk2018/xxgk/xxgk01/zfgb/",
+  "secondary_type": "zfbm 规章",
+  "list_selectors": {
+    "item": "table tr td a[href*='t20'], .xxgk_list li, ul li a[href*='t20']",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "td:last-child::text, span::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .con, .content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date"
+  },
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "notes": "生态环境部 2026-07-09 修复: 列表选择器从 .list li 改成 a[href*='t20'] (MEE 文章 URL 模式), 加 xxgk01 子路径, 避免列表页误识别为详情"
+}

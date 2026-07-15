@@ -1,0 +1,26 @@
+{
+  "source_id": "city_qhd_zyghj_tzgg",
+  "name": "秦皇岛市自然资源局·tzgg",
+  "category": "市级",
+  "region": "秦皇岛",
+  "department": "自然资源局",
+  "list_url": "http://zyghj.qhd.gov.cn/tzgg/",
+  "mode": "html",
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 5,
+  "request_interval_max": 10,
+  "max_pages": 2,
+  "list_selectors": {
+    "item": "ul li",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+  },
+  "notes": "自动生成·tzgg·基于city_qhd_zyghj"
+}

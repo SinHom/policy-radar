@@ -37,9 +37,11 @@ cd policy-radar
 
 ```bash
 cp .env.example .env
-# 编辑 .env，填入真实的 MINIMAX_API_KEY
+# 编辑 .env，填入真实的 MINIMAX_API_KEY（119 元全模态套餐同时支持 M3 文本 + VL-01 视觉）
 nano .env
 ```
+
+> **VLM（正文图片 caption）**：复用同一个 `MINIMAX_API_KEY`。spider 抓到正文配图时调 MiniMax-VL-01 生成中文 caption 注入 markdown。`MINIMAX_VLM_MODEL` 默认 `MiniMax-VL-01`（已在 `.env.example`）。未配 `MINIMAX_API_KEY` 时 caption 流程静默降级（保留原图无 caption，不影响抓取）。详见 `docs/HEBEI-QHD-CRAWL-TECHNICAL.md`「正文图片抓取」。
 
 ### 4. 启动
 
@@ -84,6 +86,7 @@ start http://localhost:8000
 
 ### SQLite + Docker volume
 必须把 `data/` 挂载到 host，否则容器重启数据丢。当前 docker-compose.yml 已挂载。
+**重要**：`data/exports/policies/` 是 host 容器共享挂载点，RSSHub 端点的 .md 从这里读。
 
 ### Playwright 在 Docker 中需要系统依赖
 Dockerfile 用 `python:3.11-slim`（debian），已 apt-get install 所有依赖。
@@ -100,3 +103,42 @@ environment:
 政府网站对云服务器 IP 段可能也有限制。如反复失败：
 - 加代理（HTTP_PROXY 环境变量）
 - 减少爬取频率（`CRAWLER_REQUEST_INTERVAL_MIN=10`）
+
+## 定时任务（v0.3 新增）
+
+```bash
+# 1. 服务器 5am cron（爬取+导出）
+# 文件: /etc/cron.d/policy-radar-5am
+# 内容: 0 5 * * * root /opt/policy-radar/cron_5am.sh
+# 脚本流程: docker exec policy-radar-app python -m crawlers --all
+#        → backfill_content → export_policies_md
+#        → docker restart policy-radar-app（加载新代码）
+
+# 2. 已有 8/14/20 点 cron（不变）
+# 文件: /etc/cron.d/policy-radar
+```
+
+## RSSHub 端点验证
+
+```bash
+# 服务器启动后验证（确保 8000 端口可访问）
+curl -s http://43.155.161.54:8000/policy-radar/feed?limit=3 | head -30
+curl -s http://43.155.161.54:8000/policy-radar/markdown/1 | head -20
+curl -s http://43.155.161.54:8000/policy-radar/opml | head -10
+```
+
+## Windows 本地每日同步
+
+```powershell
+# 1. 配置 SSH 免密（一次性，详见 ~/.claude/.../memory/policy-radar-ssh-and-waf.md）
+# 2. 复制 sync_from_server.ps1 到 OneDrive 根目录
+# 3. 注册 Windows Task Scheduler 任务：
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' `
+  -Argument '-ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\Users\Fangyi\OneDrive\文档\Claude\政策收集总结\sync_from_server.ps1"'
+$trigger = New-ScheduledTaskTrigger -Daily -At '06:00'
+Register-ScheduledTask -TaskName 'PolicyRadar-DailySync' `
+  -Action $action -Trigger $trigger
+
+# 验证
+Get-ScheduledTask -TaskName 'PolicyRadar-DailySync'
+```

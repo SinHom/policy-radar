@@ -1,0 +1,24 @@
+{
+  "source_id": "city_qhd_scjgj",
+  "name": "秦皇岛市市场监管局",
+  "category": "市级",
+  "region": "秦皇岛",
+  "department": "市场监管局",
+  "list_url": "http://scjgj.qhd.gov.cn/home/list/?code=NjE1&pcode=MDE3NjMxOTgyNTE2",
+  "list_selectors": {
+    "item": "a[href*='/home/details']",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .nr, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span"
+  },
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 1
+}

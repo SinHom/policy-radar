@@ -1,0 +1,26 @@
+{
+  "source_id": "city_qhd_wenlvju",
+  "name": "秦皇岛市旅游和文化广电局",
+  "category": "市级",
+  "region": "秦皇岛",
+  "department": "秦皇岛市文旅局",
+  "list_url": "https://wglj.qhd.gov.cn/home/list/?code=NjEz&pcode=MDE3NjMxOTgyNTE2",
+  "mode": "html",
+  "list_selectors": {
+    "item": "ul li, .list li, table tr, a[href*='content']",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text, .date, td:last-child::text"
+  },
+  "detail_selectors": {
+    "title": "h1, h1#ti, .article-title",
+    "content": ".TRS_Editor, #UCAP-CONTENT, div#UCAP-CONTENT, .article-content, .content, .pages_content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry, article",
+    "date": "meta[name='PubDate'], meta[name='createDate'], .date, span.date, .pub-date, .pages_print"
+  },
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "notes": "秦皇岛市文旅局 2026-07-09 新增 | 现有 other 目录下 10 篇命中, 需建正式源"
+}

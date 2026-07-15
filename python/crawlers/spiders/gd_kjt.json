@@ -11,7 +11,7 @@
   },
   "detail_selectors": {
     "title": "h1.article-title, h1.title, h1",
-    "content": "div.article-content, .article-content, .content, article",
+    "content": "div.article-content, .article-content, .content, article, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
     "date": ".pub-date, .date"
   },
   "render_js": false,

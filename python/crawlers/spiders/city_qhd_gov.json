@@ -4,7 +4,9 @@
   "category": "市级",
   "region": "秦皇岛",
   "department": "秦皇岛市人民政府",
-  "list_url": "http://www.qhd.gov.cn/",
+  "list_url": "http://www.qhd.gov.cn/front_pcsec.do?tid=47B8DD1E0D4039780B021F947848EFE2&p=1",
+  "list_url_secondary": "http://www.qhd.gov.cn/front_pcsec_zcjd.do?tid=60CC571538AC7C6A009A548656C2C9E2&p=1",
+  "list_url_type": "通知公告",
   "mode": "html",
   "render_js": true,
   "frequency": "daily",
@@ -12,15 +14,15 @@
   "request_interval_max": 10,
   "max_pages": 2,
   "list_selectors": {
-    "item": "ul li",
+    "item": "a[href*='front_pcthi.do'], a[href*='front_pcthird']",
     "title": "a::text",
     "href": "a::attr(href)",
     "date": "span::text"
   },
   "detail_selectors": {
     "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
-    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article, .wzy_wzzw, .gxt-xilan-con, .entry, .gxt-xilan, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], meta[name=\"createDate\"], .date, .info span, .pub-date, .article-date"
   },
-  "notes": "秦皇岛市级·秦皇岛市人民政府·需从服务器抓取(qhd.gov.cn封锁非大陆IP)"
+  "notes": "秦皇岛市级·秦皇岛市人民政府·2026-07-09 修复:原 /tzgg/ 是 404,改用 front_pcsec.do?tid=... | URL 模式:列表 front_pcsec.do?tid=XXX&p=N, 详情 front_pcthi.do?uuid=XXX | list_url_secondary 是政策解读栏目"
 }

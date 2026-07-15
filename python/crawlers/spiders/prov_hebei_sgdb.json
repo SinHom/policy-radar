@@ -4,23 +4,23 @@
   "category": "省级",
   "region": "河北",
   "department": "国动办",
-  "list_url": "https://sgdb.hebei.gov.cn/category/list.html?id=19",
+  "list_url": "https://sgdb.hebei.gov.cn/zcfg/",
   "mode": "html",
   "render_js": false,
   "frequency": "daily",
   "request_interval_min": 3,
   "request_interval_max": 6,
-  "max_pages": 1,
+  "max_pages": 2,
   "list_selectors": {
-    "item": "ul li",
+    "item": "a[href*='/system/'], a[href*='/zcfg/']",
     "title": "a::text",
     "href": "a::attr(href)",
     "date": "span::text"
   },
   "detail_selectors": {
     "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
     "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
   },
-  "notes": "国动办(域名sgdb非gdb)"
+  "notes": "2026-07-08 探测 Network unreachable, 推测: /zcfg/(政策法规) 兜底; 原 /category/list.html?id=19 命中政府信息公开页"
 }

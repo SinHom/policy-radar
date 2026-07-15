@@ -1,0 +1,26 @@
+{
+  "source_id": "prov_hebei_swj_jg_zcjd",
+  "name": "河北省机关事务管理局·zcjd",
+  "category": "省级",
+  "region": "河北",
+  "department": "机关事务管理局",
+  "list_url": "https://swj.hebei.gov.cn/zcjd/",
+  "mode": "html",
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 1,
+  "list_selectors": {
+    "item": "ul li",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+  },
+  "notes": "自动生成·zcjd·基于prov_hebei_swj_jg"
+}

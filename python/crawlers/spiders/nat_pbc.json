@@ -1,0 +1,28 @@
+{
+  "source_id": "nat_pbc",
+  "name": "中国人民银行",
+  "category": "国家级",
+  "region": "全国",
+  "department": "央行",
+  "list_url": "https://www.pbc.gov.cn/rmyh/105145/index.html",
+  "mode": "html",
+  "list_selectors": {
+    "item": "ul li, .list li, table tr, a[href*='content'], a[href*='art/']",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text, .date, td:last-child::text"
+  },
+  "detail_selectors": {
+    "title": "h1, h1#ti, .article-title",
+    "content": ".TRS_Editor, #UCAP-CONTENT, div#UCAP-CONTENT, .article-content, .content, .pages_content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry, article",
+    "date": "meta[name='PubDate'], meta[name='createDate'], .date, span.date, .pub-date, .pages_print"
+  },
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "list_url_secondary": "https://www.pbc.gov.cn/rmyh/3963412/index.html",
+  "list_url_type": "政策解读",
+  "notes": "央行·货币政策 2026-07-09 新增 | URL 模式:货币政策 /rmyh/105145/, 信贷 /xindaishichangsi/5443861/, 政策解读 /rmyh/3963412/"
+}

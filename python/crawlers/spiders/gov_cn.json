@@ -11,7 +11,7 @@
   },
   "detail_selectors": {
     "title": "h1#ti, h1.article-title, h1.title, h1",
-    "content": "div#content, div.article-content, .content, article",
+    "content": "div#content, div.article-content, .content, article, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
     "date": ".pub-date, .date, .pages_print span"
   },
   "render_js": false,

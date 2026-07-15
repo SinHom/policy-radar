@@ -6,7 +6,7 @@
   "department": "河北省人民政府",
   "list_url": "https://www.hebei.gov.cn/columns/49f13cc2-db03-4d0c-b4fe-2f3f659d3b6e/index.html",
   "mode": "html",
-  "render_js": false,
+  "render_js": true,
   "frequency": "daily",
   "request_interval_min": 3,
   "request_interval_max": 6,
@@ -19,8 +19,8 @@
   },
   "detail_selectors": {
     "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
     "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
   },
-  "notes": "省政府文件(政府令/冀政字/冀政办字),20条/页"
+  "notes": "省政府文件(政府令/冀政字/冀政办字),20条/页 | 自动修复:render_js=true"
 }

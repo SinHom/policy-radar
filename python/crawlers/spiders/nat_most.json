@@ -11,10 +11,10 @@
   },
   "detail_selectors": {
     "title": "h1, .article-title",
-    "content": "div.article-content, .TRS_Editor, .content",
+    "content": "div#UCAP-CONTENT, #UCAP-CONTENT-FORPRINT, div.article-content, .TRS_Editor, .content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
     "date": "span.date, .date"
   },
-  "render_js": false,
+  "render_js": true,
   "frequency": "daily",
   "request_interval_min": 4,
   "request_interval_max": 6,

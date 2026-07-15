@@ -1,0 +1,26 @@
+{
+  "source_id": "national_mof",
+  "name": "财政部",
+  "list_url": "http://www.mof.gov.cn/zhengwuxinxi/zhengcefabu/",
+  "category": "国家级",
+  "region": "全国",
+  "department": "财政部",
+  "mode": "html",
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "list_selectors": {
+    "item": "ul li",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+  },
+  "notes": "自动生成·国家级·修复零数据源"
+}

@@ -4,23 +4,21 @@
   "category": "市级",
   "region": "秦皇岛",
   "department": "财政局",
-  "list_url": "http://czj.qhd.gov.cn/",
-  "mode": "html",
-  "render_js": true,
-  "frequency": "daily",
-  "request_interval_min": 5,
-  "request_interval_max": 10,
-  "max_pages": 2,
+  "list_url": "http://czj.qhd.gov.cn/home/list/?code=NTk5&pcode=MDE3NjMxOTgyNTE2",
   "list_selectors": {
-    "item": "ul li",
+    "item": "a[href*='/home/details']",
     "title": "a::text",
     "href": "a::attr(href)",
     "date": "span::text"
   },
   "detail_selectors": {
-    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
-    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+    "title": "h1, .article-title, .bt",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .nr, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span"
   },
-  "notes": "秦皇岛市级·财政局·需从服务器抓取(qhd.gov.cn封锁非大陆IP)"
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 1
 }

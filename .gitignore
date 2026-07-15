@@ -28,6 +28,8 @@ data/pdfs/
 data/pushed_messages.log
 data/screenshots/
 data/debug_html/
+data/policies/
+data/exports/
 
 # Playwright
 playwright/.cache/

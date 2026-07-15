@@ -1,0 +1,24 @@
+{
+  "source_id": "nat_mot",
+  "name": "交通运输部",
+  "category": "国家级",
+  "region": "全国",
+  "department": "交通运输部",
+  "list_url": "https://www.mot.gov.cn/zhengce/",
+  "list_selectors": {
+    "item": ".list li, ul li",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text, .date::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .con, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date"
+  },
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 1
+}

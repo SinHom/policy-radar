@@ -50,6 +50,81 @@ def safe_filename(s: str, max_len: int = 50) -> str:
     return s[:max_len]
 
 
+# ---- 内容质量过滤 ----
+# 垃圾正文特征（WAF 拦截、导航页、空壳页面等）
+_GARBAGE_PATTERNS = [
+    "403 Forbidden", "404 Not Found", "502 Bad Gateway",
+    "云防护", "拒绝执行", "服务器拒绝执行该请求",
+    "您访问的链接即将离开",
+    # 2026-07-09 优化: 移除以下过严规则,避免 nav 误判
+    # "网站地图", "站点地图", "sitemap",
+    # "我要留言", "留言须知",
+]
+# 2026-07-09 优化: 放宽至 50 字符 (原 100)
+_MIN_CONTENT_LENGTH = 50
+_MIN_CHINESE_RATIO = 0.10  # 10% 中文
+
+# 第 9 轮: 政策标题白名单, 命中可进一步降低阈值
+_POLICY_TITLE_KEYWORDS = [
+    "通知", "办法", "意见", "条例", "规定", "细则", "方案", "决定",
+    "命令", "公告", "标准", "规范", "指南", "规则", "准则", "规程",
+    "制度", "条文", "复函", "批复", "通报", "请示", "公告", "公示",
+]
+
+# 2026-07-09: 无价值标题黑名单（命中直接跳过）
+_TITLE_JUNK_PATTERNS = [
+    "邮箱", "通讯录", "联系", "联系方式",
+    "询价函", "询价公告", "询价通知", "比选公告", "竞争性磋商", "磋商公告",
+    "备案", "统计表", "汇总表", "情况统计",
+    "目录", "索引", "列表", "清单", "总目录",
+    "网页", "首页", "无标题", "入口", "导航",
+    "检索", "搜索",
+    "测试", "demo", "DEMO",
+    "空标题",
+    "无内容", "空白", "占位",
+    "违规举报", "我要举报",
+    "行政许可", "办事指南", "办事流程", "服务指南", "服务事项",
+    "信用", "红黑名单",
+    "年报", "年报数据", "统计公报", "统计报告",
+]
+
+# 2026-07-09: 无价值内容模式
+_CONTENT_JUNK_PATTERNS = [
+    "请输入关键字", "请输入关键词", "请输入搜索词", "请输入您要搜索",
+    "请选择", "请选择地区", "请选择分类",
+    "没有找到", "未找到相关", "无相关内容", "没有匹配",
+    "登录后才能", "请先登录", "请登录后",
+    "政务服务投诉", "国务院客户端", "扫码下载", "微信公众号",
+    "手机版", "电脑版", "English",
+]
+
+
+def _is_garbage_content(text: str) -> bool:
+    """检测正文是否是垃圾内容（WAF/导航/留言等）。"""
+    text_lower = text.lower()
+    for pat in _GARBAGE_PATTERNS:
+        if pat.lower() in text_lower:
+            return True
+    return False
+
+
+def _is_quality_content(text: str, title: str = "") -> bool:
+    """正文是否达到质量标准：够长、中文占比够高、无垃圾特征。"""
+    if not text or not text.strip():
+        return False
+    stripped = text.strip()
+    if len(stripped) < _MIN_CONTENT_LENGTH:
+        return False
+    if _is_garbage_content(stripped):
+        return False
+    # 中文字符占比
+    chinese_chars = sum(1 for c in stripped if '一' <= c <= '鿿')
+    ratio = chinese_chars / len(stripped) if stripped else 0
+    if ratio < _MIN_CHINESE_RATIO:
+        return False
+    return True
+
+
 # ---- HTML → MD ----
 def html_to_md(html: Optional[str]) -> str:
     """将 HTML 原文转为 Markdown，失败则返回纯文本。"""
@@ -66,6 +141,91 @@ def html_to_md(html: Optional[str]) -> str:
         return BeautifulSoup(html, "lxml").get_text("\n\n", strip=True)
     except Exception:
         return html
+
+
+# ---- 图片提取 ----
+def extract_images(html: str, out_dir: Path, policy_id: int) -> list[tuple[str, str]]:
+    """从 HTML 提取 base64/data URI 图片，保存到 out_dir，返回 [(md_image_text, abs_path), ...]。
+
+    返回的 md_image_text 形如 ![alt](images/xxx.png)
+    abs_path 是本地绝对路径（用于 markdown 引用）
+    """
+    if not html:
+        return []
+    import base64
+    import re
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "lxml")
+    imgs = soup.find_all("img")
+    if not imgs:
+        return []
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    results = []
+    seen_data = set()  # 防重复
+
+    for idx, img in enumerate(imgs):
+        src = img.get("src", "")
+        alt = img.get("alt", "") or f"image_{idx}"
+        if not src:
+            continue
+
+        # 跳过外链（http/https）
+        if src.startswith("http://") or src.startswith("https://"):
+            # 不下载外部图片，只在 md 里加链接
+            results.append((f"![{alt}]({src})\n", ""))
+            continue
+
+        # 处理 data: URI
+        if src.startswith("data:"):
+            m = re.match(r"data:image/(\w+);base64,(.+)", src)
+            if not m:
+                continue
+            ext = m.group(1)
+            if ext not in ("png", "jpg", "jpeg", "gif", "webp", "svg"):
+                ext = "png"
+            b64 = m.group(2)
+
+            # 去重: 同样的 base64 不重复保存
+            h = hash(b64[:200])
+            if h in seen_data:
+                continue
+            seen_data.add(h)
+
+            try:
+                img_bytes = base64.b64decode(b64)
+            except Exception:
+                continue
+
+            # 文件名
+            safe_alt = re.sub(r'[\\/:*?"<>|]', '_', alt)[:30].strip() or f"img_{idx}"
+            filename = f"p{policy_id}_{idx:03d}_{safe_alt}.{ext}"
+            img_path = out_dir / filename
+            try:
+                img_path.write_bytes(img_bytes)
+                # md 引用相对路径 (相对 .md 所在目录)
+                md_ref = f"images/{filename}"
+                results.append((f"![{alt}]({md_ref})\n", str(img_path)))
+            except Exception as e:
+                logger.debug("保存图片失败: %s", e)
+                continue
+
+    return results
+
+
+def is_image_heavy(html: str, text_threshold: int = 100) -> bool:
+    """判断内容是否主要是图片（文字极少 + 多个 img）。"""
+    if not html:
+        return False
+    import re
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html, "lxml")
+    text = soup.get_text(strip=True)
+    n_imgs = len(soup.find_all("img"))
+    # 文字 < 阈值 + 有图片 = 图片类
+    # 一图读懂类的"一图+长标题"也算
+    return n_imgs >= 1 and len(text) < text_threshold
 
 
 # ---- 核心导出逻辑 ----
@@ -125,6 +285,8 @@ async def export(
 
     exported = 0
     skipped_empty = 0
+    skipped_garbage = 0
+    skipped_thin = 0
     errors = 0
     out_path = Path(output_dir)
 
@@ -141,12 +303,69 @@ async def export(
             title_short = safe_filename(pol.title or "untitled")
             filename = f"{pub_date}_{src.source_id}_{title_short}.md"
 
+            # 2026-07-09 优化: 跳过明显是"首页/无标题/栏目页"等非具体政策文
+            title_norm = (pol.title or "").strip()
+            if title_norm in ('首页', '无标题', '主页', 'index', 'Index', '', '无', '首页/Index', '邮箱'):
+                skipped_garbage += 1
+                logger.debug("[SKIP] 首页/无标题/邮箱: %s | %s", src.source_id, pol.url)
+                continue
+            # URL 是 list/index 类的也跳过
+            if pol.url and re.search(r'/(index|list|main|home|portal)[._/]?(\d*\.html?)?$', pol.url, re.I):
+                skipped_garbage += 1
+                logger.debug("[SKIP] 列表页 URL: %s | %s", src.source_id, pol.url)
+                continue
+            # 2026-07-09: 标题黑名单 (邮箱/询价函/统计表/通讯录/索引/目录 等)
+            # 优化: 不限长度,只要标题含这些关键字就跳过
+            is_junk_title = False
+            for pat in _TITLE_JUNK_PATTERNS:
+                if pat in title_norm:
+                    is_junk_title = True
+                    logger.debug("[SKIP] 垃圾标题 %s: %s", pat, title_norm[:50])
+                    break
+            if is_junk_title:
+                skipped_garbage += 1
+                continue
+
             # 转换内容
             md_content = html_to_md(pol.raw_content)
             if not md_content.strip():
                 skipped_empty += 1
-                logger.debug("跳过空内容: %s", pol.title)
                 continue
+
+            # 质量过滤
+            if not _is_quality_content(md_content):
+                if len(md_content.strip()) < _MIN_CONTENT_LENGTH:
+                    skipped_thin += 1
+                else:
+                    skipped_garbage += 1
+                continue
+
+            # 2026-07-09: 内容垃圾模式过滤
+            is_content_junk = False
+            for pat in _CONTENT_JUNK_PATTERNS:
+                if pat in md_content and len(md_content) < 500:
+                    is_content_junk = True
+                    logger.debug("[SKIP] 内容垃圾 %s: %s", pat, title_norm)
+                    break
+            if is_content_junk:
+                skipped_garbage += 1
+                continue
+
+            # 2026-07-09: 图片类文档处理 - 提取图片到子目录
+            image_md_addition = ""
+            if is_image_heavy(pol.raw_content, text_threshold=500):
+                # 图片多 + 文字少 → 提取图片到 images/ 子目录
+                img_dir = (out_path / reg / dep / str(year) / "images")
+                extracted = extract_images(pol.raw_content, img_dir, pol.id)
+                if extracted:
+                    img_texts = [t[0] for t in extracted]
+                    image_md_addition = "\n\n## 配图\n\n" + "".join(img_texts)
+                    logger.info("提取 %d 张图片: %s", len(extracted), title_norm[:30])
+                else:
+                    # raw_content 中没有 <img> 标签 (spider 抓的是外部图片 URL)
+                    # 添加 "需访问原文" 提示
+                    image_md_addition = '\n\n> ⚠ **本文为图片解读类文档**（如 一图读懂 / 图解 等）\n> 原始 raw_content 中未含图片数据（spider 仅抓到文字 + nav）\n> 实际图表/配图需访问原文链接查看。\n> 后续可考虑用 Playwright 重抓 + 截图 + tesseract OCR 提取文字。\n'
+                    logger.info("图片类文档无内嵌图片: %s", title_norm[:30])
 
             # 构建 MD 全文
             url_line = f"- 原文链接：{pol.url}" if pol.url else ""
@@ -160,7 +379,7 @@ async def export(
 
 ---
 
-{md_content}
+{md_content}{image_md_addition}
 """
 
             if dry_run:
@@ -179,8 +398,15 @@ async def export(
             errors += 1
             logger.error("导出失败 [%s]: %s", getattr(pol, 'title', '?')[:50], e)
 
-    stats = {"total": total, "exported": exported, "skipped_empty": skipped_empty, "errors": errors}
-    logger.info("导出完成: total=%d exported=%d skipped=%d errors=%d", total, exported, skipped_empty, errors)
+    stats = {
+        "total": total, "exported": exported,
+        "skipped_empty": skipped_empty, "skipped_thin": skipped_thin,
+        "skipped_garbage": skipped_garbage, "errors": errors,
+    }
+    logger.info(
+        "导出完成: total=%d exported=%d skipped_empty=%d skipped_thin=%d skipped_garbage=%d errors=%d",
+        total, exported, skipped_empty, skipped_thin, skipped_garbage, errors,
+    )
     return stats
 
 

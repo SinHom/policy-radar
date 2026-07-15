@@ -1,0 +1,24 @@
+{
+  "source_id": "city_qhd_czj_gk",
+  "name": "秦皇岛市财政局(信息公开)",
+  "category": "市级",
+  "region": "秦皇岛",
+  "department": "财政局",
+  "list_url": "http://www.qhd.gov.cn:81/list.jsp?deptid=132&code=340",
+  "list_selectors": {
+    "item": "a[href*='info/']",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "td::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .title, .bt",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .content, .article-content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .time"
+  },
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 1
+}

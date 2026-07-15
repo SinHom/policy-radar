@@ -20,7 +20,7 @@
   },
   "detail_selectors": {
     "title": "h1, .article-title",
-    "content": ".article-content, article p, main p",
+    "content": ".article-content, article p, main p, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
     "date": ".article-date, .date"
   },
   "notes": "河北省政府公报栏目(最权威正式政策原文)"

@@ -1,6 +1,6 @@
 # 政策雷达 (Policy Radar) — Claude 阅读入口
 
-> **状态：🟢 活跃** | 最后更新：2026-07-13 | 版本 v0.3 + Phase A/B(本地分支 `feat/policy-advisor-phase-ab`，未部署)
+> **状态：🟢 活跃** | 最后更新：2026-07-15 | 版本 v0.3 + Phase A/B(本地分支 `feat/policy-advisor-phase-ab`，9 spider+tagger 未部署) + 图片抓取+VLM caption(commit `afa2079` 已部署)
 > 13 MCP Tools · ~40 REST 端点 · 10 张表 · 132 政策源（本地 97 + 上海 52，有数据 58，721 条政策，29% 正文覆盖）
 > 服务器：腾讯云 `43.155.161.54`，每日 8/14/20 点定时爬取+回填+导出
 > 导出：`data/exports/policies/`（208 .md），`data/exports/feeds/`（OPML + JSON）
@@ -81,13 +81,14 @@ policy-radar/
   - **?tag= 过滤重排**：从 SQL 层（按 PolicySource.tags 源级）改为 item 构建后 Python 层按 merged tags AND 过滤，使 `?tag=文旅_规划` 等标题级标签可过滤
   - `parse_tags` 加 `isinstance(result, list)` 防护（防 json.loads 返回 str/dict 时全端点 500）
   - 待服务器：A5 city_qhd_lyj(probe code+WAF) / A12 验证已有 11 信源 / A13 全量抓取导出
-- ✅ **正文图片抓取 + VLM caption 增强**（2026-07-14，本地分支，**未部署**）：
+- ✅ **正文图片抓取 + VLM caption 增强**（2026-07-15，commit `afa2079` + 服务器 rebuild 持久化）：
   - `python/crawlers/parser.py` 新增 `extract_content_html(soup, selector, base_url, caption_images=True)`：取代 `extract_by_selector` 抓正文。返回**带 `<img>` 的 HTML 片段**（非纯文本），补全相对 src 为绝对 URL，删 script/style/nav/footer
   - `python/ai/vlm_client.py` 新增 `VLMClient`：调 MiniMax-VL-01 via `https://api.minimaxi.com/anthropic/v1/messages`（Anthropic Messages API，**非** OpenAI 兼容端点）。`caption_image_bytes(img_bytes, media_type) -> str`，失败降级返回空串
   - `extract_content_html` 内 `_caption_images(node, base_url)`：下载正文每张绝对 URL 图（带 Referer 绕 gov 防盗链，限 5 张/页）-> VLM 生成中文 caption -> 写 `<img alt=caption>`。markdownify 后成 `![caption](url)`，caption 进 chunk 文本被向量检索
   - 复用 `MINIMAX_API_KEY`（119 元全模态套餐含 VL），新增 `MINIMAX_VLM_MODEL`（默认 `MiniMax-VL-01`）+ 可选 `MINIMAX_VLM_BASE_URL`
   - `engine.py` 第 206 行已改调 `extract_content_html`。raw_content 现存带 img + caption 的 HTML（向后兼容：旧纯文本数据不受影响，导出 markdownify 自动转 `![](url)`）
-  - **WeKnora 集成**：上传这种 md 到配齐 `embedding_model_id`+`summary_model_id`+`chunking_config` 的 KB，caption 被向量化，检索"国徽"/"文化和旅游部官网"可命中图片内容
+  - **部署**：commit `afa2079` 在 `feat/policy-advisor-phase-ab` 分支（已 push origin）。服务器 `git checkout origin/feat/...-- <3 files>` + `docker compose build app` + `up -d`（force-recreate，env 注入 `MINIMAX_VLM_MODEL`）。服务器 git 仍在 main 工作树，3 文件 checkout 到 feat 版本打包进 image
+  - **WeKnora 集成**：上传这种 md 到配齐 `embedding_model_id`+`summary_model_id`+`chunking_config` 的 KB，caption 被向量化，检索"国徽"/"文化和旅游部官网"可命中图片内容（详见 [[weknora-phase-c-verification]] 记忆）
 
 ---
 

@@ -1,0 +1,26 @@
+{
+  "source_id": "nat_gongbao",
+  "name": "国务院公报",
+  "category": "国家级",
+  "region": "全国",
+  "department": "国务院办公厅",
+  "list_url": "https://www.gov.cn/gongbao/",
+  "mode": "html",
+  "list_selectors": {
+    "item": "a[href*='gongbao/'][href*='issue_']",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text"
+  },
+  "detail_selectors": {
+    "title": "h1, h1#ti, .article-title",
+    "content": "div#UCAP-CONTENT, #UCAP-CONTENT-FORPRINT, div#content, div.article-content, .content, article, .pages_content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": ".pages_print, .pub-date, span.date"
+  },
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 3,
+  "request_interval_max": 5,
+  "max_pages": 2,
+  "notes": "国务院公报 2026-07-09 新增 | URL 模式:issue /gongbao/{YYYY}/issue_{id}/,文章 /gongbao/{YYYY}/issue_{id}/{YYYYMM}/content_{id}.html | 单期 10+ 篇高质量官方文件,复用 gov.cn 详情选择器"
+}

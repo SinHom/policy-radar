@@ -1,18 +1,20 @@
 # 政策雷达 (Policy Radar) · MCP Server
 
-> **v0.2.0** · 13 个 MCP Tools · 7 张表 · 17 API 端点
+> **v0.2.0** · 13 个 MCP Tools · 10 张表 · ~40 REST 端点
 > 让任何 AI 工具（Claude / Cursor / 飞书 / 企微 / 小龙虾）通过 MCP 协议接入政策雷达
+> 注：版本号来源不一致 — `python/app/main.py` 报 v0.1.0、`frontend/admin.html` 报 v0.3.0，以本文档为准待统一
 
 ---
 
 ## 核心能力
 
-- 🕷️ **政策爬虫**：3 个源（深圳工信局 / 广东科技厅 / 国务院），Playwright + httpx
+- 🕷️ **政策爬虫**：97 个源 seed 进 DB，有数据 60 个，500 条政策（98% 正文覆盖）；含通知公告/政策解读/公示三类子源；Playwright + httpx；详见 `docs/CRAWLER-FIX-TODO.md`
+- 🖼️ **正文图片抓取 + VLM caption**：正文 `<img>` 保留进 `raw_content`（非纯文本），相对 src 补全为绝对 URL；MiniMax-VL-01 给每张图生成中文 caption 写入 `![caption](url)`，灌入 WeKnora 后图片内容可向量检索。详见 `docs/HEBEI-QHD-CRAWL-TECHNICAL.md`「正文图片抓取」
 - 🤖 **AI 摘要**：MiniMax M3，自动提取政策类型/截止/金额/条件/关键词
 - 🎯 **匹配引擎**：规则预筛（类型+地区+关键词）+ 可选 LLM 深度评分
 - 🔔 **推送通道**：Webhook 推送（飞书/企微/通用 JSON），HMAC-SHA256 签名
 - 🛠️ **MCP Server**：13 个 Tool，stdio（给 Claude Desktop）+ SSE（给远程 AI 工具）
-- 📊 **管理后台**：Vue 3 SPA（5 tab：Dashboard/Subscriptions/Policies/Sources/Logs）
+- 📊 **管理后台**：Vue 3 SPA（7 tab：Dashboard/Subscriptions/Policies/Sources/PushLogs/LLMConfig/AuditLogs）
 - 🔁 **抗失败**：3 次指数退避重试 + 死信表 + scheduler 周期重发
 - 📈 **可观测性**：JSON 结构化日志 + Prometheus 指标 + 健康检查
 
@@ -67,7 +69,7 @@ start http://localhost:8000/admin         # Vue 3 管理后台
 
 ---
 
-## API 端点
+## API 端点（高频 + admin 摘要，完整 ~40 端点见 `python/app/api/`）
 
 | 路径 | 说明 |
 |------|------|
@@ -76,19 +78,26 @@ start http://localhost:8000/admin         # Vue 3 管理后台
 | `/health` | 健康检查 + 统计 |
 | `/metrics` | Prometheus 指标 |
 | `/version` | 服务版本 |
+| `/api/auth/login` | admin 登录（限流 5 次/分/IP） |
+| `/api/auth/verify`, `/logout`, `/me` | token 验证/登出/当前用户 |
 | `/api/sources` | 政策源列表 |
 | `/api/crawl/all` | 爬取所有源 |
+| `/api/crawl/{source_id}` | 爬取单源 |
 | `/api/policies` | 政策列表 |
+| `/api/policies/search` | 政策搜索 |
 | `/api/policies/{id}/summarize` | 摘要 |
 | `/api/policies/{id}/push` | 推送 |
-| `/api/push-logs` | 推送历史 |
-| `/api/dashboard/funnel` | 漏斗统计 |
-| `/api/dashboard/companies` | 企业汇总 |
-| `/api/push-history` | 推送历史查询 |
+| `/api/policies/{id}/content` | 政策正文 |
+| `/api/policies/{id}/pdf` | 政策 markdown（飞书 webview 用） |
+| `/api/subscriptions` | 订阅 CRUD（含 pause/resume/push/test/weekly-report） |
+| `/api/companies` | 企业 CRUD |
+| `/api/llm/usage`, `/api/config/llm` | LLM 统计 + 配置（admin） |
+| `/api/audit/logs`, `/api/audit/stats` | 审计日志（admin） |
+| `/api/push-logs`, `/api/dashboard/funnel`, `/api/dashboard/companies`, `/api/push-history` | 运营分析 |
 
 ---
 
-## 数据库表（7 张）
+## 数据库表（10 张）
 
 | 表 | 说明 |
 |---|------|
@@ -99,6 +108,9 @@ start http://localhost:8000/admin         # Vue 3 管理后台
 | `subscriptions` | 订阅规则（含 webhook + secret） |
 | `matches` | 匹配结果 |
 | `push_dead_letters` | 死信（重试失败入队） |
+| `audit_logs` | admin 操作审计（v0.2 新增） |
+| `llm_usage_logs` | LLM token 消耗统计（v0.2 新增） |
+| `system_configs` | 系统配置（LLM API key 存这里，不入 .env） |
 
 ---
 
@@ -185,7 +197,7 @@ python/
 ├── ai/             LLM 层（MiniMax M3 客户端 + 摘要）
 ├── crawlers/       爬虫引擎
 ├── mcp_server/     MCP Server（13 Tool + matcher + scheduler + webhook）
-├── models/         SQLAlchemy ORM（7 张表）
+├── models/         SQLAlchemy ORM（10 张表）
 ├── mock/           iLink mock
 ├── wechat/         真实 iLink 适配器
 └── scripts/        seed_* / e2e / stdio_smoke / verify_hmac

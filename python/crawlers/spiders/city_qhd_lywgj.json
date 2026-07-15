@@ -4,23 +4,23 @@
   "category": "市级",
   "region": "秦皇岛",
   "department": "文旅局",
-  "list_url": "http://lywgj.qhd.gov.cn/",
+  "list_url": "http://lywgj.qhd.gov.cn/home/list?code=MTA2&pcode=MTA0",
   "mode": "html",
-  "render_js": true,
+  "render_js": false,
   "frequency": "daily",
-  "request_interval_min": 5,
-  "request_interval_max": 10,
-  "max_pages": 2,
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 1,
   "list_selectors": {
-    "item": "ul li",
+    "item": "a[href*='/home/details']",
     "title": "a::text",
     "href": "a::attr(href)",
     "date": "span::text"
   },
   "detail_selectors": {
     "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
-    "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .nr, .Custom_UnionStyle, .zw_content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span"
   },
-  "notes": "秦皇岛市级·文旅局·需从服务器抓取(qhd.gov.cn封锁非大陆IP) 域名lywgj非whlyj"
+  "notes": "2026-07-08 修复: 首页→政策文件(code=MTA2) 栏目; 原首页+ul li 抓到大量导航/公众参与页"
 }

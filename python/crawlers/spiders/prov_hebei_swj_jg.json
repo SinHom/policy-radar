@@ -4,23 +4,23 @@
   "category": "省级",
   "region": "河北",
   "department": "机关事务管理局",
-  "list_url": "https://swj.hebei.gov.cn/",
+  "list_url": "https://swj.hebei.gov.cn/zcfg/",
   "mode": "html",
-  "render_js": true,
+  "render_js": false,
   "frequency": "daily",
   "request_interval_min": 3,
   "request_interval_max": 6,
-  "max_pages": 1,
+  "max_pages": 3,
   "list_selectors": {
-    "item": "ul li",
+    "item": "a[href*='/system/']",
     "title": "a::text",
     "href": "a::attr(href)",
     "date": "span::text"
   },
   "detail_selectors": {
     "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
-    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .TRS_PreAppend, .Custom_UnionStyle, .zw_content, article, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
     "date": "meta[name=\"PubDate\"], .date, .info span, .pub-date, .article-date"
   },
-  "notes": "机关局(域名swj非jgswj,.shtml)"
+  "notes": "2026-07-08 修复: 首页→/zcfg/(政策法规) score=19; 详情路径 /system/YYYY/MM/DD/ID.shtml; 原首页+ul li 命中大量领导人调研和庆祝大会"
 }

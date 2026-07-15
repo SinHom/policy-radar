@@ -1,0 +1,24 @@
+{
+  "source_id": "prov_hebei_minzheng2",
+  "name": "河北省民政厅",
+  "category": "省级",
+  "region": "河北",
+  "department": "民政厅",
+  "list_url": "https://minzheng.hebei.gov.cn/",
+  "list_selectors": {
+    "item": "li a, .list a",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": "span::text, .date::text, .time::text"
+  },
+  "detail_selectors": {
+    "title": "h1, .article-title, .bt, meta[name=\"ArticleTitle\"]",
+    "content": ".TRS_Editor, #UCAP-CONTENT, .article-content, .content, .Custom_UnionStyle, .zw_content, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
+    "date": "meta[name=\"PubDate\"], .date, .info span, .time"
+  },
+  "render_js": true,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 2
+}

@@ -20,7 +20,7 @@
   },
   "detail_selectors": {
     "title": "h1, .article-title, .title",
-    "content": ".article-content, .content, article p, main p",
+    "content": ".article-content, .content, article p, main p, .wzy_wzzw, .gxt-xilan-con, .gxt-xilan, .entry, .xxgk_gfxwjk-detail, .list-auto .entry",
     "date": ".article-date, .date, .publish-date, time"
   },
   "notes": "河北省政府门户·要闻 栏目直爬(playwright 模式,RSSHub 不收录)"
