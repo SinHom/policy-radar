@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>秦皇岛文旅政策驾驶舱 · 智能问答</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            // 政务蓝：沉稳深靛，非 SaaS 亮蓝
+            brand: { 50: '#f3f6fa', 100: '#e7eef6', 200: '#c4d2e3', 300: '#7e96bf', 500: '#1d4e89', 600: '#163a66', 700: '#102a4a' },
+            // 联网：降饱和赭琥珀
+            accent: { 50: '#fbf5e8', 100: '#f7ecd6', 200: '#ecd5a8', 500: '#c8821a', 600: '#a86d15' },
+            ink: '#1a1f29',
+            line: '#e3e6eb',
+            canvas: '#f5f6f8',
+          },
+          fontFamily: { sans: ['Noto Sans SC', 'system-ui', 'sans-serif'] },
+        },
+      },
+    }
+  </script>
+  <style>
+    body { font-family: 'Noto Sans SC', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .tabular { font-variant-numeric: tabular-nums; }
+    .step-node { transition: opacity 0.2s ease, transform 0.2s ease; opacity: 0.5; }
+    .step-node.active { opacity: 1; }
+    .step-node.done .step-badge { background: #15803d; }
+    .typing-dot::after { content: '...'; animation: typing 1.5s infinite; }
+    @keyframes typing { 0%,20%{content:'.'} 40%{content:'..'} 60%,100%{content:'...'} }
+    .graph-node { cursor: pointer; transition: opacity 0.2s ease; }
+    .graph-node:hover .node-rect { stroke-width: 3; }
+    .graph-node.selected .node-rect { stroke-width: 3; }
+    .preset-btn.active { background: #1d4e89; color: #fff; border-color: #1d4e89; }
+    .bonus-card .detail { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
+    .bonus-card.expanded .detail { max-height: 400px; }
+    .ref-card { transition: border-color 0.15s ease, background-color 0.15s ease; }
+    .ref-card:hover { border-color: #1d4e89; background-color: #f3f6fa; }
+    .progress-fill { transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+    .dot-row span { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 3px; }
+    .donut-seg { transition: opacity 0.15s ease; cursor: pointer; }
+    .donut-seg.dim { opacity: 0.32; }
+    .bar-fill { transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+    .tl-item { transition: background-color 0.15s ease; border-radius: 6px; }
+    .tl-item.hit { background-color: #f3f6fa; }
+    .tl-item.web-hit { background-color: #fbf5e8; }
+    .tl-item.hit .tl-title { font-weight: 600; }
+    /* 侧栏滚动条克制 */
+    .scroll-thin::-webkit-scrollbar { width: 6px; }
+    .scroll-thin::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+    .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body class="bg-canvas min-h-screen text-ink">
+
+  <!-- 顶部导航 -->
+  <header class="bg-white border-b border-line sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-brand-500 rounded flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+        </div>
+        <div class="leading-tight">
+          <div class="text-sm font-semibold text-ink">秦皇岛文旅政策驾驶舱</div>
+          <div class="text-[11px] text-gray-500">政策资产全貌 · 智能问答 · 联网补充</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-4 text-[11px] text-gray-500">
+        <span class="hidden sm:flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>知识库在线</span>
+        <span class="hidden md:inline">联网实时</span>
+        <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded">MiniMax M3</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5">
+
+    <!-- KPI 指标条 -->
+    <div class="bg-white border border-line rounded-lg mb-5">
+      <div class="grid grid-cols-2 sm:grid-cols-4">
+        <div class="p-4 flex items-center gap-3 border-b sm:border-b-0 sm:border-r border-line">
+          <div class="w-9 h-9 rounded bg-brand-50 text-brand-500 flex items-center justify-center shrink-0" id="kpi-ico-total"></div>
+          <div class="min-w-0">
+            <div id="kpi-total" class="text-xl font-semibold tabular leading-none">0</div>
+            <div class="text-xs text-gray-500 mt-1.5">政策总数</div>
+          </div>
+        </div>
+        <div class="p-4 flex items-center gap-3 border-b sm:border-b-0 sm:border-r border-line">
+          <div class="w-9 h-9 rounded bg-green-50 text-green-600 flex items-center justify-center shrink-0" id="kpi-ico-new"></div>
+          <div class="min-w-0">
+            <div class="text-xl font-semibold tabular leading-none"><span id="kpi-new" class="text-green-600">0</span><span class="text-sm text-gray-400 font-normal ml-1">条/月</span></div>
+            <div class="text-xs text-gray-500 mt-1.5">本月新增</div>
+          </div>
+        </div>
+        <div class="p-4 flex items-center gap-3 sm:border-r border-line">
+          <div class="w-9 h-9 rounded bg-brand-50 text-brand-500 flex items-center justify-center shrink-0" id="kpi-ico-dept"></div>
+          <div class="min-w-0">
+            <div id="kpi-dept" class="text-xl font-semibold tabular leading-none">0</div>
+            <div class="text-xs text-gray-500 mt-1.5">覆盖部门</div>
+          </div>
+        </div>
+        <div class="p-4 flex items-center gap-3">
+          <div class="w-9 h-9 rounded bg-accent-50 text-accent-600 flex items-center justify-center shrink-0" id="kpi-ico-web"></div>
+          <div class="min-w-0">
+            <div id="kpi-web" class="text-xl font-semibold tabular leading-none text-accent-600">0</div>
+            <div class="text-xs text-gray-500 mt-1.5">联网补充</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 左右分屏 -->
+    <div class="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-5 items-start">
+
+      <!-- ============ 左列：驾驶舱 ============ -->
+      <aside class="space-y-4 lg:sticky lg:top-[68px] lg:max-h-[calc(100vh-88px)] lg:overflow-y-auto lg:pr-1 scroll-thin">
+
+        <!-- 主题分布 -->
+        <div class="bg-white border border-line rounded-lg p-4">
+          <div class="flex items-center gap-2 mb-4">
+            <span id="ico-pie" class="text-brand-500"></span>
+            <span class="text-sm font-semibold text-ink">主题分布</span>
+            <span class="text-[11px] text-gray-400 ml-auto">库内政策</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <svg id="pie-svg" viewBox="0 0 160 160" class="w-32 h-32 shrink-0"></svg>
+            <div id="pie-legend" class="flex-1 space-y-1.5 text-xs"></div>
+          </div>
+        </div>
+
+        <!-- 部门分布 -->
+        <div class="bg-white border border-line rounded-lg p-4">
+          <div class="flex items-center gap-2 mb-4">
+            <span id="ico-bar" class="text-brand-500"></span>
+            <span class="text-sm font-semibold text-ink">部门分布</span>
+            <span class="text-[11px] text-gray-400 ml-auto">按发布部门</span>
+          </div>
+          <div id="bar-list" class="space-y-2.5"></div>
+        </div>
+
+        <!-- 最近政策时间轴 -->
+        <div class="bg-white border border-line rounded-lg p-4">
+          <div class="flex items-center gap-2 mb-4">
+            <span id="ico-clock" class="text-brand-500"></span>
+            <span class="text-sm font-semibold text-ink">最近政策</span>
+            <span id="tl-hint" class="text-[11px] text-gray-400 ml-auto">命中高亮</span>
+          </div>
+          <div id="timeline" class="relative pl-5"></div>
+        </div>
+
+      </aside>
+
+      <!-- ============ 右列：Agent 问答 + 详情 ============ -->
+      <section class="min-w-0 space-y-4">
+
+        <!-- 输入区 -->
+        <div class="bg-white border border-line rounded-lg p-5">
+          <div class="mb-3">
+            <div class="text-xs text-gray-500 mb-2">快问（点一下直接查）</div>
+            <div class="flex flex-wrap gap-2" id="presets">
+              <button class="preset-btn px-3 py-1.5 rounded border border-line bg-white text-sm text-gray-700 hover:border-brand-500 hover:text-brand-500 transition-colors" data-key="old">老旧小区改造补贴</button>
+              <button class="preset-btn px-3 py-1.5 rounded border border-line bg-white text-sm text-gray-700 hover:border-brand-500 hover:text-brand-500 transition-colors" data-key="heritage">非遗传承人政策</button>
+              <button class="preset-btn px-3 py-1.5 rounded border border-line bg-white text-sm text-gray-700 hover:border-brand-500 hover:text-brand-500 transition-colors" data-key="night">夜间经济扶持</button>
+            </div>
+          </div>
+          <div class="flex gap-3 items-stretch">
+            <textarea id="q-input" rows="2" placeholder="描述你的政策问题，越具体越好。例如：老旧小区改造有什么补贴？申报流程是什么？"
+              class="flex-1 px-3.5 py-2.5 border border-line rounded text-sm text-ink placeholder-gray-400 resize-none focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-200 transition-colors leading-relaxed"></textarea>
+            <button id="ask-btn" class="px-5 bg-brand-500 hover:bg-brand-600 text-white rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 self-stretch">
+              <span>查询</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Agent 工作流面板 -->
+        <div id="workflow-panel" class="hidden bg-white border border-line rounded-lg p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-semibold text-ink">Agent 工作流</span>
+              <span class="text-xs text-gray-400">自主决策 · 多源检索 · 证据整合</span>
+            </div>
+            <div id="wf-status" class="text-xs text-brand-500 font-medium"></div>
+          </div>
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="step-node rounded border border-line p-3.5" data-step="1">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-gray-500">① 意图理解</span>
+                <span class="step-badge w-2.5 h-2.5 rounded-full bg-gray-200"></span>
+              </div>
+              <div class="text-sm font-medium text-ink">解析用户问题</div>
+              <div id="wf-intent" class="text-xs text-gray-500 mt-1.5 leading-relaxed"></div>
+            </div>
+            <div class="step-node rounded border border-line p-3.5" data-step="2">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-gray-500">② 政策库检索</span>
+                <span class="step-badge w-2.5 h-2.5 rounded-full bg-gray-200"></span>
+              </div>
+              <div class="text-sm font-medium text-ink">本地知识库</div>
+              <div id="wf-kb" class="text-xs text-gray-500 mt-1.5"></div>
+            </div>
+            <div class="step-node rounded border border-line p-3.5" data-step="3">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-gray-500">③ 联网补充</span>
+                <span class="step-badge w-2.5 h-2.5 rounded-full bg-gray-200"></span>
+              </div>
+              <div class="text-sm font-medium text-ink">实时搜索</div>
+              <div id="wf-web" class="text-xs text-gray-500 mt-1.5"></div>
+            </div>
+            <div class="step-node rounded border border-line p-3.5" data-step="4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-gray-500">④ 证据整合</span>
+                <span class="step-badge w-2.5 h-2.5 rounded-full bg-gray-200"></span>
+              </div>
+              <div class="text-sm font-medium text-ink">综合分析</div>
+              <div id="wf-merge" class="text-xs text-gray-500 mt-1.5"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div id="empty-state" class="text-center py-16 text-gray-400 bg-white border border-line rounded-lg">
+          <div class="flex justify-center mb-3 text-gray-300" id="ico-empty"></div>
+          <div class="text-sm text-gray-500">输入一个文旅政策问题，Agent 将检索政策库并整合证据</div>
+          <div class="text-xs text-gray-400 mt-1.5">左侧驾驶舱展示政策资产全貌 · 右侧 Agent 问答驱动详情</div>
+        </div>
+
+        <!-- 结果区 -->
+        <div id="result-area" class="hidden space-y-4">
+
+          <!-- 答案概要 + 匹配度 -->
+          <div class="bg-white border border-line rounded-lg p-5">
+            <div class="flex items-start gap-6 flex-col sm:flex-row">
+              <div class="shrink-0 flex flex-col items-center">
+                <svg width="80" height="80" viewBox="0 0 84 84" class="-rotate-90">
+                  <circle cx="42" cy="42" r="36" fill="none" stroke="#e3e6eb" stroke-width="7"/>
+                  <circle id="score-ring" cx="42" cy="42" r="36" fill="none" stroke="#1d4e89" stroke-width="7" stroke-linecap="round" stroke-dasharray="226" stroke-dashoffset="226" style="transition: stroke-dashoffset 0.8s cubic-bezier(0.22,1,0.36,1);"/>
+                </svg>
+                <div class="-mt-[56px] mb-[16px] text-center">
+                  <div id="score-val" class="text-xl font-semibold tabular text-ink">0</div>
+                  <div class="text-[10px] text-gray-400">匹配度</div>
+                </div>
+              </div>
+              <div class="flex-1">
+                <div class="text-xs text-gray-500 mb-2">答案概要 · 基于 <span id="ref-count" class="tabular text-ink font-medium">0</span> 条真实政策</div>
+                <div id="verdict-text" class="text-sm leading-relaxed text-gray-700"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 政策知识图谱 -->
+          <div class="bg-white border border-line rounded-lg p-5">
+            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <div class="flex items-center gap-2">
+                <span id="ico-graph" class="text-brand-500"></span>
+                <span class="text-sm font-semibold text-ink">政策知识图谱</span>
+                <span class="text-xs text-gray-400">主题关联 · 中央/省/市三级</span>
+              </div>
+              <div class="flex items-center gap-4 text-[11px] text-gray-500">
+                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-brand-100 border border-brand-300"></span>政策库</span>
+                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-accent-100 border border-accent-200"></span>联网</span>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <svg id="graph-svg" viewBox="0 0 900 400" class="w-full" style="min-width:640px;"></svg>
+            </div>
+            <div id="node-detail" class="hidden mt-3 p-3.5 bg-canvas rounded border border-line text-xs"></div>
+            <div class="text-xs text-gray-400 mt-2">点击图谱节点查看政策原文与解读</div>
+          </div>
+
+          <!-- 关键信息抽取 -->
+          <div class="bg-white border border-line rounded-lg p-5">
+            <div class="flex items-center gap-2 mb-4">
+              <span id="ico-key" class="text-brand-500"></span>
+              <span class="text-sm font-semibold text-ink">关键信息抽取</span>
+              <span class="text-xs text-gray-400">结构化指标</span>
+            </div>
+            <div id="key-info" class="grid grid-cols-1 sm:grid-cols-3 gap-5"></div>
+          </div>
+
+          <!-- 红利 + 风险 -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="bg-white border border-line rounded-lg overflow-hidden">
+              <div class="px-4 py-3 border-b border-line flex items-center gap-2 bg-green-50/40">
+                <span id="ico-bonus" class="text-green-600"></span>
+                <span class="text-sm font-semibold text-ink">政策红利</span>
+                <span id="bonus-count" class="ml-auto text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded tabular"></span>
+              </div>
+              <div id="bonuses-list" class="divide-y divide-line max-h-[520px] overflow-y-auto scroll-thin"></div>
+            </div>
+            <div class="bg-white border border-line rounded-lg overflow-hidden">
+              <div class="px-4 py-3 border-b border-line flex items-center gap-2 bg-red-50/40">
+                <span id="ico-risk" class="text-red-600"></span>
+                <span class="text-sm font-semibold text-ink">项目风险</span>
+                <span id="risk-count" class="ml-auto text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded tabular"></span>
+              </div>
+              <div id="risks-list" class="divide-y divide-line"></div>
+            </div>
+          </div>
+
+          <!-- 引用原文 -->
+          <div class="bg-white border border-line rounded-lg p-5">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <span id="ico-ref" class="text-brand-500"></span>
+                <span class="text-sm font-semibold text-ink">引用政策原文</span>
+                <span class="text-xs text-gray-400">可追溯 · 每条答案挂真实政策来源</span>
+              </div>
+            </div>
+            <div id="refs-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+          </div>
+
+          <!-- 追问 -->
+          <div class="bg-brand-50 border border-brand-100 rounded-lg p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span id="ico-followup" class="text-brand-500"></span>
+              <span class="text-sm font-semibold text-ink">您可能还想问</span>
+            </div>
+            <div id="followups" class="flex flex-wrap gap-2"></div>
+          </div>
+
+        </div>
+
+        <!-- 错误 -->
+        <div id="error-state" class="hidden bg-red-50 border border-red-200 rounded-lg p-5 text-center">
+          <div class="flex justify-center mb-2 text-red-500" id="ico-error"></div>
+          <div id="error-msg" class="text-sm text-red-700"></div>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- 政策原文模态框 -->
+  <div id="policy-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/40" data-modal-close></div>
+    <div class="relative bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col">
+      <div class="flex items-start justify-between gap-4 px-5 py-4 border-b border-line">
+        <div class="min-w-0">
+          <div id="pm-meta" class="text-[11px] text-gray-500 mb-1"></div>
+          <div id="pm-title" class="text-base font-semibold text-ink leading-snug"></div>
+        </div>
+        <button class="shrink-0 text-gray-400 hover:text-ink p-1" data-modal-close>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="pm-body" class="px-5 py-4 overflow-y-auto scroll-thin text-sm text-gray-700 leading-relaxed flex-1"></div>
+      <div class="px-5 py-3 border-t border-line flex items-center justify-between gap-3 bg-canvas rounded-b-lg">
+        <span id="pm-source" class="text-[11px] text-gray-500 min-w-0 truncate"></span>
+        <a id="pm-link" href="#" target="_blank" rel="noopener" class="shrink-0 text-xs text-brand-600 hover:underline">查看原文链接 ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="border-t border-line mt-8 py-5 text-center">
+    <div class="text-xs text-gray-400">秦皇岛文旅政策驾驶舱 · 数据来源：秦皇岛/河北/国家级政策库 + 联网搜索</div>
+  </footer>
+
+  <script>
+  // ============ 图标集（1.5px stroke，线条风格，统一品牌色）============
+  const ICONS = {
+    database: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></svg>',
+    trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h7v7"/></svg>',
+    building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v18M3 9h6M9 15h6M15 3v18"/></svg>',
+    globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>',
+    pie: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 109 9h-9V3z"/><path d="M12 3v9h9"/></svg>',
+    bar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20V8M3 20h18"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    graph: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M12 7.5L6 15.5M12 7.5l6 8M7.5 18h9"/></svg>',
+    key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M7 7h4M7 11h10M7 15h7M7 19h10"/></svg>',
+    target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>',
+    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+    doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M8 10h8M8 13h5"/></svg>',
+    arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  };
+  const ico = (name, cls = 'w-4 h-4') => ICONS[name].replace('<svg', `<svg class="${cls}"`);
+
+  // ============ 驾驶舱总览数据（演示，接后端时改 fetch /api/policies/overview）============
+  const OVERVIEW = {
+    kpi: { total: 156, new_this_month: 12, departments: 8, web_supplement: 23 },
+    topics: [
+      { name: '文旅融合', count: 38, color: '#1d4e89' },
+      { name: '城市更新', count: 32, color: '#c8821a' },
+      { name: '非遗传承', count: 24, color: '#15803d' },
+      { name: '夜间经济', count: 21, color: '#6b5e8f' },
+      { name: '乡村振兴', count: 19, color: '#b85c5c' },
+      { name: '其他', count: 22, color: '#94a3b8' },
+    ],
+    departments: [
+      { name: '文旅局', count: 41 },
+      { name: '住建局', count: 33 },
+      { name: '商务局', count: 22 },
+      { name: '发改委', count: 18 },
+      { name: '农业局', count: 14 },
+      { name: '民政局', count: 12 },
+      { name: '其他', count: 16 },
+    ],
+    timeline: [
+      { date: '07/25', title: '文旅专项扶持计划', src: '秦皇岛市文旅局', kind: '库', id: 88 },
+      { date: '07/20', title: '非遗传承人认定办法', src: '秦皇岛市文旅局', kind: '库', id: 142 },
+      { date: '07/15', title: '老旧小区改造管理办法', src: '秦皇岛市住建局', kind: '库', id: 156 },
+      { date: '07/10', title: '城市更新行动方案', src: '河北省住建厅', kind: '库', id: 123 },
+      { date: '07/05', title: '夜间经济行动方案', src: '河北省商务厅', kind: '库', id: 167 },
+      { date: '06/28', title: '非遗工坊建设扶持办法', src: '河北省文旅厅', kind: '库', id: 219 },
+      { date: '06/22', title: '加装电梯补贴细则', src: '河北省住建厅', kind: '库', id: 201 },
+      { date: '06/15', title: '24小时业态扶持办法', src: '河北省商务厅', kind: '库', id: 233 },
+      { date: '06/08', title: '非遗保护条例', src: '河北省人大', kind: '库', id: 178 },
+      { date: '06/01', title: '中央预算内投资专项', src: '国家发改委', kind: '库', id: 89 },
+      { date: '05/28', title: '城市更新十五五规划解读', src: '住建部官网', kind: '网', id: null },
+      { date: '05/20', title: '非遗工坊最新政策解读', src: '文旅部官网', kind: '网', id: null },
+    ],
+  };
+
+  // ============ Agent 问答演示数据（3 套）============
+  const DEMO = {
+    old: {
+      question: '老旧小区改造有什么补贴？申报流程是什么？',
+      workflow: {
+        intent: '主题：老旧小区改造｜类型：补贴+申报流程｜地区：秦皇岛',
+        kb: '地区：秦皇岛+河北+国家级｜命中 4 条政策',
+        web: '查询：秦皇岛老旧小区改造 2026｜去重后 3 条',
+        merge: '整合 7 条依据｜红利 6 · 风险 2',
+      },
+      score: 86,
+      verdict: '秦皇岛老旧小区改造可享受「中央+省级」资金补助，最高不超过项目总投资 30%。申报经区住建局初审->市住建局复核->省厅备案，建议优先关注 2000 年前建成小区。当前正值「十五五」城市更新窗口期。',
+      graph: {
+        center: { label: '老旧小区改造', sub: '补贴 30% · 周期 6 月 · 立即' },
+        nodes: [
+          { id: 'c', label: '国务院·城市更新"十五五"规划', kind: '库', level: '中央', x: 450, y: 50, detail: '国务院 2026 年 5 月印发，将老旧小区改造列为城市更新重点任务，明确中央预算内资金支持方向。' },
+          { id: 'p', label: '河北省·城市更新行动方案', kind: '库', level: '省级', x: 170, y: 180, detail: '河北省住建厅 2026 年文件，省级财政按项目总投资 20% 配套补助，优先支持基础设施老化小区。' },
+          { id: 'm', label: '秦皇岛市·老旧小区改造管理办法', kind: '库', level: '市级', x: 170, y: 350, detail: '秦皇岛市住建局 2026 年 4 月印发，明确申报路径：区住建局初审->市住建局复核->报省厅备案，配套市级资金 10%。' },
+          { id: 'w', label: '住建部·2026 改造最新解读', kind: '网', level: '联网', x: 730, y: 350, detail: '住建部 2026 年 6 月解读，强调加装电梯、节能改造可叠加享受专项补贴，单项最高 15 万。' },
+          { id: 'p2', label: '国家发改委·中央预算内投资专项', kind: '库', level: '中央', x: 730, y: 180, detail: '国家发改委 2026 年文件，生态保护修复与城市更新领域中央预算内投资补助，最高 30%。' },
+        ],
+      },
+      key_info: [
+        { label: '补助比例', value: '30%', pct: 60, hint: '中央+省级合计不超总投资 30%' },
+        { label: '申报周期', value: '6 个月', pct: 50, hint: '从立项到资金到位约 4-6 月' },
+        { label: '难度评级', value: '中', dots: 3, hint: '多部门联合审批，材料较繁' },
+      ],
+      bonuses: [
+        { name: '河北省城市更新补助', source: '河北省住建厅', kind: '库', priority: '立即', match: 4, content: '省级财政按项目总投资 **20%** 配套补助，重点支持 2000 年前建成小区。', action: '前期对接区住建局，准备项目可行性报告。', detail: '申报材料：① 项目立项批复 ② 改造方案 ③ 资金预算 ④ 业主同意书。资金分两批拨付：开工 60% + 验收 40%。' },
+        { name: '秦皇岛老旧小区专项补助', source: '秦皇岛市住建局', kind: '库', priority: '立即', match: 5, content: '市级配套资金 **10%**，与省级叠加后最高达 30%。加装电梯单部补贴 **15 万**。', action: '向区住建局提交《改造项目申请表》。', detail: '市级专项资金每年 9 月集中受理，建议 8 月前完成材料预审。电梯补贴需 2/3 以上业主同意。' },
+        { name: '中央预算内投资补助', source: '国家发改委', kind: '库', priority: '中期', match: 3, content: '城市更新领域中央预算内投资，补助比例 **最高 30%**，需纳入国家项目库。', action: '通过省发改委申报纳入国家项目库。', detail: '需省级发改委推荐，项目投资额原则上不低于 500 万。审批周期较长（6-12 月），建议提前规划。' },
+        { name: '加装电梯专项补贴', source: '河北省住建厅', kind: '库', priority: '中期', match: 4, content: '老旧小区加装电梯每部补贴 **15 万**，剩余由业主分摊+公积金提取。', action: '业委会牵头，2/3 业主同意后申请。', detail: '补贴需电梯验收合格后拨付。可叠加使用住房公积金支付个人分摊部分。' },
+        { name: '绿色节能改造奖励', source: '住建部（联网）', kind: '网', priority: '长期', match: 3, content: '节能改造达到标准的，给予一次性奖励 **5-10 万/栋**。', action: '改造方案纳入节能评估，验收后申报。', detail: '需达到节能率 30% 以上标准，由第三方机构出具评估报告。' },
+        { name: '社区养老设施配套', source: '民政部', kind: '库', priority: '长期', match: 3, content: '改造中配建社区养老设施的，可申请养老服务设施建设补贴。', action: '改造方案预留养老设施空间，同步申报。', detail: '配建面积不低于 200 ㎡，建成后可纳入社区养老服务网络运营。' },
+      ],
+      risks: [
+        { type: '资金链风险', level: '高', desc: '补贴到账周期长（4-6 月），前期需垫资，现金流压力较大。', sugg: '预留 50% 现金缓冲，争取分批拨付条款，必要时申请过桥贷款。' },
+        { type: '审批周期风险', level: '中', desc: '多部门联合审批（住建+发改+财政），材料反复修改，易延误开工。', sugg: '聘请有经验的政策咨询机构协助材料预审，提前与各部门沟通边界。' },
+      ],
+      refs: [
+        { kind: '库', id: 123, title: '河北省·城市更新行动方案', src: '河北省住建厅', date: '2026-05-28', url: '#' },
+        { kind: '库', id: 156, title: '秦皇岛市·老旧小区改造管理办法', src: '秦皇岛市住建局', date: '2026-04-12', url: '#' },
+        { kind: '库', id: 89, title: '国家发改委·中央预算内投资专项', src: '国家发改委', date: '2026-03', url: '#' },
+        { kind: '库', id: 201, title: '河北省·加装电梯补贴实施细则', src: '河北省住建厅', date: '2026-03-20', url: '#' },
+        { kind: '网', id: null, title: '国务院·城市更新"十五五"规划解读', src: '住建部官网', date: '2026-06', url: '#' },
+      ],
+      followups: ['申报需要准备哪些材料？', '补贴资金多久能到位？', '历史风貌保护有什么政策？'],
+    },
+    heritage: {
+      question: '非遗传承人可以享受哪些政策支持？',
+      workflow: {
+        intent: '主题：非遗传承人｜类型：资助+认定｜地区：秦皇岛+河北',
+        kb: '地区：秦皇岛+河北+国家级｜命中 4 条政策',
+        web: '查询：秦皇岛非遗传承人 2026｜去重后 2 条',
+        merge: '整合 6 条依据｜红利 5 · 风险 2',
+      },
+      score: 82,
+      verdict: '非遗传承人可享受国家级+省级+市级三级资助，国家级代表性传承人每年 8000 元，省级 5000 元。秦皇岛另设市级认定与展示补贴，支持非遗工坊建设。建议先完成区级认定再逐级申报。',
+      graph: {
+        center: { label: '非遗传承人', sub: '资助 8000元/年 · 12月 · 立即' },
+        nodes: [
+          { id: 'c', label: '国家级非遗代表性传承人资助办法', kind: '库', level: '中央', x: 450, y: 50, detail: '文化和旅游部办法，国家级代表性传承人每年资助 8000 元，重大传承项目可申请专项经费。' },
+          { id: 'p', label: '河北省·非遗保护条例', kind: '库', level: '省级', x: 170, y: 180, detail: '河北省人大立法，省级代表性传承人每年资助 5000 元，优先支持濒危项目。' },
+          { id: 'm', label: '秦皇岛市·非遗传承人认定办法', kind: '库', level: '市级', x: 170, y: 350, detail: '秦皇岛市文旅局办法，市级传承人每年 3000 元，可申请展示活动补贴最高 2 万。' },
+          { id: 'w', label: '文旅部·非遗工坊最新政策', kind: '网', level: '联网', x: 730, y: 350, detail: '文旅部 2026 年解读，非遗工坊建设可获一次性扶持 10-20 万，吸纳脱贫户另有补贴。' },
+          { id: 'p2', label: '河北省·非遗工坊建设扶持办法', kind: '库', level: '省级', x: 730, y: 180, detail: '河北省文旅厅办法，非遗工坊认定后给予一次性建设扶持 10 万，每年运营补贴 2 万。' },
+        ],
+      },
+      key_info: [
+        { label: '年度资助', value: '8000 元', pct: 80, hint: '国家级传承人每年 8000 元' },
+        { label: '认定周期', value: '12 个月', pct: 100, hint: '区->市->省->国家逐级申报' },
+        { label: '难度评级', value: '中高', dots: 4, hint: '需 3 年以上传承经历' },
+      ],
+      bonuses: [
+        { name: '国家级非遗代表性传承人资助', source: '文化和旅游部', kind: '库', priority: '立即', match: 5, content: '国家级代表性传承人每年资助 **8000 元**，重大传承项目可申请专项经费。', action: '通过省文旅厅逐级推荐申报。', detail: '申报条件：① 传承谱系清晰 ② 3 年以上传承经历 ③ 项目具有重大历史文学艺术科学价值。每两年评审一次。' },
+        { name: '省级非遗传承人补助', source: '河北省文旅厅', kind: '库', priority: '中期', match: 4, content: '省级代表性传承人每年 **5000 元**，濒危项目优先。', action: '取得市级认定满 2 年后申报省级。', detail: '需先取得市级传承人资格，且有持续传承活动记录。省级每年评审一次。' },
+        { name: '市级非遗传承人认定', source: '秦皇岛市文旅局', kind: '库', priority: '中期', match: 4, content: '市级传承人每年 **3000 元**，展示活动补贴最高 **2 万**。', action: '向区文旅局提交认定申请。', detail: '认定条件相对宽松，是申报省级的必经台阶。展示补贴需活动前 30 天报备。' },
+        { name: '非遗工坊建设扶持', source: '河北省文旅厅', kind: '库', priority: '长期', match: 4, content: '认定后一次性扶持 **10 万**，每年运营补贴 **2 万**。', action: '具备固定场所+传承人+产品后申请认定。', detail: '需具备 50 ㎡以上固定场所、至少 1 名传承人、稳定产品线。吸纳脱贫户就业另有每人 5000 元补贴。' },
+        { name: '非遗展示活动补贴', source: '文旅部（联网）', kind: '网', priority: '长期', match: 3, content: '参加国家级非遗展示活动，差旅+布展补贴最高 **5 万**。', action: '关注文旅部年度活动通知，通过省级推荐。', detail: '需纳入省级非遗项目名录，由省文旅厅统一推荐参展。' },
+      ],
+      risks: [
+        { type: '认定门槛风险', level: '中', desc: '需 3 年以上传承经历，且传承谱系需清晰可考，部分口传非遗举证困难。', sugg: '提前整理传承谱系、影像资料，邀请地方非遗保护中心协助建档。' },
+        { type: '传承断层风险', level: '中', desc: '传承人年龄结构老化，若未培养年轻接班人，可能被列入濒危名单甚至取消资格。', sugg: '主动收徒传艺，记录传承教学过程，定期向文旅部门报送传承活动。' },
+      ],
+      refs: [
+        { kind: '库', id: 305, title: '国家级非遗代表性传承人资助办法', src: '文化和旅游部', date: '2026-02', url: '#' },
+        { kind: '库', id: 178, title: '河北省·非遗保护条例', src: '河北省人大', date: '2025-11', url: '#' },
+        { kind: '库', id: 142, title: '秦皇岛市·非遗传承人认定办法', src: '秦皇岛市文旅局', date: '2026-01', url: '#' },
+        { kind: '库', id: 219, title: '河北省·非遗工坊建设扶持办法', src: '河北省文旅厅', date: '2026-03', url: '#' },
+        { kind: '网', id: null, title: '文旅部·非遗工坊最新政策解读', src: '文旅部官网', date: '2026-06', url: '#' },
+      ],
+      followups: ['传承人认定需要什么条件？', '非遗工坊怎么认定？', '非遗项目如何申报省级？'],
+    },
+    night: {
+      question: '夜间经济和夜游项目有什么扶持政策？',
+      workflow: {
+        intent: '主题：夜间经济｜类型：扶持+奖励｜地区：秦皇岛',
+        kb: '地区：秦皇岛+河北+国家级｜命中 3 条政策',
+        web: '查询：秦皇岛夜间经济 2026｜去重后 3 条',
+        merge: '整合 6 条依据｜红利 5 · 风险 2',
+      },
+      score: 79,
+      verdict: '秦皇岛夜间经济可享受示范区奖励（最高 50 万）、夜游灯光改造补贴、24 小时业态扶持等多项政策。结合秦皇岛旅游城市定位，北戴河/山海关夜游项目申报优势明显，建议抓住夏季旺季窗口。',
+      graph: {
+        center: { label: '夜间经济', sub: '奖励 50万 · 3月 · 立即' },
+        nodes: [
+          { id: 'c', label: '国务院·促进夜间经济发展指导意见', kind: '库', level: '中央', x: 450, y: 50, detail: '国务院指导意见，将夜间经济作为促消费重点，鼓励各地建设夜间文旅消费集聚区。' },
+          { id: 'p', label: '河北省·夜间经济行动方案', kind: '库', level: '省级', x: 170, y: 180, detail: '河北省商务厅方案，省级夜间经济示范区奖励 30 万，24 小时便利店每店补贴 3 万。' },
+          { id: 'm', label: '秦皇岛市·夜游经济扶持办法', kind: '库', level: '市级', x: 170, y: 350, detail: '秦皇岛市文旅局办法，夜游灯光改造补贴 50%，示范区奖励最高 50 万，优先支持滨海区域。' },
+          { id: 'w', label: '文旅部·夜间消费集聚区通知', kind: '网', level: '联网', x: 730, y: 350, detail: '文旅部 2026 年通知，国家级夜间文旅消费集聚区每区奖励 100 万，每年评审。' },
+          { id: 'p2', label: '河北省·24 小时业态扶持', kind: '库', level: '省级', x: 730, y: 180, detail: '河北省商务厅办法，24 小时餐饮/便利店每店补贴 3 万，连锁品牌优先。' },
+        ],
+      },
+      key_info: [
+        { label: '最高奖励', value: '50 万', pct: 70, hint: '市级示范区奖励最高 50 万' },
+        { label: '申报周期', value: '3 个月', pct: 30, hint: '材料齐全后审批较快' },
+        { label: '难度评级', value: '低', dots: 2, hint: '门槛较低，适合中小项目' },
+      ],
+      bonuses: [
+        { name: '夜间经济示范区奖励', source: '秦皇岛市文旅局', kind: '库', priority: '立即', match: 5, content: '认定为市级夜间经济示范区，奖励 **30-50 万**，滨海区域优先。', action: '准备集聚区运营方案，向市文旅局申报。', detail: '申报条件：① 夜间业态 30 家以上 ② 营业至 22 点后 ③ 有统一运营主体 ④ 年夜间客流 50 万人次以上。每年 5 月受理。' },
+        { name: '夜游灯光改造补贴', source: '秦皇岛市文旅局', kind: '库', priority: '立即', match: 4, content: '夜游项目灯光改造补贴投资额 **50%**，单个项目最高 **20 万**。', action: '改造方案报备后实施，验收后申领。', detail: '需为文旅场景灯光（景区/街区/滨海步道），不含纯商业照明。优先支持节能 LED 方案。' },
+        { name: '省级夜间经济示范区奖励', source: '河北省商务厅', kind: '库', priority: '中期', match: 4, content: '省级示范区奖励 **30 万**，可作为国家级申报跳板。', action: '取得市级认定后由市推荐至省。', detail: '省级每年评审一次，需市级认定满 1 年且运营良好。省级是申报国家级的必经台阶。' },
+        { name: '24 小时业态扶持', source: '河北省商务厅', kind: '库', priority: '中期', match: 3, content: '24 小时餐饮/便利店每店补贴 **3 万**，连锁品牌优先。', action: '取得 24 小时营业许可后申报。', detail: '需持续经营 6 个月以上，纳入街道夜间经济统一管理。连锁品牌可批量申报。' },
+        { name: '国家级夜间文旅消费集聚区', source: '文旅部（联网）', kind: '网', priority: '长期', match: 3, content: '国家级集聚区每区奖励 **100 万**，每年评审。', action: '省级认定后由省文旅厅推荐申报。', detail: '国家级门槛较高，需夜间文旅业态占比 60% 以上，年夜间客流 200 万人次。秦皇岛滨海资源有申报优势。' },
+      ],
+      risks: [
+        { type: '同质化风险', level: '低', desc: '夜间经济项目易扎堆餐饮/灯光，缺乏特色易被市场淘汰。', sugg: '挖掘秦皇岛地域文化（长城/滨海/近代建筑），打造差异化夜游 IP。' },
+        { type: '扰民投诉风险', level: '中', desc: '夜间经营噪音、灯光可能引发周边居民投诉，影响运营。', sugg: '选址避开密集住宅区，控制 22 点后音量，主动与社区建立沟通机制。' },
+      ],
+      refs: [
+        { kind: '库', id: 88, title: '国务院·促进夜间经济发展指导意见', src: '国务院', date: '2026-04', url: '#' },
+        { kind: '库', id: 167, title: '河北省·夜间经济行动方案', src: '河北省商务厅', date: '2026-03', url: '#' },
+        { kind: '库', id: 198, title: '秦皇岛市·夜游经济扶持办法', src: '秦皇岛市文旅局', date: '2026-05', url: '#' },
+        { kind: '库', id: 233, title: '河北省·24小时业态扶持办法', src: '河北省商务厅', date: '2026-02', url: '#' },
+        { kind: '网', id: null, title: '文旅部·夜间文旅消费集聚区通知', src: '文旅部官网', date: '2026-06', url: '#' },
+      ],
+      followups: ['奖励资金如何申请？', '夜游项目用地政策？', '延时营业有什么补贴？'],
+    },
+  };
+
+  // ============ DOM 引用 ============
+  const $ = (id) => document.getElementById(id);
+  const qInput = $('q-input'), askBtn = $('ask-btn');
+  const wfPanel = $('workflow-panel'), resultArea = $('result-area'), emptyState = $('empty-state'), errorState = $('error-state');
+
+  // 注入区块图标
+  $('kpi-ico-total').innerHTML = ico('database', 'w-5 h-5');
+  $('kpi-ico-new').innerHTML = ico('trend', 'w-5 h-5');
+  $('kpi-ico-dept').innerHTML = ico('building', 'w-5 h-5');
+  $('kpi-ico-web').innerHTML = ico('globe', 'w-5 h-5');
+  $('ico-pie').innerHTML = ico('pie', 'w-4 h-4');
+  $('ico-bar').innerHTML = ico('bar', 'w-4 h-4');
+  $('ico-clock').innerHTML = ico('clock', 'w-4 h-4');
+  $('ico-graph').innerHTML = ico('graph', 'w-4 h-4');
+  $('ico-key').innerHTML = ico('key', 'w-4 h-4');
+  $('ico-bonus').innerHTML = ico('target', 'w-4 h-4');
+  $('ico-risk').innerHTML = ico('alert', 'w-4 h-4');
+  $('ico-ref').innerHTML = ico('doc', 'w-4 h-4');
+  $('ico-followup').innerHTML = ico('chat', 'w-4 h-4');
+  $('ico-error').innerHTML = ico('alert', 'w-6 h-6');
+  $('ico-empty').innerHTML = ico('doc', 'w-10 h-10');
+
+  // ============ 预置按钮 ============
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key;
+      qInput.value = DEMO[key].question;
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // ============ 提交 ============
+  askBtn.addEventListener('click', async () => {
+    const q = qInput.value.trim();
+    if (!q) { qInput.focus(); qInput.classList.add('border-red-400'); setTimeout(()=>qInput.classList.remove('border-red-400'),1500); return; }
+    if (q.length < 10) { qInput.focus(); qInput.classList.add('border-red-400'); setTimeout(()=>qInput.classList.remove('border-red-400'),1500); showError('请输入至少 10 个字的问题描述（后端要求）'); return; }
+    setLoading(true);
+    try {
+      const data = await fetchAdvisor(q);
+      await runWorkflow(data);
+      renderResult(data);
+    } catch (err) {
+      showError(err.message || '查询失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  qInput.addEventListener('keydown', (e) => { if ((e.ctrlKey||e.metaKey) && e.key==='Enter') askBtn.click(); });
+
+  // ============ Agent 调用（真实后端 /advisor/analyze）============
+  async function fetchAdvisor(query) {
+    const r = await fetch('/advisor/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario: query, use_web: true }),
+    });
+    if (!r.ok) {
+      let msg = `HTTP ${r.status}`;
+      try { const e = await r.json(); msg = e.detail || msg; } catch (_) {}
+      throw new Error(msg);
+    }
+    const raw = await r.json();
+    return mapBackendData(raw, query);
+  }
+
+  // 后端响应结构 -> 前端渲染结构（字段映射 + 派生 graph/workflow）
+  function mapBackendData(d, query) {
+    const topic = guessTopic(query);
+    const bonuses = d.bonuses || [];
+    const refs = d.references || [];
+    const webBonuses = bonuses.filter(b => b.source_type === '网');
+    const libRefs = refs.map(r => ({
+      kind: '库', id: r.policy_id, title: r.title, src: r.source_name,
+      date: (r.published_at || '').slice(0, 10), url: r.url || null, region: r.region || '',
+    }));
+    const webRefs = webBonuses.map(b => ({
+      kind: '网', id: null, title: b.policy_name, src: b.source,
+      date: '', url: b.source_url || '#',
+    }));
+    return {
+      score: d.feasibility_score || 0,
+      verdict: d.verdict || '',
+      bonuses: bonuses.map(b => ({
+        name: b.policy_name, source: b.source, kind: b.source_type === '网' ? '网' : '库',
+        priority: b.priority, match: b.match_level, content: b.content, action: b.action,
+        policy_id: b.policy_id || null, url: b.source_url || null,
+      })),
+      risks: (d.risks || []).map(r => ({
+        type: r.risk_type, level: r.level, desc: r.description, sugg: r.suggestion,
+      })),
+      refs: [...libRefs, ...webRefs],
+      workflow: {
+        intent: `主题：${topic}｜地区：秦皇岛`,
+        kb: `地区：秦皇岛+河北+国家级｜命中 ${d.policy_count || 0} 条政策`,
+        web: d.searched_online ? `查询：秦皇岛 ${topic}｜联网补充 ${webBonuses.length} 条` : '本次未启用联网',
+        merge: `整合 ${refs.length + webBonuses.length} 条依据｜红利 ${bonuses.length} · 风险 ${(d.risks || []).length}`,
+      },
+      graph: {
+        center: { label: topic, sub: `匹配度 ${d.feasibility_score || 0} · 命中 ${refs.length} 条` },
+        refs: libRefs, webBonuses,
+      },
+      policy_count: d.policy_count || 0,
+      searched_online: !!d.searched_online,
+    };
+  }
+
+  function guessTopic(q) {
+    if (/非遗|传承/.test(q)) return '非遗传承人';
+    if (/夜|夜间|夜游/.test(q)) return '夜间经济';
+    if (/老旧小区|改造/.test(q)) return '老旧小区改造';
+    if (/文旅|旅游|景区/.test(q)) return '文旅融合';
+    if (/乡村振兴|农旅/.test(q)) return '乡村振兴';
+    return q.slice(0, 8);
+  }
+
+  function setLoading(on) {
+    if (on) {
+      emptyState.classList.add('hidden');
+      resultArea.classList.add('hidden');
+    }
+    wfPanel.classList.toggle('hidden', !on);
+    errorState.classList.add('hidden');
+    askBtn.disabled = on;
+    askBtn.querySelector('span').textContent = on ? '检索中' : '查询';
+  }
+
+  function showError(msg) {
+    wfPanel.classList.add('hidden');
+    resultArea.classList.add('hidden');
+    errorState.classList.remove('hidden');
+    $('error-msg').textContent = msg;
+  }
+
+  // ============ 政策原文查看（服务器真实 markdown + 示例库兜底）============
+  // DEMO 示例政策原文：服务器 md 不全时兜底，保证 preset 三类的代表政策可看
+  const DEMO_CONTENT = {
+    156: { title: '秦皇岛市·老旧小区改造管理办法', source: '秦皇岛市住建局', date: '2026-04-12',
+      body: '2026 年 4 月印发。明确秦皇岛市老旧小区改造的申报路径：区住建局初审 → 市住建局复核 → 报省厅备案。\n\n**资金配套**：市级配套资金 10%，与省级 20% 叠加后最高达项目总投资 30%。\n\n**加装电梯**：单部补贴 15 万元，需 2/3 以上业主同意，验收合格后拨付。\n\n**申报材料**：① 项目立项批复 ② 改造方案 ③ 资金预算 ④ 业主同意书。资金分两批拨付：开工 60% + 验收 40%。\n\n**受理周期**：每年 9 月集中受理，建议 8 月前完成材料预审。' },
+    123: { title: '河北省·城市更新行动方案', source: '河北省住建厅', date: '2026-05-28',
+      body: '河北省住建厅 2026 年文件。将老旧小区改造列为城市更新重点任务。\n\n**省级补助**：省级财政按项目总投资 20% 配套补助，重点支持 2000 年前建成、基础设施老化的小区。\n\n**优先方向**：基础设施老化、居民改造意愿强、资金落实到位的项目优先纳入省级台账。\n\n**配套要求**：市县需按比例配套，鼓励引入社会资本参与（PPP/EOD 模式）。' },
+    89: { title: '国家发改委·中央预算内投资专项', source: '国家发改委', date: '2026-03',
+      body: '国家发改委 2026 年文件。生态保护修复与城市更新领域的中央预算内投资补助。\n\n**补助比例**：最高不超过项目总投资 30%。\n\n**申报条件**：需纳入国家项目库，由省级发改委推荐，项目投资额原则上不低于 500 万元。\n\n**审批周期**：较长（6-12 月），建议提前一年规划。资金到位后专款专用，需定期报送进度。' },
+    201: { title: '河北省·加装电梯补贴实施细则', source: '河北省住建厅', date: '2026-03-20',
+      body: '河北省住建厅 2026 年细则。老旧小区加装电梯每部补贴 15 万元。\n\n**分摊机制**：剩余费用由业主按比例分摊，可提取住房公积金支付个人分摊部分。\n\n**申请条件**：需 2/3 以上业主同意，且加装方案符合规划与安全要求。\n\n**拨付方式**：电梯验收合格后一次性拨付。鼓励叠加绿色节能改造。' },
+    305: { title: '国家级非遗代表性传承人资助办法', source: '文化和旅游部', date: '2026-02',
+      body: '文化和旅游部办法。国家级非物质文化遗产代表性传承人资助。\n\n**资助标准**：每人每年 8000 元，重大传承项目可另行申请专项经费。\n\n**申报条件**：① 传承谱系清晰 ② 3 年以上传承经历 ③ 项目具有重大历史、文学、艺术、科学价值。\n\n**评审**：每两年评审一次，通过省文旅厅逐级推荐。' },
+    178: { title: '河北省·非遗保护条例', source: '河北省人大', date: '2025-11',
+      body: '河北省人大常委会立法。省级非遗代表性传承人每年资助 5000 元，优先支持濒危项目。\n\n**保护范围**：传统口头文学、表演艺术、社会实践、 rituals、节庆、传统手工艺等。\n\n**濒危项目**：对传承困难的项目给予重点扶持，建立数字化档案。' },
+    142: { title: '秦皇岛市·非遗传承人认定办法', source: '秦皇岛市文旅局', date: '2026-01',
+      body: '秦皇岛市文旅局 2026 年办法。市级非遗传承人每年 3000 元，展示活动补贴最高 2 万元。\n\n**认定条件**：相对宽松，是申报省级的必经台阶。需在秦皇岛有稳定传承活动。\n\n**展示补贴**：活动前 30 天报备，验收后拨付。' },
+    219: { title: '河北省·非遗工坊建设扶持办法', source: '河北省文旅厅', date: '2026-03',
+      body: '河北省文旅厅 2026 年办法。非遗工坊认定后给予一次性建设扶持 10 万元，每年运营补贴 2 万元。\n\n**认定条件**：① 50 ㎡以上固定场所 ② 至少 1 名传承人 ③ 稳定产品线。\n\n**附加补贴**：吸纳脱贫户就业另有每人 5000 元补贴。' },
+    88: { title: '国务院·促进夜间经济发展指导意见', source: '国务院', date: '2026-04',
+      body: '国务院指导意见。将夜间经济作为促消费重点，鼓励各地建设夜间文旅消费集聚区。\n\n**支持方向**：夜间业态多元化、延长营业时间、灯光改造、夜间文旅产品开发。\n\n**配套**：鼓励各地出台示范区奖励、业态扶持等地方政策。' },
+    167: { title: '河北省·夜间经济行动方案', source: '河北省商务厅', date: '2026-03',
+      body: '河北省商务厅 2026 年方案。省级夜间经济示范区奖励 30 万元，24 小时便利店每店补贴 3 万元。\n\n**示范区条件**：夜间业态 30 家以上、营业至 22 点后、统一运营主体。\n\n**评审**：省级每年评审一次，是申报国家级的必经台阶。' },
+    198: { title: '秦皇岛市·夜游经济扶持办法', source: '秦皇岛市文旅局', date: '2026-05',
+      body: '秦皇岛市文旅局 2026 年办法。夜游灯光改造补贴投资额 50%，单个项目最高 20 万元。\n\n**示范区奖励**：市级夜间经济示范区奖励 30-50 万元，滨海区域优先。\n\n**受理**：每年 5 月受理，需夜间客流达 50 万人次以上。' },
+    233: { title: '河北省·24小时业态扶持办法', source: '河北省商务厅', date: '2026-02',
+      body: '河北省商务厅 2026 年办法。24 小时餐饮/便利店每店补贴 3 万元，连锁品牌优先。\n\n**条件**：持续经营 6 个月以上，纳入街道夜间经济统一管理。\n\n**申报**：取得 24 小时营业许可后申报，连锁品牌可批量申报。' },
+  };
+
+  async function openPolicyModal(r) {
+    const modal = $('policy-modal');
+    $('pm-title').textContent = r.title || '';
+    $('pm-meta').textContent = `政策库 #${r.id}${r.region ? ' · ' + r.region : ''}`;
+    $('pm-source').textContent = r.src || '';
+    $('pm-link').href = r.url || '#';
+    $('pm-body').innerHTML = '<div class="text-gray-400">加载原文中…</div>';
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    // 优先服务器真实 markdown
+    let body = '';
+    try {
+      const resp = await fetch(`/policy-radar/markdown/${r.id}`);
+      if (resp.ok) {
+        const md = await resp.text();
+        // 剥 YAML frontmatter，取正文
+        body = md.replace(/^---[\s\S]*?---\s*/, '');
+      }
+    } catch (_) { body = ''; }
+
+    // 服务器 md 太短（仅 frontmatter 无正文）→ 示例库兜底
+    if (!body || body.replace(/[#\s>\-|]/g, '').length < 60) {
+      const demo = DEMO_CONTENT[r.id];
+      if (demo) {
+        body = `> 注：服务器原文较简，以下为该政策的要点摘要。\n\n${demo.body}`;
+        if (!r.title && demo.title) $('pm-title').textContent = demo.title;
+        if (!r.src && demo.source) $('pm-source').textContent = demo.source;
+      } else if (!body) {
+        body = '> 该政策在服务器仅存元数据，暂无完整正文。\n\n建议点击下方「查看原文链接」访问原始发布页面。';
+      }
+    }
+    $('pm-body').innerHTML = renderMarkdown(body);
+  }
+
+  // 极简 markdown 渲染（标题/加粗/列表/引用/分隔线）
+  function renderMarkdown(md) {
+    const esc = escHtml(md);
+    return esc
+      .replace(/^&gt; ?(.+)$/gm, '<blockquote class="border-l-2 border-brand-300 pl-3 text-gray-500 my-2">$1</blockquote>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong class="text-ink font-semibold">$1</strong>')
+      .replace(/^### (.+)$/gm, '<h3 class="text-sm font-semibold text-ink mt-3 mb-1">$1</h3>')
+      .replace(/^## (.+)$/gm, '<h3 class="text-sm font-semibold text-ink mt-3 mb-1">$1</h3>')
+      .replace(/^# (.+)$/gm, '<h3 class="text-base font-semibold text-ink mt-3 mb-1">$1</h3>')
+      .replace(/^---$/gm, '<hr class="border-line my-3">')
+      .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
+      .replace(/\n\n/g, '</p><p class="my-1.5">')
+      .replace(/^(?!<)/, '<p class="my-1.5">') + '</p>';
+  }
+
+  // 模态关闭
+  document.querySelectorAll('[data-modal-close]').forEach(el => {
+    el.addEventListener('click', () => {
+      $('policy-modal').classList.add('hidden');
+      document.body.style.overflow = '';
+    });
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !$('policy-modal').classList.contains('hidden')) {
+      $('policy-modal').classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  });
+
+  // ============ Agent 工作流动画 ============
+  async function runWorkflow(data) {
+    const steps = [
+      { sel: 1, text: data.workflow.intent, status: '理解意图中…' },
+      { sel: 2, text: data.workflow.kb, status: '检索政策库…' },
+      { sel: 3, text: data.workflow.web, status: '联网搜索…' },
+      { sel: 4, text: data.workflow.merge, status: '整合证据…' },
+    ];
+    document.querySelectorAll('.step-node').forEach(n => { n.classList.remove('active','done'); n.querySelector('.step-badge').style.background=''; });
+    $('wf-intent').textContent=''; $('wf-kb').textContent=''; $('wf-web').textContent=''; $('wf-merge').textContent='';
+    for (const s of steps) {
+      $('wf-status').textContent = s.status;
+      const node = document.querySelector(`.step-node[data-step="${s.sel}"]`);
+      node.classList.add('active');
+      await sleep(420);
+      const target = { 1:'wf-intent', 2:'wf-kb', 3:'wf-web', 4:'wf-merge' }[s.sel];
+      $(target).textContent = s.text;
+      node.classList.add('done');
+      node.querySelector('.step-badge').style.background = '#15803d';
+      await sleep(120);
+    }
+    $('wf-status').innerHTML = '<span class="text-green-600">完成</span>';
+  }
+
+  // ============ 渲染结果 ============
+  function renderResult(data) {
+    const ring = $('score-ring'), circ = 226;
+    ring.style.strokeDashoffset = circ;
+    $('score-val').textContent = '0';
+    resultArea.classList.remove('hidden');
+    setTimeout(() => {
+      ring.style.strokeDashoffset = circ - (circ * data.score / 100);
+      animateNum($('score-val'), 0, data.score, 700);
+    }, 80);
+    $('verdict-text').innerHTML = simpleMd(data.verdict);
+    $('ref-count').textContent = data.refs.length;
+
+    renderGraph(data.graph);
+    renderKeyInfo(data);
+    $('bonus-count').textContent = data.bonuses.length + ' 条';
+    $('bonuses-list').innerHTML = data.bonuses.length ? data.bonuses.map(renderBonus).join('') : '<div class="px-4 py-8 text-center text-sm text-gray-400">未识别到政策红利</div>';
+    $('risk-count').textContent = data.risks.length + ' 条';
+    $('risks-list').innerHTML = data.risks.length ? data.risks.map(renderRisk).join('') : '<div class="px-4 py-8 text-center text-sm text-gray-400">未识别到明显风险</div>';
+    $('refs-list').innerHTML = data.refs.length ? data.refs.map(renderRef).join('') : '<div class="col-span-full px-4 py-8 text-center text-sm text-gray-400">本次未引用具体政策（LLM 未挂载真实 policy_id）</div>';
+    const followups = buildFollowups(qInput.value.trim());
+    $('followups').innerHTML = followups.map(f => `<button class="followup-btn px-3 py-1.5 rounded border border-brand-200 bg-white text-sm text-brand-600 hover:bg-brand-50 transition-colors">${escHtml(f)}</button>`).join('');
+    document.querySelectorAll('.followup-btn').forEach(b => b.addEventListener('click', () => { qInput.value = b.textContent; askBtn.click(); }));
+    document.querySelectorAll('.bonus-card').forEach(card => {
+      card.querySelector('.expand-btn')?.addEventListener('click', () => card.classList.toggle('expanded'));
+    });
+    document.querySelectorAll('.view-src-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const b = data.bonuses[+btn.dataset.bonusIdx];
+        if (b && b.policy_id) openPolicyModal({ id: b.policy_id, title: b.name, src: b.source, url: b.url || null, region: '' });
+      });
+    });
+    bindRefClicks(data.refs);
+    highlightTimeline(data.refs);
+  }
+
+  function buildFollowups(q) {
+    if (/非遗|传承/.test(q)) return ['传承人认定需要什么条件？', '非遗工坊怎么认定？', '有什么主要风险？'];
+    if (/夜|夜间|夜游/.test(q)) return ['奖励资金如何申请？', '延时营业有什么补贴？', '有什么主要风险？'];
+    if (/老旧小区|改造/.test(q)) return ['申报需要准备哪些材料？', '补贴资金多久能到位？', '加装电梯有什么政策？'];
+    return ['申报需要准备哪些材料？', '资金多久能到位？', '有什么主要风险？'];
+  }
+
+  // 库内引用卡片：点击弹模态加载真实政策原文
+  function bindRefClicks(refs) {
+    document.querySelectorAll('.ref-card[data-ref-idx]').forEach(el => {
+      el.addEventListener('click', () => {
+        const r = refs[+el.dataset.refIdx];
+        if (r && r.id) openPolicyModal(r);
+      });
+    });
+  }
+
+  // ============ 知识图谱（SVG，从真实 refs 构造）============
+  function renderGraph(g) {
+    const svg = $('graph-svg');
+    const cx = 450, cy = 210;
+    // 把库 refs + 联网 bonus 合并成节点（每侧最多 4 个，避免图谱拥挤）
+    const libNodes = (g.refs || []).slice(0, 4).map((r, i) => ({
+      id: 'lib' + i, label: r.title || '政策', kind: '库',
+      level: r.region || '本地', pid: r.id, ref: r,
+    }));
+    const webNodes = (g.webBonuses || []).slice(0, 4).map((b, i) => ({
+      id: 'web' + i, label: b.policy_name, kind: '网', level: '联网',
+      pid: null, url: b.source_url, ref: { kind: '网', id: null, title: b.policy_name, src: b.source, url: b.source_url },
+    }));
+
+    // 左右分列布局：库节点在左列(x=170)、联网节点在右列(x=730)，垂直均分，避免圆周重叠
+    const colY = (i, count) => count <= 1 ? cy : 50 + i * (320 / (count - 1));
+    const placed = [];
+    libNodes.forEach((n, i) => placed.push({ ...n, x: 170, y: colY(i, libNodes.length) }));
+    webNodes.forEach((n, i) => placed.push({ ...n, x: 730, y: colY(i, webNodes.length) }));
+
+    let html = `<defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#cbd5e1"/></marker></defs>`;
+    placed.forEach(n => {
+      html += `<line x1="${n.x}" y1="${n.y}" x2="${cx}" y2="${cy}" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="${n.kind==='网'?'5,4':'none'}" marker-end="url(#arr)"/>`;
+    });
+    html += `<g class="graph-node" data-node="center">
+      <rect class="node-rect" x="${cx-110}" y="${cy-42}" width="220" height="84" rx="8" fill="#102a4a" stroke="#1d4e89" stroke-width="2"/>
+      <text x="${cx}" y="${cy-8}" text-anchor="middle" fill="#fff" font-size="16" font-weight="600">${escSvg(g.center.label)}</text>
+      <text x="${cx}" y="${cy+16}" text-anchor="middle" fill="#93c5fd" font-size="11">${escSvg(g.center.sub)}</text>
+    </g>`;
+    placed.forEach(n => {
+      const isWeb = n.kind === '网';
+      const fill = isWeb ? '#fbf5e8' : '#f3f6fa';
+      const stroke = isWeb ? '#c8821a' : '#1d4e89';
+      const tagColor = isWeb ? '#a86d15' : '#1d4e89';
+      const label = (n.label || '').length > 16 ? (n.label.slice(0, 16) + '…') : (n.label || '');
+      html += `<g class="graph-node" data-node="${n.id}">
+        <rect class="node-rect" x="${n.x-100}" y="${n.y-30}" width="200" height="60" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>
+        <rect x="${n.x-100}" y="${n.y-30}" width="200" height="18" rx="6" fill="${tagColor}" opacity="0.10"/>
+        <text x="${n.x-90}" y="${n.y-17}" fill="${tagColor}" font-size="10" font-weight="600">${isWeb?'联网 · 实时':'政策库 · '+escSvg(n.level||'本地')}</text>
+        <text x="${n.x}" y="${n.y+8}" text-anchor="middle" fill="#1a1f29" font-size="11" font-weight="500">${escSvg(label)}</text>
+      </g>`;
+    });
+    svg.innerHTML = html;
+    svg.querySelectorAll('.graph-node').forEach(el => {
+      el.addEventListener('click', () => {
+        svg.querySelectorAll('.graph-node').forEach(e => e.classList.remove('selected'));
+        el.classList.add('selected');
+        const id = el.dataset.node;
+        const detail = $('node-detail');
+        if (id === 'center') {
+          detail.classList.remove('hidden');
+          detail.innerHTML = `<div class="font-semibold text-ink mb-1">● ${escHtml(g.center.label)}</div><div class="text-gray-600">${escHtml(g.center.sub)}</div>`;
+          return;
+        }
+        const node = placed.find(n => n.id === id);
+        if (!node) return;
+        detail.classList.remove('hidden');
+        const r = node.ref;
+        const tag = r.kind === '网'
+          ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent-100 text-accent-600">联网 · 实时</span>`
+          : `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-brand-100 text-brand-600">政策库 ${r.id?'#'+r.id:''}</span>`;
+        const cta = r.kind === '库' && r.id
+          ? `<button class="mt-2 text-xs text-brand-600 hover:underline" id="graph-view-src">查看政策原文 -></button>`
+          : (r.url ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener" class="mt-2 inline-block text-xs text-accent-600 hover:underline">打开来源 ↗</a>` : '');
+        detail.innerHTML = `<div class="flex items-center gap-2 mb-1.5">${tag}<span class="font-semibold text-ink">${escHtml(r.title)}</span></div>
+          <div class="text-gray-600 leading-relaxed mb-1">${escHtml(r.src || '')}</div>${cta}`;
+        if (r.kind === '库' && r.id) {
+          $('graph-view-src')?.addEventListener('click', () => openPolicyModal(r));
+        }
+        detail.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      });
+    });
+  }
+
+  // ============ 关键信息抽取（从后端结果派生）============
+  function renderKeyInfo(data) {
+    const bonusCount = (data.bonuses || []).length;
+    const policyCount = data.policy_count || 0;
+    const items = [
+      { label: '命中政策', value: policyCount + ' 条', pct: Math.min(100, policyCount * 8), hint: '本次检索到的相关政策总量' },
+      { label: '可申领红利', value: bonusCount + ' 条', pct: Math.min(100, bonusCount * 15), hint: `从命中政策中筛选出可申领的红利（${policyCount} 选 ${bonusCount}）` },
+      { label: '可行性评分', value: (data.score || 0) + ' 分', pct: data.score || 0, hint: '综合政策匹配度评分' },
+    ];
+    $('key-info').innerHTML = items.map(it => `<div title="${escHtml(it.hint)}">
+      <div class="text-xs text-gray-500 mb-1.5">${escHtml(it.label)}</div>
+      <div class="text-lg font-semibold tabular text-ink mb-2">${escHtml(it.value)}</div>
+      <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div class="progress-fill h-full bg-brand-500 rounded-full" style="width:0" data-pct="${it.pct}"></div>
+      </div>
+      <div class="text-xs text-gray-400 mt-2">${escHtml(it.hint)}</div>
+    </div>`).join('');
+    setTimeout(() => { $('key-info').querySelectorAll('.progress-fill').forEach(b => b.style.width = b.dataset.pct + '%'); }, 120);
+  }
+
+  // ============ 红利卡片 ============
+  function renderBonus(b, i) {
+    const pStyle = { '立即':'bg-red-50 text-red-700 border-red-200', '中期':'bg-amber-50 text-amber-700 border-amber-200', '长期':'bg-slate-50 text-slate-700 border-slate-200' }[b.priority] || 'bg-gray-50 text-gray-700 border-gray-200';
+    const kStyle = b.kind==='网' ? 'bg-accent-50 text-accent-600 border-accent-200' : 'bg-brand-50 text-brand-600 border-brand-200';
+    let dots = '';
+    for (let j=0;j<5;j++) dots += `<span style="background:${j<b.match?'#15803d':'#e3e6eb'}"></span>`;
+    const viewSrc = (b.kind !== '网' && b.policy_id)
+      ? `<button class="view-src-btn text-xs text-brand-600 hover:underline mt-2" data-bonus-idx="${i}">查看政策原文 -></button>`
+      : (b.url ? `<a href="${escHtml(b.url)}" target="_blank" rel="noopener" class="text-xs text-accent-600 hover:underline mt-2 inline-block">打开来源 ↗</a>` : '');
+    return `<div class="bonus-card px-4 py-3.5">
+      <div class="flex items-start gap-2.5">
+        <span class="shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border ${pStyle}">${escHtml(b.priority)}</span>
+        <div class="flex-1 min-w-0">
+          <div class="font-medium text-sm text-ink mb-1.5">${escHtml(b.name)}</div>
+          <div class="flex items-center gap-2 mb-2 flex-wrap">
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-medium border ${kStyle}">${b.kind==='网'?'联网':'政策库'}</span>
+            <span class="text-xs text-gray-400">${escHtml(b.source)}</span>
+            <span class="text-xs text-gray-400">·</span>
+            <span class="text-xs text-gray-500">匹配度</span>
+            <span class="dot-row">${dots}</span>
+          </div>
+          <div class="text-xs text-gray-700 leading-relaxed mb-2">${simpleMd(b.content)}</div>
+          <div class="text-xs text-brand-700 bg-brand-50 px-2.5 py-1.5 rounded">建议行动：${escHtml(b.action)}</div>
+          ${viewSrc}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ============ 风险 ============
+  function renderRisk(r, i) {
+    const lDot = { '高':'bg-red-500', '中':'bg-amber-500', '低':'bg-green-500' }[r.level] || 'bg-gray-400';
+    const lStyle = { '高':'bg-red-50 text-red-700 border-red-200', '中':'bg-amber-50 text-amber-700 border-amber-200', '低':'bg-green-50 text-green-700 border-green-200' }[r.level] || 'bg-gray-50 text-gray-700 border-gray-200';
+    return `<div class="px-4 py-3.5">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2 h-2 rounded-full ${lDot}"></span>
+        <span class="px-1.5 py-0.5 rounded text-[10px] font-medium border ${lStyle}">${escHtml(r.level)} 风险</span>
+        <span class="font-medium text-sm text-ink">${escHtml(r.type)}</span>
+      </div>
+      <div class="text-xs text-gray-700 leading-relaxed mb-2">${escHtml(r.desc)}</div>
+      <div class="text-xs text-gray-600 bg-canvas px-2.5 py-1.5 rounded">应对建议：${escHtml(r.sugg)}</div>
+    </div>`;
+  }
+
+  // ============ 引用原文 ============
+  function renderRef(r, i) {
+    const kStyle = r.kind==='网' ? 'border-accent-200 bg-accent-50/40' : 'border-brand-200 bg-brand-50/40';
+    const tag = r.kind==='网' ? `<span class="text-accent-600">联网 · 实时</span>` : `<span class="text-brand-600">政策库 ${r.id?'#'+r.id:''}</span>`;
+    const hint = r.kind === '库' && r.id
+      ? '<span class="text-[10px] text-brand-500 mt-1.5 inline-block">点击查看原文 →</span>'
+      : (r.kind==='网' ? '<span class="text-[10px] text-accent-500 mt-1.5 inline-block">打开来源 ↗</span>' : '');
+    const head = `<div class="text-[10px] mb-1.5 font-medium">${tag}</div>
+      <div class="text-xs font-medium text-ink leading-snug mb-2 line-clamp-2">${escHtml(r.title)}</div>
+      <div class="flex items-center justify-between text-[10px] text-gray-400">
+        <span>${escHtml(r.src)}</span><span class="tabular">${escHtml(r.date)}</span>
+      </div>${hint}`;
+    if (r.kind === '库' && r.id) {
+      return `<div class="ref-card block p-3.5 rounded border ${kStyle} transition-colors cursor-pointer" data-ref-idx="${i}">${head}</div>`;
+    }
+    return `<a href="${r.url||'#'}" target="_blank" rel="noopener" class="ref-card block p-3.5 rounded border ${kStyle} transition-colors">${head}</a>`;
+  }
+
+  // ============ 驾驶舱：饼图（donut）============
+  function renderPie() {
+    const svg = $('pie-svg');
+    const cx = 80, cy = 80, r = 56, sw = 16;
+    const C = 2 * Math.PI * r;
+    const total = OVERVIEW.topics.reduce((s, t) => s + t.count, 0);
+    let acc = 0;
+    let segs = '';
+    OVERVIEW.topics.forEach((t, i) => {
+      const frac = t.count / total;
+      const len = frac * C;
+      const offset = -acc * C;
+      segs += `<circle class="donut-seg" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${t.color}" stroke-width="${sw}" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${offset}" transform="rotate(-90 ${cx} ${cy})" data-topic="${i}"/>`;
+      acc += frac;
+    });
+    svg.innerHTML = `${segs}
+      <text x="${cx}" y="${cy-2}" text-anchor="middle" fill="#1a1f29" font-size="20" font-weight="600" class="tabular">${OVERVIEW.kpi.total}</text>
+      <text x="${cx}" y="${cy+14}" text-anchor="middle" fill="#9ca3af" font-size="9">总数</text>`;
+    $('pie-legend').innerHTML = OVERVIEW.topics.map((t, i) => {
+      const pct = Math.round(t.count / total * 100);
+      return `<div class="flex items-center justify-between gap-2" data-legend="${i}">
+        <span class="flex items-center min-w-0"><span class="w-2.5 h-2.5 rounded-sm mr-2 shrink-0" style="background:${t.color}"></span><span class="text-gray-600 truncate">${escHtml(t.name)}</span></span>
+        <span class="text-gray-400 tabular shrink-0">${pct}%</span>
+      </div>`;
+    }).join('');
+    svg.querySelectorAll('.donut-seg').forEach(seg => {
+      seg.addEventListener('mouseenter', () => {
+        svg.querySelectorAll('.donut-seg').forEach(s => s.classList.add('dim'));
+        seg.classList.remove('dim');
+      });
+      seg.addEventListener('mouseleave', () => svg.querySelectorAll('.donut-seg').forEach(s => s.classList.remove('dim')));
+    });
+  }
+
+  // ============ 驾驶舱：部门柱图（横向 bar）============
+  function renderBar() {
+    const max = Math.max(...OVERVIEW.departments.map(d => d.count));
+    $('bar-list').innerHTML = OVERVIEW.departments.map(d => {
+      const pct = Math.round(d.count / max * 100);
+      return `<div class="grid grid-cols-[60px_1fr_28px] items-center gap-2.5">
+        <span class="text-xs text-gray-600 truncate">${escHtml(d.name)}</span>
+        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div class="bar-fill h-full bg-brand-500 rounded-full" style="width:0" data-pct="${pct}"></div>
+        </div>
+        <span class="text-xs text-gray-500 tabular text-right">${d.count}</span>
+      </div>`;
+    }).join('');
+    setTimeout(() => { $('bar-list').querySelectorAll('.bar-fill').forEach(b => b.style.width = b.dataset.pct + '%'); }, 120);
+  }
+
+  // ============ 驾驶舱：时间轴 ============
+  function renderTimeline() {
+    const tl = $('timeline');
+    let html = `<div class="absolute left-[5px] top-1 bottom-1 w-px bg-line"></div>`;
+    OVERVIEW.timeline.forEach(item => {
+      const isWeb = item.kind === '网';
+      const dotColor = isWeb ? 'bg-accent-500' : 'bg-brand-500';
+      const tag = isWeb ? '<span class="text-accent-600">联网</span>' : `<span class="text-brand-600">#${item.id}</span>`;
+      html += `<div class="tl-item relative mb-2.5 pl-3 py-1.5" data-id="${item.id ?? ''}" data-kind="${item.kind}">
+        <span class="absolute -left-[13px] top-2.5 w-2.5 h-2.5 rounded-full ${dotColor} ring-2 ring-white"></span>
+        <div class="flex items-center gap-2 mb-0.5">
+          <span class="text-[11px] text-gray-400 tabular">${item.date}</span>
+          <span class="text-[10px]">${tag}</span>
+        </div>
+        <div class="tl-title text-xs text-ink leading-snug">${escHtml(item.title)}</div>
+        <div class="text-[10px] text-gray-400 mt-0.5">${escHtml(item.src)}</div>
+      </div>`;
+    });
+    tl.innerHTML = html;
+  }
+
+  // ============ 时间轴联动高亮（Agent 查询 refs 命中）============
+  function highlightTimeline(refs) {
+    const hitIds = new Set(refs.filter(r => r.kind === '库' && r.id).map(r => String(r.id)));
+    const hitWeb = refs.some(r => r.kind === '网');
+    document.querySelectorAll('.tl-item').forEach(el => {
+      el.classList.remove('hit', 'web-hit');
+      const id = el.dataset.id;
+      const kind = el.dataset.kind;
+      if (kind === '库' && id && hitIds.has(id)) el.classList.add('hit');
+      else if (kind === '网' && hitWeb) el.classList.add('web-hit');
+    });
+    const hits = hitIds.size + (hitWeb ? 1 : 0);
+    $('tl-hint').textContent = hits ? `本次命中 ${hits} 条` : '命中高亮';
+  }
+
+  // ============ 驾驶舱 KPI 数字动画 ============
+  function renderKpi() {
+    animateNum($('kpi-total'), 0, OVERVIEW.kpi.total, 700);
+    animateNum($('kpi-new'), 0, OVERVIEW.kpi.new_this_month, 700);
+    animateNum($('kpi-dept'), 0, OVERVIEW.kpi.departments, 700);
+    animateNum($('kpi-web'), 0, OVERVIEW.kpi.web_supplement, 700);
+  }
+
+  // ============ 工具 ============
+  function escHtml(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function escSvg(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function simpleMd(s){ return escHtml(s).replace(/\*\*(.+?)\*\*/g,'<strong class="text-ink font-semibold">$1</strong>').replace(/\n/g,'<br>'); }
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+  function animateNum(el, from, to, dur){ const start=performance.now(); function tick(t){ const p=Math.min((t-start)/dur,1); el.textContent=Math.round(from+(to-from)*p); if(p<1) requestAnimationFrame(tick);} requestAnimationFrame(tick); }
+
+  // ============ 初始化驾驶舱 ============
+  renderKpi();
+  renderPie();
+  renderBar();
+  renderTimeline();
+  </script>
+</body>
+</html>

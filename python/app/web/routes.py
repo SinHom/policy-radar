@@ -38,6 +38,16 @@ async def index() -> HTMLResponse:
 # SPA fallback:vue-router history 模式需要的 fallback。
 # 不匹配 /static 或 /assets 的路径都返回 index.html,前端 router 接管。
 # 必须在所有具体路由之后声明。
+# 政策顾问独立页面（2026-07-20）
+@router.get('/advisor', response_class=HTMLResponse)
+async def advisor_page() -> HTMLResponse:
+    """独立的政策顾问页面，不走 Vue SPA。"""
+    advisor_html = WEB_DIR / 'advisor.html'
+    if not advisor_html.exists():
+        raise HTTPException(status_code=404, detail='advisor.html not found')
+    return HTMLResponse(content=advisor_html.read_text(encoding='utf-8'))
+
+
 @router.get("/{full_path:path}", response_class=HTMLResponse)
 async def spa_fallback(full_path: str) -> HTMLResponse:
     """SPA fallback:所有未匹配的 path 返回 dist/index.html。

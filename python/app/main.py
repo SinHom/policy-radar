@@ -163,6 +163,9 @@ def create_app() -> FastAPI:
     # 2026-07-09 新增: 政策雷达 RSS / Markdown 输出 (必须在 web_router 之前,否则被 SPA catch-all 拦截)
     from python.app.api.policy_radar import router as policy_radar_router
     app.include_router(policy_radar_router, tags=["policy-radar-rss"])
+    # 2026-07-20: 政策顾问独立页面 API（公开，无需鉴权）
+    from python.app.api.advisor import router as advisor_router
+    app.include_router(advisor_router, tags=["advisor"])
     # web_router 放最后,作为 SPA fallback
     app.include_router(web_router, tags=["web"])
     return app

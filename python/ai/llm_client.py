@@ -94,8 +94,12 @@ class LLMClient:
         json_mode: bool = False,
         purpose: str = "summarize",
         policy_id: int = 0,
+        extra_body: Optional[dict] = None,
     ) -> str:
-        """发一次 chat 请求，返回 assistant content 字符串。"""
+        """发一次 chat 请求，返回 assistant content 字符串。
+
+        extra_body 透传非标参数（如 MiniMax plugins web_search 插件）。
+        """
         kwargs = dict(
             model=self.model,
             messages=[
@@ -107,6 +111,8 @@ class LLMClient:
         )
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
+        if extra_body:
+            kwargs["extra_body"] = extra_body
         start = time.time()
         try:
             resp = await self._client.chat.completions.create(**kwargs)
@@ -124,9 +130,10 @@ class LLMClient:
         await _log_usage(self.model, in_tok, out_tok, purpose, policy_id, duration_ms)
         return resp.choices[0].message.content or ""
 
-    async def chat_json(self, system: str, user: str) -> dict:
+    async def chat_json(self, system: str, user: str, *, extra_body: Optional[dict] = None,
+                        max_tokens: int = 1500) -> dict:
         """发请求并解析返回为 dict。"""
-        text = await self.chat(system, user, json_mode=True)
+        text = await self.chat(system, user, json_mode=True, extra_body=extra_body, max_tokens=max_tokens)
         return _safe_parse_json(text)
 
     async def health_check(self) -> bool:

@@ -1,7 +1,9 @@
 # 政策雷达 (Policy Radar) — Claude 阅读入口
 
-> **状态：🟢 活跃** | 最后更新：2026-07-15 | 版本 v0.3 + Phase A/B(本地分支 `feat/policy-advisor-phase-ab`，9 spider+tagger 未部署) + 图片抓取+VLM caption(commit `afa2079` 已部署)
-> 13 MCP Tools · ~40 REST 端点 · 10 张表 · 132 政策源（本地 97 + 上海 52，有数据 58，721 条政策，29% 正文覆盖）
+> **状态：🟢 活跃** | 最后更新：2026-07-20 | 版本 v0.3 + Phase A/B(commit `ea629df` 已完整部署，含 60 spider + 16 scripts + tagger) + 图片抓取+VLM caption(commit `afa2079`) + 政策顾问驾驶舱页 `/advisor`(2026-07-20 已接线真实 LLM+RAG+MiniMax 官方联网搜索)
+> 13 MCP Tools · ~40 REST 端点 · 10 张表 · 132 政策源（本地 97 + 上海 52，有数据 58，2110 条政策，29% 正文覆盖）
+>
+> **注**：Phase A/B 中若干 qhd 子域名 spider (`city_qhd_cl/gn/jtj/sfj` 等) 在生产服务器抓取超时（gov 站 WAF/DNS 限制，详见 [[policy-radar-ssh-and-waf]]）。已知问题，list_skip_re 过滤部分列表 URL；具体 spider 实际抓取效果需等 5am cron 跑一轮后看日志。
 > 服务器：腾讯云 `43.155.161.54`，每日 8/14/20 点定时爬取+回填+导出
 > 导出：`data/exports/policies/`（208 .md），`data/exports/feeds/`（OPML + JSON）
 > 完整给客户上线路线见 `docs/PRODUCTION-CHECKLIST.md`
@@ -81,6 +83,13 @@ policy-radar/
   - **?tag= 过滤重排**：从 SQL 层（按 PolicySource.tags 源级）改为 item 构建后 Python 层按 merged tags AND 过滤，使 `?tag=文旅_规划` 等标题级标签可过滤
   - `parse_tags` 加 `isinstance(result, list)` 防护（防 json.loads 返回 str/dict 时全端点 500）
   - 待服务器：A5 city_qhd_lyj(probe code+WAF) / A12 验证已有 11 信源 / A13 全量抓取导出
+- ✅ **Phase A/B 完整部署**（2026-07-15，commit `ea629df` + 服务器 rebuild 持久化）：
+  - 60+ spider configs (city_qhd_* / city_sz_* / shanghai_* / Phase A/B 9 新源) 已 checkout 到 image
+  - 16 个新 scripts/*.py (backfill_*.py / fix_zero_sources.py / generate_opml.py / probe_*.py / seed_*.py)
+  - `python/crawlers/tagger.py` 已 import + classify_tags 工作正常（测例"文化和旅游部发布关于做好2026年规划的通知" → `['文旅_政策', '通知', '政策文件']`）
+  - `python/crawlers/fetcher.py` (+52: IPv4 强制/QHD 代理/Chrome 136 完整指纹头/Playwright 回退)
+  - 已知问题：部分 qhd 子域名 (`clxzf.gov.cn` 等) 60s timeout (WAF/DNS, 详见 [[policy-radar-ssh-and-waf]])。5am cron 全量跑后可看新数据
+  - **联合 image enhancement (afa2079)**：含图政策抓取后自动 MiniMax-VL caption，灌入 WeKnora 可向量检索
 - ✅ **正文图片抓取 + VLM caption 增强**（2026-07-15，commit `afa2079` + 服务器 rebuild 持久化）：
   - `python/crawlers/parser.py` 新增 `extract_content_html(soup, selector, base_url, caption_images=True)`：取代 `extract_by_selector` 抓正文。返回**带 `<img>` 的 HTML 片段**（非纯文本），补全相对 src 为绝对 URL，删 script/style/nav/footer
   - `python/ai/vlm_client.py` 新增 `VLMClient`：调 MiniMax-VL-01 via `https://api.minimaxi.com/anthropic/v1/messages`（Anthropic Messages API，**非** OpenAI 兼容端点）。`caption_image_bytes(img_bytes, media_type) -> str`，失败降级返回空串
@@ -192,6 +201,17 @@ Windows 本地同步：Task Scheduler `PolicyRadar-DailySync` 每天 06:00 触�
 - 极轻阴影 + hover-lift 浮起
 
 **MVP 触发页面范围控制**：只做"4 个按钮 + 1 个列表 + 推送日志面板"，不要扩到搜索/筛选/分页（第二期再加）。
+
+### 政策顾问驾驶舱页 `/advisor`（2026-07-20）
+
+独立页面，**不走 Vue SPA**。`python/app/web/routes.py:42` `GET /advisor` 直接返回 `python/app/web/advisor.html`（SPA fallback 之前拦截）。左驾驶舱（KPI + 主题饼图 + 部门柱图 + 时间轴）+ 右 Agent 问答 + 详情（图谱/关键信息/红利风险/引用/追问），时间轴随查询命中高亮。
+
+- **风格**（政务，非 SaaS）：主色政务蓝 `#1d4e89`、冷中性背景 `#f5f6f8`、Noto Sans SC 单字族 + weight 层次、1.5px stroke 内联 SVG 图标（`ICONS` 对象，非 emoji）、`rounded-lg/md`、无玻璃态/无渐变/无 hover-lift/无装饰 fade-in。区别于上面 demo.html 的 `#3b82f6` + hover-lift 旧风。
+- **数据层 ✅ 已接线**（`POST /advisor/analyze`，main.py 注册 advisor_router）：前端 `fetchAdvisor()` 真实对接，MiniMax M3 生成 verdict/bonuses/risks，bonuses 挂真实 policy_id。驾驶舱 KPI/饼图/柱图/时间轴仍用页内 `OVERVIEW` 静态 demo（按需求保留 mock）。政策原文双源查看：引用卡片/图谱节点点击 -> `openPolicyModal()` -> 优先 `GET /policy-radar/markdown/{id}`（服务器真实抓取），md 不全走页内 `DEMO_CONTENT` 兜底。**不能复用 `python/app/api/dashboard.py`**（推送漏斗 + require_admin，语义/鉴权不符）。
+- **联网搜索**：MiniMax 官方 Web Search API `POST {base}/v1/coding_plan/search`（body `{"q":query}`，响应 `organic[].link/title/snippet`），复用 MINIMAX_API_KEY。端点从 `minimax-coding-plan-mcp` 包源码挖出（官方文档没写）。**勿走三条弯路**：① tinyfish CLI（服务器没装，永远空）② M3 `plugins web_search` 插件（`/v1/chat/completions` 端点不生效，模型自称未联网）③ duckduckgo-search（大陆服务器返回 Microsoft 垃圾）。
+- **后端关键坑**（advisor.py）：`_extract_keywords` 领域词全词扫描（`in` 长词优先，不可用 `re.findall(r"[一-龥]{2,6}")` 贪婪匹配--会把「老旧小区」拆进「秦皇岛老旧小」）；`_search_policies` 加 `joinedload(Policy.source)`（避免 session 关闭后访问 `p.source` 触发 DetachedInstanceError）+ title 命中关键词数排序优先于 published_at（防泛词「改造」63 条淹没精准词）；`_parse_advisor_json` 从固定起始 key `{"feasibility_score"` 定位跳过 M3 reasoning 思考链；max_tokens=3000 防联网后输出变长截断 JSON 触发重试。
+- **部署**（非 rebuild）：本地 Edit -> `scp` 到 `radar:/tmp/` -> `docker cp` 进 `policy-radar-app:/app/python/...` -> `docker restart` -> 宿主 `sudo cp /tmp/* /opt/policy-radar/...` 同步防 rebuild 回退。LLM 单次 30-44s 是 M3 reasoning 固有耗时（`enable_thinking:False` 实测反而更慢，勿用）。
+- **注意两份 advisor.html**：服务的是 `python/app/web/advisor.html`；`frontend/advisor.html` 是旧版孤儿（无引用、未纳入 git），勿改错文件
 
 ---
 
