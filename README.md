@@ -1,13 +1,13 @@
 # 政策雷达 (Policy Radar) · MCP Server
 
-> **v0.3 + Phase A/B + 抚顺 spider(11 源/8 部门 145 条)** · 13 个 MCP Tools · 10 张表 · ~40 REST 端点 + 2 个政策顾问驾驶舱
+> **v0.3 + Phase A/B + 抚顺 spider(11 源/8 部门 136 条)** · 13 个 MCP Tools · 10 张表 · ~40 REST 端点 + 2 个政策顾问驾驶舱
 > 让任何 AI 工具（Claude / Cursor / 飞书 / 企微 / 小龙虾）通过 MCP 协议接入政策雷达
 
 ---
 
 ## 核心能力
 
-- 🕷️ **政策爬虫**：~150 源有数据，~900+ 条政策（含抚顺 145 条）；含通知公告/政策解读/公示三类子源；Playwright + httpx；详见 `docs/CRAWLER-FIX-TODO.md`
+- 🕷️ **政策爬虫**：~150 源有数据，~900+ 条政策（含抚顺 136 条）；含通知公告/政策解读/公示三类子源；Playwright + httpx；详见 `docs/CRAWLER-FIX-TODO.md`
 - 🖼️ **正文图片抓取 + VLM caption**：正文 `<img>` 保留进 `raw_content`（非纯文本）；MiniMax-VL-01 给每张图生成中文 caption 写入 alt text，灌入 WeKnora 后图片内容可向量检索
 - 🤖 **AI 摘要**：MiniMax M3，自动提取政策类型/截止/金额/条件/关键词
 - 🎯 **匹配引擎**：规则预筛（类型+地区+关键词）+ 可选 LLM 深度评分

@@ -1,7 +1,7 @@
 # 政策雷达 (Policy Radar) — Claude 阅读入口
 
 > **状态：🟢 活跃** | 最后更新：2026-07-21 | 版本 v0.3 + Phase A/B + 抚顺 spider(11 源 8 部门 136 条入库，已清 9 垃圾) + 政策顾问驾驶舱页 `/advisor` + **`/advisor-fushun`(2026-07-21 整套独立后端：独立 LLM prompt + 独立 RAG region + 独立联网)**
-> 13 MCP Tools · ~40 REST 端点 · 10 张表 · 143 政策源（v0.3 132 + 抚顺 11，有数据 64，新增 145 条抚顺本地政策）
+> 13 MCP Tools · ~40 REST 端点 · 10 张表 · 143 政策源（v0.3 132 + 抚顺 11，有数据 64，新增 136 条抚顺本地政策）
 >
 > **注**：Phase A/B 中若干 qhd 子域名 spider (`city_qhd_cl/gn/jtj/sfj` 等) 在生产服务器抓取超时（gov 站 WAF/DNS 限制，详见 [[policy-radar-ssh-and-waf]]）。已知问题，list_skip_re 过滤部分列表 URL；具体 spider 实际抓取效果需等 5am cron 跑一轮后看日志。
 > 服务器：腾讯云 `43.155.161.54`，每日 8/14/20 点定时爬取+回填+导出
