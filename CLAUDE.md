@@ -1,6 +1,6 @@
 # 政策雷达 (Policy Radar) — Claude 阅读入口
 
-> **状态：🟢 活跃** | 最后更新：2026-07-21 | 版本 v0.3 + Phase A/B + 抚顺 spider(11 源 8 部门 145 条入库) + 政策顾问驾驶舱页 `/advisor` + **`/advisor-fushun`(2026-07-21 整套独立后端：独立 LLM prompt + 独立 RAG region + 独立联网)**
+> **状态：🟢 活跃** | 最后更新：2026-07-21 | 版本 v0.3 + Phase A/B + 抚顺 spider(11 源 8 部门 136 条入库，已清 9 垃圾) + 政策顾问驾驶舱页 `/advisor` + **`/advisor-fushun`(2026-07-21 整套独立后端：独立 LLM prompt + 独立 RAG region + 独立联网)**
 > 13 MCP Tools · ~40 REST 端点 · 10 张表 · 143 政策源（v0.3 132 + 抚顺 11，有数据 64，新增 145 条抚顺本地政策）
 >
 > **注**：Phase A/B 中若干 qhd 子域名 spider (`city_qhd_cl/gn/jtj/sfj` 等) 在生产服务器抓取超时（gov 站 WAF/DNS 限制，详见 [[policy-radar-ssh-and-waf]]）。已知问题，list_skip_re 过滤部分列表 URL；具体 spider 实际抓取效果需等 5am cron 跑一轮后看日志。
@@ -258,21 +258,21 @@ Windows 本地同步：Task Scheduler `PolicyRadar-DailySync` 每天 06:00 触�
 
 `python/crawlers/spiders/city_fushun_*.json` 共 11 个（命名 `city_fushun_<简写>` 对齐 `city_qhd_*` 模式）：
 
-| 源 | 部门 | 首批抓取 | 状态 |
+| 源 | 部门 | 入库 | 状态 |
 |---|---|---|---|
-| `city_fushun_keji` | 科技局 | 17 | ✅ |
-| `city_fushun_gongxin` | 工信局 | 16 | ✅ |
+| `city_fushun_shangwu` | 商务局 | 20 | ✅ |
 | `city_fushun_fagaiwei` | 发改委 | 20 | ✅ |
-| `city_fushun_caizheng` | 财政局 | 18 | ✅ |
-| `city_fushun_renshe` | 人社局 | 9 | ✅ |
+| `city_fushun_caizheng` | 财政局 | 19 | ✅ |
+| `city_fushun_renshe` | 人社局 | 19 | ✅ |
 | `city_fushun_gov` | 市政府 | 19 | ✅ |
+| `city_fushun_shichangjiandu` | 市场监管局 | 15 | ✅ |
+| `city_fushun_gongxin` | 工信局 | 14 | ✅ |
+| `city_fushun_keji` | 科技局 | 10 | ✅ |
 | `city_fushun_minzheng` | 民政局 | 0 | ❌ 403 WAF |
 | `city_fushun_wenhua` | 文旅局 | 0 | ❌ 403 WAF |
-| `city_fushun_shangwu` | 商务局 | 0 | ❌ 拉取失败 |
 | `city_fushun_weisheng` | 卫健局 | 0 | ❌ URL 待重测 |
-| `city_fushun_shichangjiandu` | 市场监管局 | 0 | ❌ PDF 附件直链 |
 
-5 源 0 抓取详见 `docs/CRAWLER-FIX-TODO.md` 抚顺段。
+3 源 0 抓取详见 `docs/CRAWLER-FIX-TODO.md` 抚顺段。总计 **136 条**（2026-07-21 服务器 db 真实统计，已清 9 条垃圾：8 微信文章 + 1 目录页）。
 
 ---
 

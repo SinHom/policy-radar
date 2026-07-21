@@ -387,16 +387,16 @@
   };
   const ico = (name, cls = 'w-4 h-4') => ICONS[name].replace('<svg', `<svg class="${cls}"`);
 
-  // ============ 驾驶舱总览数据（2026-07-21 服务器 db 真实统计：145 条 / 8 部门）============
+  // ============ 驾驶舱总览数据（2026-07-21 服务器 db 真实统计：136 条 / 8 部门，已清 9 条垃圾）============
   const OVERVIEW = {
-    kpi: { total: 145, new_this_month: 145, departments: 8, web_supplement: 0 },
+    kpi: { total: 136, new_this_month: 136, departments: 8, web_supplement: 0 },
     topics: [
-      { name: '企业科创', count: 25, color: '#1d4e89' },
+      { name: '企业科创', count: 21, color: '#1d4e89' },
       { name: '财税政策', count: 19, color: '#15803d' },
       { name: '法治建设', count: 17, color: '#6b5e8f' },
       { name: '人才就业', count: 16, color: '#b85c5c' },
       { name: '市场监管', count: 13, color: '#c8821a' },
-      { name: '综合政务', count: 55, color: '#94a3b8' },
+      { name: '综合政务', count: 50, color: '#94a3b8' },
     ],
     departments: [
       { name: '商务局', count: 20 },
@@ -404,9 +404,9 @@
       { name: '人社局', count: 19 },
       { name: '财政局', count: 19 },
       { name: '市政府', count: 19 },
-      { name: '科技局', count: 17 },
-      { name: '工信局', count: 16 },
       { name: '市场监管局', count: 15 },
+      { name: '工信局', count: 14 },
+      { name: '科技局', count: 10 },
     ],
     timeline: [
       { date: '07/17', title: '关于开展抚顺抗洪救灾公益援助行动的倡议书', src: '抚顺市发改委', kind: '库', id: 3062 },
