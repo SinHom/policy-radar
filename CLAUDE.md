@@ -1,7 +1,7 @@
 # 政策雷达 (Policy Radar) — Claude 阅读入口
 
-> **状态：🟢 活跃** | 最后更新：2026-07-20 | 版本 v0.3 + Phase A/B(commit `ea629df` 已完整部署，含 60 spider + 16 scripts + tagger) + 图片抓取+VLM caption(commit `afa2079`) + 政策顾问驾驶舱页 `/advisor`(2026-07-20 已接线真实 LLM+RAG+MiniMax 官方联网搜索)
-> 13 MCP Tools · ~40 REST 端点 · 10 张表 · 132 政策源（本地 97 + 上海 52，有数据 58，2110 条政策，29% 正文覆盖）
+> **状态：🟢 活跃** | 最后更新：2026-07-21 | 版本 v0.3 + Phase A/B + 抚顺 spider(11 源 8 部门 145 条入库) + 政策顾问驾驶舱页 `/advisor` + **`/advisor-fushun`(2026-07-21 整套独立后端：独立 LLM prompt + 独立 RAG region + 独立联网)**
+> 13 MCP Tools · ~40 REST 端点 · 10 张表 · 143 政策源（v0.3 132 + 抚顺 11，有数据 64，新增 145 条抚顺本地政策）
 >
 > **注**：Phase A/B 中若干 qhd 子域名 spider (`city_qhd_cl/gn/jtj/sfj` 等) 在生产服务器抓取超时（gov 站 WAF/DNS 限制，详见 [[policy-radar-ssh-and-waf]]）。已知问题，list_skip_re 过滤部分列表 URL；具体 spider 实际抓取效果需等 5am cron 跑一轮后看日志。
 > 服务器：腾讯云 `43.155.161.54`，每日 8/14/20 点定时爬取+回填+导出
@@ -98,6 +98,18 @@ policy-radar/
   - `engine.py` 第 206 行已改调 `extract_content_html`。raw_content 现存带 img + caption 的 HTML（向后兼容：旧纯文本数据不受影响，导出 markdownify 自动转 `![](url)`）
   - **部署**：commit `afa2079` 在 `feat/policy-advisor-phase-ab` 分支（已 push origin）。服务器 `git checkout origin/feat/...-- <3 files>` + `docker compose build app` + `up -d`（force-recreate，env 注入 `MINIMAX_VLM_MODEL`）。服务器 git 仍在 main 工作树，3 文件 checkout 到 feat 版本打包进 image
   - **WeKnora 集成**：上传这种 md 到配齐 `embedding_model_id`+`summary_model_id`+`chunking_config` 的 KB，caption 被向量化，检索"国徽"/"文化和旅游部官网"可命中图片内容（详见 [[weknora-phase-c-verification]] 记忆）
+- ✅ **抚顺市级 spider 上线**（2026-07-21，应「做整个抚顺市政策库」需求）：
+  - 11 个 `city_fushun_*.json` 在 `python/crawlers/spiders/`（科技局/工信局/发改委/财政局/人社局/民政局/卫健局/文旅局/商务局/市场监管局/市政府），统一 CMS 模板，**全部 `render_js:false`**，**全部 `region=抚顺`**
+  - 首批抓取入库 99 条（6 源成功：财政局18/发改委20/工信局16/市政府19/科技局17/人社局9）。5 源 0 抓取待二期：minzheng/wenhua(403 WAF)、shangwu(超时)、weisheng(URL 重测)、shichangjiandu(PDF 附件)。详见 `docs/CRAWLER-FIX-TODO.md` 抚顺段
+  - 探测发现抚顺站对比秦皇岛**无 WAF**，统一选择器：`item=.ewb-info-item`（22 处，Agent 报告写 `.sec-right-item` 不准，已实测修正）、`detail=#TDContent`、日期 `.ewb-date::text`
+  - **`seed_sources.py` bug 修复**：原版不提取 `region/department` 到列只塞进 spider_config JSON，导致 advisor_fushun 的 `region.like("%抚顺%")` 查不到列。修：① `seed_sources.py:80` 永久提取 ② 新增 `python/scripts/backfill_region_from_spider_config.py` 一次性回填（138 条）
+  - ⚠ **部署关键坑**：`docker compose up -d app` recreate 容器会清空 `docker cp` 写入的文件，**advisor-fushun 重部署必须一次到位 4 件**（见下文"关键命令速查"）。改 `.env` API key 必须 `docker compose up -d`（不是 restart，否则 env_file 不重读）
+- ✅ **政策顾问驾驶舱页 `/advisor-fushun` 整套独立后端**（2026-07-21）：
+  - `python/app/api/advisor_fushun.py` = `advisor.py` 克隆，**与秦皇岛 advisor 完全独立、互不影响**。改 4 处：① system prompt 角色「抚顺市政策顾问」+ 覆盖范围（企业培育/科技创新/成果转化/数字化转型/人才引育）② RAG region_cond `region.like("%抚顺%") / "%辽宁%"` + 国家级 ③ 联网 query 前缀 `"抚顺 企业 政策 "` ④ 端点 `POST /advisor-fushun/analyze`
+  - `python/app/web/advisor-fushun.html` 复用 advisor.html 驾驶舱布局（KPI + 饼图 + 柱图 + 时间轴 + Agent 问答），主题切到「科技局/工信局惠企政策」，**标题去「法人专题库」化**（法人库只作 verdict/bonus 案例提及）
+  - 11 spider + 1 后端端点端到端验证：score 85、verdict 抚顺语境、bonuses 命中抚顺市科技局 `fskjj.fushun.gov.cn`、references 命中 4 条 region='抚顺' 真实本地政策。详见 [[policy-advisor-demo-page]] §4
+  - 部署 4 件文件清单（少一个路由就坏）：`advisor-fushun.html` + `routes.py`（含 `GET /advisor-fushun`）+ `advisor_fushun.py` + `main.py`（注册 router）
+  - ⚠ **JS 编辑陷阱**（见 [[policy-advisor-demo-page]] §5.5）：Python f-string `\\1` 实际变 `\x01` 控制字符破 JS、Python 多行 body 真换行破 JS — 改 advisor*.html 后必跑 `node --check` 验证
 
 ---
 
@@ -212,6 +224,55 @@ Windows 本地同步：Task Scheduler `PolicyRadar-DailySync` 每天 06:00 触�
 - **后端关键坑**（advisor.py）：`_extract_keywords` 领域词全词扫描（`in` 长词优先，不可用 `re.findall(r"[一-龥]{2,6}")` 贪婪匹配--会把「老旧小区」拆进「秦皇岛老旧小」）；`_search_policies` 加 `joinedload(Policy.source)`（避免 session 关闭后访问 `p.source` 触发 DetachedInstanceError）+ title 命中关键词数排序优先于 published_at（防泛词「改造」63 条淹没精准词）；`_parse_advisor_json` 从固定起始 key `{"feasibility_score"` 定位跳过 M3 reasoning 思考链；max_tokens=3000 防联网后输出变长截断 JSON 触发重试。
 - **部署**（非 rebuild）：本地 Edit -> `scp` 到 `radar:/tmp/` -> `docker cp` 进 `policy-radar-app:/app/python/...` -> `docker restart` -> 宿主 `sudo cp /tmp/* /opt/policy-radar/...` 同步防 rebuild 回退。LLM 单次 30-44s 是 M3 reasoning 固有耗时（`enable_thinking:False` 实测反而更慢，勿用）。
 - **注意两份 advisor.html**：服务的是 `python/app/web/advisor.html`；`frontend/advisor.html` 是旧版孤儿（无引用、未纳入 git），勿改错文件
+
+### 政策顾问驾驶舱页 `/advisor-fushun`（2026-07-21）
+
+独立页面（与 `/advisor` 平行），**不走 Vue SPA**。`python/app/web/routes.py` `GET /advisor-fushun` 直接返回 `python/app/web/advisor-fushun.html`。左驾驶舱 + 右 Agent 问答布局与 `/advisor` 一致，主题切到「抚顺市科技局/工信局惠企政策」（高企认定/专精特新/石化大学成果转化）。
+
+- **整套独立后端**（用户明确要求"一整套"）：`python/app/api/advisor_fushun.py` = `advisor.py` 克隆，**与秦皇岛 advisor 完全独立、互不影响**。改 4 处：
+  1. `ADVISOR_SYSTEM_PROMPT` 角色「抚顺市政策顾问」+ 覆盖范围（企业培育/科技创新/成果转化/数字化转型/人才引育）+ 示例来源「辽宁省科技厅」
+  2. `_search_policies` `region_cond`：`region.like("%抚顺%") / "%辽宁%"` + 国家级，**不再命中秦皇岛/河北**
+  3. `_web_search` `web_query` 前缀：`"抚顺 企业 政策 "` 而非 `"秦皇岛 文旅 政策 "`
+  4. 端点 `POST /advisor-fushun/analyze`（前端 `fetchAdvisor` 调这个；`main.py:170` 注册 `advisor_fushun_router`）
+  - `_DOMAIN_HINTS` 也从文旅词换成惠企/科技词（高企/专精特新/成果转化/数字化转型/人才引育等）
+- **标题去「法人专题库」化**：页面叫「抚顺市政策驾驶舱」，法人专题库只作 verdict/bonus 案例提及（用户：目的是整个抚顺市政策库）
+- **id 重映射技巧（非显而易见）**：原 DEMO_CONTENT 的 12 个 key（156/123/89...）是服务器秦皇岛政策真实 id，模态框 `openPolicyModal` 会先 `GET /policy-radar/markdown/{id}` 拿秦皇岛正文。抚顺版把 refs.id 全换成 **8xx 段新 id（801-824，服务器无此政策）**，让接口 404 -> 走 DEMO_CONTENT 兜底显示抚顺正文
+- **端到端验证**：score 85、verdict 抚顺语境、bonuses 命中抚顺市科技局 `fskjj.fushun.gov.cn`、references 命中 4 条 region='抚顺' 真实本地政策
+- ⚠ **关键部署坑**：`docker compose up -d app` recreate 容器会清空 `docker cp` 写入文件，**4 件必须重部署**（少一个路由就坏）：
+  ```bash
+  # advisor-fushun 完整重部署（4 件文件）
+  scp python/app/web/advisor-fushun.html \
+        python/app/web/routes.py \
+        python/app/api/advisor_fushun.py \
+        python/app/main.py radar:/tmp/
+  ssh radar 'for f in /tmp/advisor-fushun.html /tmp/routes.py /tmp/advisor_fushun.py /tmp/main.py; do
+    docker cp $f policy-radar-app:/app/python/app/$(basename $f | sed "s|^advisor-fushun.html|web/advisor-fushun.html|;s|^routes.py|web/routes.py|;s|^advisor_fushun.py|api/advisor_fushun.py|;s|^main.py|main.py|")
+    sudo cp $f /opt/policy-radar/python/app/...
+  done; docker restart policy-radar-app'
+  ```
+  改 API key（`.env` + `.env.production`）必须 `docker compose up -d`（**不是** `docker restart`），否则 env_file 不重读
+- ⚠ **JS 编辑陷阱**（详见 [[policy-advisor-demo-page]] §5.5）：Python f-string `\\1` 实际变 `\x01` 控制字符破 JS、Python 多行 body 真换行破 JS — 改 advisor*.html 后必跑 `node --check` 验证
+- ⚠ **advisor_fushun.py 必须从最新 advisor.py 克隆**：旧版 advisor.py 用 `extra_body=` 参数（已从 `llm_client.chat()` 移除），克隆时必须删掉，否则 LLMClient.chat() 报 `unexpected keyword argument 'extra_body'` → 500
+
+### 11 抚顺 spider 一览（2026-07-21 上线）
+
+`python/crawlers/spiders/city_fushun_*.json` 共 11 个（命名 `city_fushun_<简写>` 对齐 `city_qhd_*` 模式）：
+
+| 源 | 部门 | 首批抓取 | 状态 |
+|---|---|---|---|
+| `city_fushun_keji` | 科技局 | 17 | ✅ |
+| `city_fushun_gongxin` | 工信局 | 16 | ✅ |
+| `city_fushun_fagaiwei` | 发改委 | 20 | ✅ |
+| `city_fushun_caizheng` | 财政局 | 18 | ✅ |
+| `city_fushun_renshe` | 人社局 | 9 | ✅ |
+| `city_fushun_gov` | 市政府 | 19 | ✅ |
+| `city_fushun_minzheng` | 民政局 | 0 | ❌ 403 WAF |
+| `city_fushun_wenhua` | 文旅局 | 0 | ❌ 403 WAF |
+| `city_fushun_shangwu` | 商务局 | 0 | ❌ 拉取失败 |
+| `city_fushun_weisheng` | 卫健局 | 0 | ❌ URL 待重测 |
+| `city_fushun_shichangjiandu` | 市场监管局 | 0 | ❌ PDF 附件直链 |
+
+5 源 0 抓取详见 `docs/CRAWLER-FIX-TODO.md` 抚顺段。
 
 ---
 

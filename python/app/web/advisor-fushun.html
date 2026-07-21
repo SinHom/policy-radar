@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>抚顺市政策驾驶舱 · 智能问答</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            // 政务蓝：沉稳深靛，非 SaaS 亮蓝
+            brand: { 50: '#f3f6fa', 100: '#e7eef6', 200: '#c4d2e3', 300: '#7e96bf', 500: '#1d4e89', 600: '#163a66', 700: '#102a4a' },
+            // 联网：降饱和赭琥珀
+            accent: { 50: '#fbf5e8', 100: '#f7ecd6', 200: '#ecd5a8', 500: '#c8821a', 600: '#a86d15' },
+            ink: '#1a1f29',
+            line: '#e3e6eb',
+            canvas: '#f5f6f8',
+          },
+          fontFamily: { sans: ['Noto Sans SC', 'system-ui', 'sans-serif'] },
+        },
+      },
+    }
+  </script>
+  <style>
+    body { font-family: 'Noto Sans SC', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .tabular { font-variant-numeric: tabular-nums; }
+    .step-node { transition: opacity 0.2s ease, transform 0.2s ease; opacity: 0.5; }
+    .step-node.active { opacity: 1; }
+    .step-node.done .step-badge { background: #15803d; }
+    .typing-dot::after { content: '...'; animation: typing 1.5s infinite; }
+    @keyframes typing { 0%,20%{content:'.'} 40%{content:'..'} 60%,100%{content:'...'} }
+    .graph-node { cursor: pointer; transition: opacity 0.2s ease; }
+    .graph-node:hover .node-rect { stroke-width: 3; }
+    .graph-node.selected .node-rect { stroke-width: 3; }
+    .preset-btn.active { background: #1d4e89; color: #fff; border-color: #1d4e89; }
+    .bonus-card .detail { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
+    .bonus-card.expanded .detail { max-height: 400px; }
+    .ref-card { transition: border-color 0.15s ease, background-color 0.15s ease; }
+    .ref-card:hover { border-color: #1d4e89; background-color: #f3f6fa; }
+    .progress-fill { transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+    .dot-row span { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 3px; }
+    .donut-seg { transition: opacity 0.15s ease; cursor: pointer; }
+    .donut-seg.dim { opacity: 0.32; }
+    .bar-fill { transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+    .tl-item { transition: background-color 0.15s ease; border-radius: 6px; }
+    .tl-item.hit { background-color: #f3f6fa; }
+    .tl-item.web-hit { background-color: #fbf5e8; }
+    .tl-item.hit .tl-title { font-weight: 600; }
+    /* 侧栏滚动条克制 */
+    .scroll-thin::-webkit-scrollbar { width: 6px; }
+    .scroll-thin::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+    .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body class="bg-canvas min-h-screen text-ink">
+
+  <!-- 顶部导航 -->
+  <header class="bg-white border-b border-line sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-brand-500 rounded flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+        </div>
+        <div class="leading-tight">
+          <div class="text-sm font-semibold text-ink">抚顺市政策驾驶舱</div>
+          <div class="text-[11px] text-gray-500">政策资产全貌 · 智能问答 · 联网补充</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-4 text-[11px] text-gray-500">
+        <span class="hidden sm:flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>知识库在线</span>
+        <span class="hidden md:inline">联网实时</span>
+        <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded">MiniMax M3</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5">
+
+    <!-- KPI 指标条 -->
+    <div class="bg-white border border-line rounded-lg mb-5">
+      <div class="grid grid-cols-2 sm:grid-cols-4">
+        <div class="p-4 flex items-center gap-3 border-b sm:border-b-0 sm:border-r border-line">
+          <div class="w-9 h-9 rounded bg-brand-50 text-brand-500 flex items-center justify-center shrink-0" id="kpi-ico-total"></div>
+          <div class="min-w-0">
+            <div id="kpi-total" class="text-xl font-semibold tabular leading-none">0</div>
+            <div class="text-xs text-gray-500 mt-1.5">政策总数</div>
+          </div>
+        </div>
+        <div class="p-4 flex items-center gap-3 border-b sm:border-b-0 sm:border-r border-line">
+          <div class="w-9 h-9 rounded bg-green-50 text-green-600 flex items-center justify-center shrink-0" id="kpi-ico-new"></div>
+          <div class="min-w-0">
+            <div class="text-xl font-semibold tabular leading-none"><span id="kpi-new" class="text-green-600">0</span><span class="text-sm text-gray-400 font-normal ml-1">条/月</span></div>
+            <div class="text-xs text-gray-500 mt-1.5">本月新增</div>
+          </div>
+        </div>
+        <div class="p-4 flex items-center gap-3 sm:border-r border-line">
+          <div class="w-9 h-9 rounded bg-brand-50 text-brand-500 flex items-center justify-center shrink-0" id="kpi-ico-dept"></div>
+          <div class="min-w-0">
+            <div id="kpi-dept" class="text-xl font-semibold tabular leading-none">0</div>
+            <div class="text-xs text-gray-500 mt-1.5">覆盖部门</div>
+          </div>
+        </div>
+        <div class="p-4 flex items-center gap-3">
+          <div class="w-9 h-9 rounded bg-accent-50 text-accent-600 flex items-center justify-center shrink-0" id="kpi-ico-web"></div>
+          <div class="min-w-0">
+            <div id="kpi-web" class="text-xl font-semibold tabular leading-none text-accent-600">0</div>
+            <div class="text-xs text-gray-500 mt-1.5">联网补充</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 左右分屏 -->
+    <div class="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-5 items-start">
+
+      <!-- ============ 左列：驾驶舱 ============ -->
+      <aside class="space-y-4 lg:sticky lg:top-[68px] lg:max-h-[calc(100vh-88px)] lg:overflow-y-auto lg:pr-1 scroll-thin">
+
+        <!-- 主题分布 -->
+        <div class="bg-white border border-line rounded-lg p-4">
+          <div class="flex items-center gap-2 mb-4">
+            <span id="ico-pie" class="text-brand-500"></span>
+            <span class="text-sm font-semibold text-ink">主题分布</span>
+            <span class="text-[11px] text-gray-400 ml-auto">库内政策</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <svg id="pie-svg" viewBox="0 0 160 160" class="w-32 h-32 shrink-0"></svg>
+            <div id="pie-legend" class="flex-1 space-y-1.5 text-xs"></div>
+          </div>
+        </div>
+
+        <!-- 部门分布 -->
+        <div class="bg-white border border-line rounded-lg p-4">
+          <div class="flex items-center gap-2 mb-4">
+            <span id="ico-bar" class="text-brand-500"></span>
+            <span class="text-sm font-semibold text-ink">部门分布</span>
+            <span class="text-[11px] text-gray-400 ml-auto">按发布部门</span>
+          </div>
+          <div id="bar-list" class="space-y-2.5"></div>
+        </div>
+
+        <!-- 最近政策时间轴 -->
+        <div class="bg-white border border-line rounded-lg p-4">
+          <div class="flex items-center gap-2 mb-4">
+            <span id="ico-clock" class="text-brand-500"></span>
+            <span class="text-sm font-semibold text-ink">最近政策</span>
+            <span id="tl-hint" class="text-[11px] text-gray-400 ml-auto">命中高亮</span>
+          </div>
+          <div id="timeline" class="relative pl-5"></div>
+        </div>
+
+      </aside>
+
+      <!-- ============ 右列：Agent 问答 + 详情 ============ -->
+      <section class="min-w-0 space-y-4">
+
+        <!-- 输入区 -->
+        <div class="bg-white border border-line rounded-lg p-5">
+          <div class="mb-3">
+            <div class="text-xs text-gray-500 mb-2">快问（点一下直接查）</div>
+            <div class="flex flex-wrap gap-2" id="presets">
+              <button class="preset-btn px-3 py-1.5 rounded border border-line bg-white text-sm text-gray-700 hover:border-brand-500 hover:text-brand-500 transition-colors" data-key="old">高新技术企业认定奖补</button>
+              <button class="preset-btn px-3 py-1.5 rounded border border-line bg-white text-sm text-gray-700 hover:border-brand-500 hover:text-brand-500 transition-colors" data-key="heritage">专精特新中小企业培育</button>
+              <button class="preset-btn px-3 py-1.5 rounded border border-line bg-white text-sm text-gray-700 hover:border-brand-500 hover:text-brand-500 transition-colors" data-key="night">石化大学成果转化</button>
+            </div>
+          </div>
+          <div class="flex gap-3 items-stretch">
+            <textarea id="q-input" rows="2" placeholder="描述企业政策问题，越具体越好。例如：高新技术企业认定能享受哪些奖补？我们企业是否符合条件？"
+              class="flex-1 px-3.5 py-2.5 border border-line rounded text-sm text-ink placeholder-gray-400 resize-none focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-200 transition-colors leading-relaxed"></textarea>
+            <button id="ask-btn" class="px-5 bg-brand-500 hover:bg-brand-600 text-white rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 self-stretch">
+              <span>查询</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Agent 工作流面板 -->
+        <div id="workflow-panel" class="hidden bg-white border border-line rounded-lg p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-semibold text-ink">Agent 工作流</span>
+              <span class="text-xs text-gray-400">自主决策 · 多源检索 · 证据整合</span>
+            </div>
+            <div id="wf-status" class="text-xs text-brand-500 font-medium"></div>
+          </div>
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="step-node rounded border border-line p-3.5" data-step="1">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-gray-500">① 意图理解</span>
+                <span class="step-badge w-2.5 h-2.5 rounded-full bg-gray-200"></span>
+              </div>
+              <div class="text-sm font-medium text-ink">解析用户问题</div>
+              <div id="wf-intent" class="text-xs text-gray-500 mt-1.5 leading-relaxed"></div>
+            </div>
+            <div class="step-node rounded border border-line p-3.5" data-step="2">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-gray-500">② 政策库检索</span>
+                <span class="step-badge w-2.5 h-2.5 rounded-full bg-gray-200"></span>
+              </div>
+              <div class="text-sm font-medium text-ink">本地知识库</div>
+              <div id="wf-kb" class="text-xs text-gray-500 mt-1.5"></div>
+            </div>
+            <div class="step-node rounded border border-line p-3.5" data-step="3">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-gray-500">③ 联网补充</span>
+                <span class="step-badge w-2.5 h-2.5 rounded-full bg-gray-200"></span>
+              </div>
+              <div class="text-sm font-medium text-ink">实时搜索</div>
+              <div id="wf-web" class="text-xs text-gray-500 mt-1.5"></div>
+            </div>
+            <div class="step-node rounded border border-line p-3.5" data-step="4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-gray-500">④ 证据整合</span>
+                <span class="step-badge w-2.5 h-2.5 rounded-full bg-gray-200"></span>
+              </div>
+              <div class="text-sm font-medium text-ink">综合分析</div>
+              <div id="wf-merge" class="text-xs text-gray-500 mt-1.5"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div id="empty-state" class="text-center py-16 text-gray-400 bg-white border border-line rounded-lg">
+          <div class="flex justify-center mb-3 text-gray-300" id="ico-empty"></div>
+          <div class="text-sm text-gray-500">输入企业政策问题，Agent 将基于法人专题库自动匹配政策</div>
+          <div class="text-xs text-gray-400 mt-1.5">左侧驾驶舱展示政策资产全貌 · 右侧 Agent 问答驱动详情</div>
+        </div>
+
+        <!-- 结果区 -->
+        <div id="result-area" class="hidden space-y-4">
+
+          <!-- 答案概要 + 匹配度 -->
+          <div class="bg-white border border-line rounded-lg p-5">
+            <div class="flex items-start gap-6 flex-col sm:flex-row">
+              <div class="shrink-0 flex flex-col items-center">
+                <svg width="80" height="80" viewBox="0 0 84 84" class="-rotate-90">
+                  <circle cx="42" cy="42" r="36" fill="none" stroke="#e3e6eb" stroke-width="7"/>
+                  <circle id="score-ring" cx="42" cy="42" r="36" fill="none" stroke="#1d4e89" stroke-width="7" stroke-linecap="round" stroke-dasharray="226" stroke-dashoffset="226" style="transition: stroke-dashoffset 0.8s cubic-bezier(0.22,1,0.36,1);"/>
+                </svg>
+                <div class="-mt-[56px] mb-[16px] text-center">
+                  <div id="score-val" class="text-xl font-semibold tabular text-ink">0</div>
+                  <div class="text-[10px] text-gray-400">匹配度</div>
+                </div>
+              </div>
+              <div class="flex-1">
+                <div class="text-xs text-gray-500 mb-2">答案概要 · 基于 <span id="ref-count" class="tabular text-ink font-medium">0</span> 条真实政策</div>
+                <div id="verdict-text" class="text-sm leading-relaxed text-gray-700"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 政策知识图谱 -->
+          <div class="bg-white border border-line rounded-lg p-5">
+            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <div class="flex items-center gap-2">
+                <span id="ico-graph" class="text-brand-500"></span>
+                <span class="text-sm font-semibold text-ink">政策知识图谱</span>
+                <span class="text-xs text-gray-400">主题关联 · 中央/省/市三级</span>
+              </div>
+              <div class="flex items-center gap-4 text-[11px] text-gray-500">
+                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-brand-100 border border-brand-300"></span>政策库</span>
+                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-accent-100 border border-accent-200"></span>联网</span>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <svg id="graph-svg" viewBox="0 0 900 400" class="w-full" style="min-width:640px;"></svg>
+            </div>
+            <div id="node-detail" class="hidden mt-3 p-3.5 bg-canvas rounded border border-line text-xs"></div>
+            <div class="text-xs text-gray-400 mt-2">点击图谱节点查看政策原文与解读</div>
+          </div>
+
+          <!-- 关键信息抽取 -->
+          <div class="bg-white border border-line rounded-lg p-5">
+            <div class="flex items-center gap-2 mb-4">
+              <span id="ico-key" class="text-brand-500"></span>
+              <span class="text-sm font-semibold text-ink">关键信息抽取</span>
+              <span class="text-xs text-gray-400">结构化指标</span>
+            </div>
+            <div id="key-info" class="grid grid-cols-1 sm:grid-cols-3 gap-5"></div>
+          </div>
+
+          <!-- 红利 + 风险 -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="bg-white border border-line rounded-lg overflow-hidden">
+              <div class="px-4 py-3 border-b border-line flex items-center gap-2 bg-green-50/40">
+                <span id="ico-bonus" class="text-green-600"></span>
+                <span class="text-sm font-semibold text-ink">政策红利</span>
+                <span id="bonus-count" class="ml-auto text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded tabular"></span>
+              </div>
+              <div id="bonuses-list" class="divide-y divide-line max-h-[520px] overflow-y-auto scroll-thin"></div>
+            </div>
+            <div class="bg-white border border-line rounded-lg overflow-hidden">
+              <div class="px-4 py-3 border-b border-line flex items-center gap-2 bg-red-50/40">
+                <span id="ico-risk" class="text-red-600"></span>
+                <span class="text-sm font-semibold text-ink">项目风险</span>
+                <span id="risk-count" class="ml-auto text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded tabular"></span>
+              </div>
+              <div id="risks-list" class="divide-y divide-line"></div>
+            </div>
+          </div>
+
+          <!-- 引用原文 -->
+          <div class="bg-white border border-line rounded-lg p-5">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <span id="ico-ref" class="text-brand-500"></span>
+                <span class="text-sm font-semibold text-ink">引用政策原文</span>
+                <span class="text-xs text-gray-400">可追溯 · 每条答案挂真实政策来源</span>
+              </div>
+            </div>
+            <div id="refs-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+          </div>
+
+          <!-- 追问 -->
+          <div class="bg-brand-50 border border-brand-100 rounded-lg p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span id="ico-followup" class="text-brand-500"></span>
+              <span class="text-sm font-semibold text-ink">您可能还想问</span>
+            </div>
+            <div id="followups" class="flex flex-wrap gap-2"></div>
+          </div>
+
+        </div>
+
+        <!-- 错误 -->
+        <div id="error-state" class="hidden bg-red-50 border border-red-200 rounded-lg p-5 text-center">
+          <div class="flex justify-center mb-2 text-red-500" id="ico-error"></div>
+          <div id="error-msg" class="text-sm text-red-700"></div>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- 政策原文模态框 -->
+  <div id="policy-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/40" data-modal-close></div>
+    <div class="relative bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col">
+      <div class="flex items-start justify-between gap-4 px-5 py-4 border-b border-line">
+        <div class="min-w-0">
+          <div id="pm-meta" class="text-[11px] text-gray-500 mb-1"></div>
+          <div id="pm-title" class="text-base font-semibold text-ink leading-snug"></div>
+        </div>
+        <button class="shrink-0 text-gray-400 hover:text-ink p-1" data-modal-close>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="pm-body" class="px-5 py-4 overflow-y-auto scroll-thin text-sm text-gray-700 leading-relaxed flex-1"></div>
+      <div class="px-5 py-3 border-t border-line flex items-center justify-between gap-3 bg-canvas rounded-b-lg">
+        <span id="pm-source" class="text-[11px] text-gray-500 min-w-0 truncate"></span>
+        <a id="pm-link" href="#" target="_blank" rel="noopener" class="shrink-0 text-xs text-brand-600 hover:underline">查看原文链接 ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="border-t border-line mt-8 py-5 text-center">
+    <div class="text-xs text-gray-400">抚顺市政策驾驶舱 · 数据来源：抚顺市/辽宁省/国家级政策库 + 联网搜索</div>
+  </footer>
+
+  <script>
+  // ============ 图标集（1.5px stroke，线条风格，统一品牌色）============
+  const ICONS = {
+    database: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></svg>',
+    trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h7v7"/></svg>',
+    building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v18M3 9h6M9 15h6M15 3v18"/></svg>',
+    globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>',
+    pie: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 109 9h-9V3z"/><path d="M12 3v9h9"/></svg>',
+    bar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20V8M3 20h18"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    graph: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M12 7.5L6 15.5M12 7.5l6 8M7.5 18h9"/></svg>',
+    key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M7 7h4M7 11h10M7 15h7M7 19h10"/></svg>',
+    target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>',
+    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+    doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M8 10h8M8 13h5"/></svg>',
+    arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  };
+  const ico = (name, cls = 'w-4 h-4') => ICONS[name].replace('<svg', `<svg class="${cls}"`);
+
+  // ============ 驾驶舱总览数据（2026-07-21 服务器 db 真实统计：145 条 / 8 部门）============
+  const OVERVIEW = {
+    kpi: { total: 145, new_this_month: 145, departments: 8, web_supplement: 0 },
+    topics: [
+      { name: '企业科创', count: 25, color: '#1d4e89' },
+      { name: '财税政策', count: 19, color: '#15803d' },
+      { name: '法治建设', count: 17, color: '#6b5e8f' },
+      { name: '人才就业', count: 16, color: '#b85c5c' },
+      { name: '市场监管', count: 13, color: '#c8821a' },
+      { name: '综合政务', count: 55, color: '#94a3b8' },
+    ],
+    departments: [
+      { name: '商务局', count: 20 },
+      { name: '发改委', count: 20 },
+      { name: '人社局', count: 19 },
+      { name: '财政局', count: 19 },
+      { name: '市政府', count: 19 },
+      { name: '科技局', count: 17 },
+      { name: '工信局', count: 16 },
+      { name: '市场监管局', count: 15 },
+    ],
+    timeline: [
+      { date: '07/17', title: '关于开展抚顺抗洪救灾公益援助行动的倡议书', src: '抚顺市发改委', kind: '库', id: 3062 },
+      { date: '07/13', title: '预警再升级！抚顺发布暴雨红色预警信号', src: '抚顺市发改委', kind: '库', id: 3064 },
+      { date: '06/23', title: '抚顺炭素有限责任公司申请缴纳防空地下室易地建设费审批', src: '抚顺市发改委', kind: '库', id: 3070 },
+      { date: '05/22', title: '关于《抚顺市促进人工智能创新发展实施方案》公开征求意见的通知', src: '抚顺市发改委', kind: '库', id: 3069 },
+      { date: '03/01', title: '工业和信息化部关于印发《工业领域数据安全能力提升实施方案》的通知', src: '抚顺市工信局', kind: '库', id: 3056 },
+      { date: '02/10', title: '财政部 税务总局关于增值税法施行后增值税优惠政策衔接事项的公告', src: '抚顺市财政局', kind: '库', id: 3080 },
+      { date: '--/--', title: '关于印发《抚顺市中小企业数字化转型城市试点数字化服务商管理办法》的通知', src: '抚顺市工信局', kind: '库', id: 3051 },
+      { date: '--/--', title: '抚顺市促进民营经济发展条例实施细则', src: '抚顺市工信局', kind: '库', id: 3057 },
+      { date: '--/--', title: '解读：抚顺市人民政府关于印发《十五五规划纲要》的通知', src: '抚顺市人民政府', kind: '库', id: 3044 },
+      { date: '--/--', title: '致2026届高校毕业生的一封信', src: '抚顺市人社局', kind: '库', id: 3081 },
+      { date: '--/--', title: '抚顺市科学技术奖励办法实施细则', src: '抚顺市科技局', kind: '库', id: 3043 },
+      { date: '--/--', title: '辽宁省人民政府关于印发《辽宁省进一步稳经济若干政策举措》的通知', src: '抚顺市商务局', kind: '库', id: 3148 },
+    ],
+  };
+
+  // ============ Agent 问答演示数据（3 套）============
+  const DEMO = {
+    old: {
+      question: '高新技术企业认定能享受哪些奖补？我们企业是否符合条件？',
+      workflow: {
+        intent: '主题：高新技术企业认定｜类型：奖补+资质匹配｜地区：抚顺市',
+        kb: '地区：抚顺市+辽宁+国家级｜命中 4 条政策',
+        web: '查询：抚顺市 高企认定奖补 2026｜去重后 3 条',
+        merge: '整合 7 条依据｜红利 6 · 风险 3',
+      },
+      score: 88,
+      verdict: '已通过法人专题库比对贵司研发投入、知识产权与资质台账——符合高新技术企业认定条件。可叠加享受「所得税 15%+研发费用加计扣除 100%」国家级优惠，叠加辽宁省培育资助、抚顺市级奖励、望花区配套奖补。建议优先归集近三年研发费用辅助账，今年第二季度认定窗口前提交。',
+      graph: {
+        center: { label: '高新技术企业认定', sub: '奖补 60万 · 所得税15% · 立即' },
+        nodes: [
+          { id: 'c', label: '科技部·高新技术企业认定管理办法', kind: '库', level: '中央', x: 450, y: 50, detail: '科技部、财政部、税务总局联合办法。高新技术企业减按 15% 税率征收企业所得税，研发费用加计扣除 100%。', policy_id: 802 },
+          { id: 'p', label: '辽宁省·科技型企业梯度培育计划', kind: '库', level: '省级', x: 170, y: 180, detail: '辽宁省科技厅 2026 年计划。对首次通过高企认定的企业给予省级资助 10-20 万元，按认定档次分档拨付。' },
+          { id: 'm', label: '抚顺市·高新技术企业奖励办法', kind: '库', level: '市级', x: 170, y: 350, detail: '抚顺市科技局办法。首次认定高企奖励 20 万元，复审通过奖励 5 万元，配套研发投入增量补助。' },
+          { id: 'w', label: '科技部·2026 高企认定最新解读', kind: '网', level: '联网', x: 730, y: 350, detail: '科技部 2026 年解读，强调核心知识产权需与主营产品强相关，研发人员占比不低于 10%，研发费用辅助账要求趋严。' },
+          { id: 'p2', label: '财政部·研发费用加计扣除操作指引', kind: '库', level: '中央', x: 730, y: 180, detail: '财政部、税务总局指引。研发费用按 100% 加计扣除，形成无形资产按 200% 摊销，需留存研发项目辅助账备查。', policy_id: 802 },
+        ],
+      },
+      key_info: [
+        { label: '认定奖补合计', value: '60 万', pct: 75, hint: '省+市+区三级叠加首次认定奖补' },
+        { label: '所得税率', value: '15%', pct: 90, hint: '较法定 25% 税率减 10 个百分点' },
+        { label: '难度评级', value: '中高', dots: 4, hint: '研发辅助账与知识产权是核心门槛' },
+      ],
+      bonuses: [
+        { name: '望花区高企认定配套奖励', source: '望花区科技局', kind: '库', priority: '立即', match: 5, content: '法人专题库匹配命中——首次认定配套奖励 **15 万**，复审通过配套 **3 万**。', action: '取得省级资助批复后向区科技局提交配套申请。', detail: '需提供省科技厅认定文件、企业营业执照、研发投入佐证。配套资金一次性拨付，每年 3 月、9 月集中受理。', policy_id: 801 },
+        { name: '抚顺市高新技术企业奖励', source: '抚顺市科技局', kind: '库', priority: '立即', match: 5, content: '首次认定奖励 **20 万**，复审通过奖励 **5 万**，研发投入增量部分按 5% 附加补助。', action: '通过省科技厅认定后，向市科技局申报。', detail: '需在认定有效期内申报。研发投入增量补助以法人专题库归集的近两年研发投入数据为基准核算。', policy_id: 804 },
+        { name: '辽宁省科技型培育资助', source: '辽宁省科技厅', kind: '库', priority: '中期', match: 4, content: '首次通过高企认定资助 **10-20 万**，按认定档次分档拨付。', action: '省科技厅认定后自动纳入资助名单。', detail: '资助分两批拨付：认定当年 60% + 复审通过 40%。需纳入省科技型企业梯度培育库。', policy_id: 803 },
+        { name: '高企所得税减免', source: '财政部、税务总局', kind: '库', priority: '立即', match: 5, content: '减按 **15%** 税率征收企业所得税（法定 25%）。', action: '认定后向主管税务机关备案享受。', detail: '需每年汇算清缴前完成优惠备案。资格失效当年起不再享受。法人专题库已关联税务登记数据，自动校验资格。', policy_id: 804 },
+        { name: '研发费用加计扣除', source: '国家税务总局', kind: '库', priority: '立即', match: 5, content: '研发费用按 **100%** 加计扣除，形成无形资产按 **200%** 摊销。', action: '汇算清缴时填报，留存辅助账备查。', detail: '需按研发项目归集人工、直接投入、折旧等费用。法人专题库已汇入研发投入数据，可一键导出辅助账草稿。', policy_id: 802 },
+        { name: '高企认定最新解读', source: '科技部（联网）', kind: '网', priority: '长期', match: 3, content: '2026 年强调核心知识产权须与主营产品强相关，研发人员占比不低于 **10%**。', action: '关注火炬中心年度通知，按最新口径准备材料。', detail: '新增「核心知识产权与主营产品关联度」审查项。建议提前做知识产权图谱梳理。' },
+      ],
+      risks: [
+        { type: '研发费用归集风险', level: '高', desc: '研发辅助账不健全、费用归集边界不清是复审被退回的主因，法人专题库数据缺失会直接卡住精准匹配。', sugg: '依托法人专题库研发投入台账，按项目逐笔归集，聘请专业机构做认定前预审。' },
+        { type: '知识产权关联风险', level: '中', desc: '核心知识产权与主营产品关联度不足，可能被认定为「凑数」不通过。', sugg: '提前梳理知识产权图谱，确保证书与产品技术指标对应。' },
+        { type: '资格维持风险', level: '中', desc: '三年复审一次，期间研发投入、知识产权、收入占比持续达标才能维持资格。', sugg: '建立年度自查机制，依托专题库监控指标波动，低于阈值自动预警。' },
+      ],
+      refs: [
+        { kind: '库', id: 801, title: '望花区·高新技术企业认定奖补实施细则', src: '望花区科技局', date: '2026-07-25', url: '#' },
+        { kind: '库', id: 803, title: '辽宁省·科技型企业梯度培育计划', src: '辽宁省科技厅', date: '2026-06-28', url: '#' },
+        { kind: '库', id: 802, title: '财政部·研发费用加计扣除操作指引', src: '国家税务总局', date: '2026-07-05', url: '#', policy_id: 802 },
+        { kind: '库', id: 804, title: '科技部·高新技术企业认定管理办法', src: '科技部', date: '2026-03', url: '#' },
+        { kind: '网', id: null, title: '科技部·2026 高企认定最新解读', src: '科技部官网', date: '2026-06', url: '#' },
+      ],
+      followups: ['研发费用辅助账怎么建？', '复审需要哪些材料？', '知识产权与产品怎么关联？'],
+    },
+    heritage: {
+      question: '专精特新中小企业如何认定？有什么培育政策？',
+      workflow: {
+        intent: '主题：专精特新培育｜类型：认定+培育｜地区：抚顺市+辽宁',
+        kb: '地区：抚顺市+辽宁+国家级｜命中 4 条政策',
+        web: '查询：抚顺市 专精特新认定 2026｜去重后 2 条',
+        merge: '整合 6 条依据｜红利 5 · 风险 3',
+      },
+      score: 81,
+      verdict: '专精特新中小企业可享受「工信部认定+省培育资助+贷款贴息+数字化券」四级支持。贵司法人专题库经营数据齐全（营收、研发、专利、从业人员），已自动匹配「创新型→专精特新→小巨人」梯度路径。建议先申报省级专精特新，再冲击国家级小巨人。注意：当前经营数据仅靠电话走访采集，部分指标存在缺口，建议先补全专题库数据。',
+      graph: {
+        center: { label: '专精特新培育', sub: '奖补 30万 · 贴息2% · 立即' },
+        nodes: [
+          { id: 'c', label: '工信部·专精特新中小企业认定办法', kind: '库', level: '中央', x: 450, y: 50, detail: '工信部办法。专精特新「小巨人」每户一次性奖补 **30-50 万**，分创新型、专精特新、小巨人三档梯度培育。' },
+          { id: 'p', label: '辽宁省·专精特新中小企业培育方案', kind: '库', level: '省级', x: 170, y: 180, detail: '辽宁省工信厅方案。省级专精特新认定奖励 10 万元，配套数字化转型服务券 5 万元。' },
+          { id: 'm', label: '抚顺市·专精特新配套支持', kind: '库', level: '市级', x: 170, y: 350, detail: '抚顺市工信局办法。市级专精特新认定奖励 5 万元，国家级小巨人额外奖励 20 万元。' },
+          { id: 'w', label: '工信部·专精特新最新认定解读', kind: '网', level: '联网', x: 730, y: 350, detail: '工信部 2026 年解读，强调「专业化程度」需主营业务收入占比 70% 以上，创新能力指标要求趋严。' },
+          { id: 'p2', label: '辽宁省·专精特新贷款贴息政策', kind: '库', level: '省级', x: 730, y: 180, detail: '辽宁省工信厅、财政厅联合政策。专精特新企业贷款贴息 **2%**，单户每年最高 50 万元。', policy_id: 812 },
+        ],
+      },
+      key_info: [
+        { label: '认定奖补', value: '30 万', pct: 65, hint: '国家级小巨人单户奖补' },
+        { label: '贷款贴息', value: '2%', pct: 55, hint: '专精特新贷款贴息比例', policy_id: 812 },
+        { label: '难度评级', value: '中', dots: 3, hint: '主营占比与创新能力是核心' },
+      ],
+      bonuses: [
+        { name: '国家级专精特新小巨人奖补', source: '工业和信息化部', kind: '库', priority: '立即', match: 5, content: '专精特新「小巨人」每户一次性奖补 **30-50 万**，优先支持制造业关键领域。', action: '省级认定后由省工信厅推荐申报。', detail: '需主营业务收入占比 70% 以上、近两年研发占比 3% 以上、拥有 2 项以上Ⅰ类知识产权。每年评审一次。', policy_id: 814 },
+        { name: '省级专精特新培育资助', source: '辽宁省工信厅', kind: '库', priority: '中期', match: 4, content: '省级专精特新认定奖励 **10 万**，配套数字化转型服务券 **5 万**。', action: '取得市级认定后由市工信局推荐。', detail: '需先入库辽宁省创新型中小企业。服务券可用于购买云服务、工业软件、数字化诊断。', policy_id: 813 },
+        { name: '专精特新贷款贴息', source: '辽宁省工信厅', kind: '库', priority: '立即', match: 5, content: '专精特新企业贷款贴息 **2%**，单户每年最高 **50 万**。', action: '取得认定后向合作银行申请贴息贷款。', detail: '需为生产经营性贷款，法人专题库经营数据将作为贴息额度核算依据。合作银行清单见省工信厅公告。', policy_id: 812 },
+        { name: '抚顺市专精特新配套奖励', source: '抚顺市工信局', kind: '库', priority: '中期', match: 4, content: '市级专精特新奖励 **5 万**，国家级小巨人额外奖励 **20 万**。', action: '取得省级认定后向市工信局申报。', detail: '配套奖励与省级资助叠加享受。市工信局将定期从法人专题库筛选拟培育对象。', policy_id: 815 },
+        { name: '专精特新认定最新解读', source: '工信部（联网）', kind: '网', priority: '长期', match: 3, content: '2026 年强调专业化程度须主营占比 **70%** 以上，创新能力指标趋严。', action: '按最新口径准备申报材料。', detail: '新增「细分市场占有率」佐证要求，建议提前整理行业排名与市场份额证明。' },
+      ],
+      risks: [
+        { type: '经营数据缺失风险', level: '高', desc: '工信局缺乏法律法规依据强制获取企业经营数据，当前靠电话走访采集，营收、研发占比等核心指标不全，直接影响精准匹配与认定推荐。', sugg: '依托法人专题库打通营业执照、税务、工商汇入渠道，补全经营数据后重新匹配梯度路径。' },
+        { type: '主营占比不达标风险', level: '中', desc: '主营业务收入占比需 70% 以上，业务过于分散的企业难以达标。', sugg: '梳理业务结构，必要时剥离非主营业务，确保主营收入集中度。' },
+        { type: '创新能力佐证风险', level: '中', desc: '新增细分市场占有率佐证要求，部分企业难以提供权威市场份额证明。', sugg: '委托行业协会或第三方机构出具细分市场占有率报告，提前布局Ⅰ类知识产权。' },
+      ],
+      refs: [
+        { kind: '库', id: 814, title: '工信部·专精特新中小企业认定办法', src: '工业和信息化部', date: '2026-02', url: '#' },
+        { kind: '库', id: 813, title: '辽宁省·专精特新中小企业培育方案', src: '辽宁省工信厅', date: '2026-07-20', url: '#' },
+        { kind: '库', id: 812, title: '辽宁省·专精特新贷款贴息政策', src: '辽宁省工信厅', date: '2026-06-15', url: '#', policy_id: 812 },
+        { kind: '库', id: 815, title: '抚顺市·专精特新配套支持办法', src: '抚顺市工信局', date: '2026-04', url: '#' },
+        { kind: '网', id: null, title: '工信部·专精特新最新认定解读', src: '工信部官网', date: '2026-06', url: '#' },
+      ],
+      followups: ['小巨人认定需要什么条件？', '贷款贴息怎么申请？', '数字化转型券能买什么？'],
+    },
+    night: {
+      question: '石化大学科研成果如何与本地企业对接转化？',
+      workflow: {
+        intent: '主题：成果本地转化｜类型：转化+对接｜地区：抚顺市',
+        kb: '地区：抚顺市+辽宁+国家级｜命中 4 条政策',
+        web: '查询：抚顺市 石化大学成果转化 2026｜去重后 3 条',
+        merge: '整合 6 条依据｜红利 5 · 风险 2',
+      },
+      score: 84,
+      verdict: '石化大学科研成果转化可享受「技术合同登记税收+省成果转化资助+校地合作专项+中试基地建设」四级支持。望花区已建立石化大学科研成果与企业需求碰撞匹配机制，本地转化率较往年提升。建议通过区科技局「成果对接平台」发布需求清单，匹配成熟成果后优先走中试放大路径，再申请产业化奖补。当前痛点：高校科研成果库与企业需求库尚未完全打通，匹配效率有提升空间。',
+      graph: {
+        center: { label: '成果本地转化', sub: '奖励 50万 · 税收减免 · 立即' },
+        nodes: [
+          { id: 'c', label: '国家·促进科技成果转化法', kind: '库', level: '中央', x: 450, y: 50, detail: '全国人大常委会法律。技术转让、技术开发免征增值税，技术转让所得 500 万以内免企业所得税。' },
+          { id: 'p', label: '辽宁省·科技成果转化资助', kind: '库', level: '省级', x: 170, y: 180, detail: '辽宁省科技厅政策。就地转化项目按技术合同额 10% 资助，单项目最高 50 万元。' },
+          { id: 'm', label: '望花区·石化大学成果对接办法', kind: '库', level: '区级', x: 170, y: 350, detail: '望花区科技局办法。建立石化大学成果库与企业需求库双向匹配，匹配成功转化奖补 10 万元，中试放大额外补贴 20 万。' },
+          { id: 'w', label: '科技部·成果转化法修订解读', kind: '网', level: '联网', x: 730, y: 350, detail: '科技部 2026 年解读，强化技术转移机构与技术经理人作用，鼓励高校赋权科研人员职务成果所有权。' },
+          { id: 'p2', label: '抚顺市·产学研合作专项', kind: '库', level: '市级', x: 730, y: 180, detail: '抚顺市科技局专项。校企合作研发项目按实际投入 30% 资助，单项目最高 30 万元，石化大学项目优先。' },
+        ],
+      },
+      key_info: [
+        { label: '转化奖补', value: '50 万', pct: 70, hint: '省+区级转化资助叠加' },
+        { label: '本地转化率', value: '38%', pct: 50, hint: '望花区石化成果本地转化率' },
+        { label: '难度评级', value: '中', dots: 3, hint: '中试放大与产权归属是关键' },
+      ],
+      bonuses: [
+        { name: '望花区石化成果对接奖补', source: '望花区科技局', kind: '库', priority: '立即', match: 5, content: '匹配成功并就地转化奖补 **10 万**，中试放大额外补贴 **20 万**。', action: '通过区科技局成果对接平台发布需求，匹配石化大学成果后申报。', detail: '需提供技术合同、转化佐证、中试投入凭证。石化大学科研成果库与企业需求库双向匹配，命中后自动推送申报入口。', policy_id: 821 },
+        { name: '辽宁省成果转化资助', source: '辽宁省科技厅', kind: '库', priority: '立即', match: 4, content: '就地转化项目按技术合同额 **10%** 资助，单项目最高 **50 万**。', action: '技术合同登记后向省科技厅申报。', detail: '需在省技术合同登记机构完成登记，就地转化（区内落地）优先。法人专题库可关联企业承接能力画像。', policy_id: 823 },
+        { name: '技术合同登记税收减免', source: '财政部、税务总局', kind: '库', priority: '立即', match: 5, content: '技术转让、开发免征增值税，技术转让所得 **500 万以内免征**企业所得税。', action: '技术合同登记后向税务机关备案享受。', detail: '需经认定登记的技术合同方可享受。超过 500 万部分减半征收。法人专题库已关联税务数据，自动核算减免额。', policy_id: 824 },
+        { name: '产学研合作专项资助', source: '抚顺市科技局', kind: '库', priority: '中期', match: 4, content: '校企合作研发按实际投入 **30%** 资助，单项目最高 **30 万**，石化大学项目优先。', action: '与石化大学签订合作协议后向市科技局申报。', detail: '需提供合作协议、研发方案、资金投入凭证。石化大学牵头的项目优先纳入。', policy_id: 822 },
+        { name: '成果转化法最新解读', source: '科技部（联网）', kind: '网', priority: '长期', match: 3, content: '2026 年强化技术转移机构作用，鼓励高校赋权科研人员 **职务成果所有权**。', action: '关注科技部年度通知，按最新赋权政策推进。', detail: '职务成果赋权后转化收益分配更灵活，石化大学可探索「先赋权后转化」模式提升科研人员积极性。' },
+      ],
+      risks: [
+        { type: '本地转化率低风险', level: '高', desc: '高校科研成果库与企业需求库尚未完全打通，匹配效率不足，石化成果大量外流，本地承接比例偏低。', sugg: '依托法人专题库企业承接能力画像与石化大学成果库双向匹配，建立中试共享平台降低承接门槛。' },
+        { type: '知识产权归属风险', level: '中', desc: '职务成果转化涉及高校、科研人员、企业三方权属分配，约定不清易引发纠纷。', sugg: '转化前签订三方协议明确权属与收益分配，必要时探索职务成果赋权改革。' },
+      ],
+      refs: [
+        { kind: '库', id: 824, title: '国家·促进科技成果转化法', src: '全国人大常委会', date: '2025-11', url: '#' },
+        { kind: '库', id: 823, title: '辽宁省·科技成果转化资助办法', src: '辽宁省科技厅', date: '2026-03', url: '#' },
+        { kind: '库', id: 821, title: '望花区·石化大学成果对接办法', src: '望花区科技局', date: '2026-07-15', url: '#' },
+        { kind: '库', id: 822, title: '抚顺市·产学研合作专项资助', src: '抚顺市科技局', date: '2026-06-22', url: '#', policy_id: 822 },
+        { kind: '网', id: null, title: '科技部·成果转化法修订解读', src: '科技部官网', date: '2026-06', url: '#' },
+      ],
+      followups: ['中试基地怎么建？', '技术合同去哪登记？', '职务成果赋权怎么操作？'],
+    },
+  };
+
+  // ============ DOM 引用 ============
+  const $ = (id) => document.getElementById(id);
+  const qInput = $('q-input'), askBtn = $('ask-btn');
+  const wfPanel = $('workflow-panel'), resultArea = $('result-area'), emptyState = $('empty-state'), errorState = $('error-state');
+
+  // 注入区块图标
+  $('kpi-ico-total').innerHTML = ico('database', 'w-5 h-5');
+  $('kpi-ico-new').innerHTML = ico('trend', 'w-5 h-5');
+  $('kpi-ico-dept').innerHTML = ico('building', 'w-5 h-5');
+  $('kpi-ico-web').innerHTML = ico('globe', 'w-5 h-5');
+  $('ico-pie').innerHTML = ico('pie', 'w-4 h-4');
+  $('ico-bar').innerHTML = ico('bar', 'w-4 h-4');
+  $('ico-clock').innerHTML = ico('clock', 'w-4 h-4');
+  $('ico-graph').innerHTML = ico('graph', 'w-4 h-4');
+  $('ico-key').innerHTML = ico('key', 'w-4 h-4');
+  $('ico-bonus').innerHTML = ico('target', 'w-4 h-4');
+  $('ico-risk').innerHTML = ico('alert', 'w-4 h-4');
+  $('ico-ref').innerHTML = ico('doc', 'w-4 h-4');
+  $('ico-followup').innerHTML = ico('chat', 'w-4 h-4');
+  $('ico-error').innerHTML = ico('alert', 'w-6 h-6');
+  $('ico-empty').innerHTML = ico('doc', 'w-10 h-10');
+
+  // ============ 预置按钮 ============
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key;
+      qInput.value = DEMO[key].question;
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // ============ 提交 ============
+  askBtn.addEventListener('click', async () => {
+    const q = qInput.value.trim();
+    if (!q) { qInput.focus(); qInput.classList.add('border-red-400'); setTimeout(()=>qInput.classList.remove('border-red-400'),1500); return; }
+    if (q.length < 10) { qInput.focus(); qInput.classList.add('border-red-400'); setTimeout(()=>qInput.classList.remove('border-red-400'),1500); showError('请输入至少 10 个字的问题描述（后端要求）'); return; }
+    setLoading(true);
+    try {
+      const data = await fetchAdvisor(q);
+      await runWorkflow(data);
+      renderResult(data);
+    } catch (err) {
+      showError(err.message || '查询失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  qInput.addEventListener('keydown', (e) => { if ((e.ctrlKey||e.metaKey) && e.key==='Enter') askBtn.click(); });
+
+  // ============ Agent 调用（真实后端 /advisor-fushun/analyze）============
+  // 抚顺版独立后端：独立政策库检索 + 独立 LLM prompt + 独立联网，不与秦皇岛 /advisor/analyze 共用
+  async function fetchAdvisor(query) {
+    const r = await fetch('/advisor-fushun/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario: query, use_web: true }),
+    });
+    if (!r.ok) {
+      let msg = `HTTP ${r.status}`;
+      try { const e = await r.json(); msg = e.detail || msg; } catch (_) {}
+      throw new Error(msg);
+    }
+    const raw = await r.json();
+    return mapBackendData(raw, query);
+  }
+
+  // 后端响应结构 -> 前端渲染结构（字段映射 + 派生 graph/workflow）
+  function mapBackendData(d, query) {
+    const topic = guessTopic(query);
+    const bonuses = d.bonuses || [];
+    const refs = d.references || [];
+    const webBonuses = bonuses.filter(b => b.source_type === '网');
+    const libRefs = refs.map(r => ({
+      kind: '库', id: r.policy_id, title: r.title, src: r.source_name,
+      date: (r.published_at || '').slice(0, 10), url: r.url || null, region: r.region || '',
+    }));
+    const webRefs = webBonuses.map(b => ({
+      kind: '网', id: null, title: b.policy_name, src: b.source,
+      date: '', url: b.source_url || '#',
+    }));
+    return {
+      score: d.feasibility_score || 0,
+      verdict: d.verdict || '',
+      bonuses: bonuses.map(b => ({
+        name: b.policy_name, source: b.source, kind: b.source_type === '网' ? '网' : '库',
+        priority: b.priority, match: b.match_level, content: b.content, action: b.action,
+        policy_id: b.policy_id || null, url: b.source_url || null,
+      })),
+      risks: (d.risks || []).map(r => ({
+        type: r.risk_type, level: r.level, desc: r.description, sugg: r.suggestion,
+      })),
+      refs: [...libRefs, ...webRefs],
+      workflow: {
+        intent: `主题：${topic}｜地区：抚顺市`,
+        kb: `地区：抚顺市+辽宁+国家级｜命中 ${d.policy_count || 0} 条政策`,
+        web: d.searched_online ? `查询：抚顺市 ${topic}｜联网补充 ${webBonuses.length} 条` : '本次未启用联网',
+        merge: `整合 ${refs.length + webBonuses.length} 条依据｜红利 ${bonuses.length} · 风险 ${(d.risks || []).length}`,
+      },
+      graph: {
+        center: { label: topic, sub: `匹配度 ${d.feasibility_score || 0} · 命中 ${refs.length} 条` },
+        refs: libRefs, webBonuses,
+      },
+      policy_count: d.policy_count || 0,
+      searched_online: !!d.searched_online,
+    };
+  }
+
+  function guessTopic(q) {
+    if (/高企|高新技术/.test(q)) return '高新技术企业认定';
+    if (/专精特新|小巨人/.test(q)) return '专精特新培育';
+    if (/成果转化|石化大学|科研转化/.test(q)) return '成果本地转化';
+    if (/数字化|转型/.test(q)) return '数字化转型';
+    if (/人才|引育/.test(q)) return '人才引育';
+    return q.slice(0, 8);
+  }
+
+  function setLoading(on) {
+    if (on) {
+      emptyState.classList.add('hidden');
+      resultArea.classList.add('hidden');
+    }
+    wfPanel.classList.toggle('hidden', !on);
+    errorState.classList.add('hidden');
+    askBtn.disabled = on;
+    askBtn.querySelector('span').textContent = on ? '检索中' : '查询';
+  }
+
+  function showError(msg) {
+    wfPanel.classList.add('hidden');
+    resultArea.classList.add('hidden');
+    errorState.classList.remove('hidden');
+    $('error-msg').textContent = msg;
+  }
+
+  // ============ 政策原文查看（服务器真实 markdown + 示例库兜底）============
+  // DEMO 示例政策原文：服务器 md 不全时兜底，保证 preset 三类的代表政策可看
+  const DEMO_CONTENT = {
+    801: { title: '望花区·高新技术企业认定奖补实施细则', source: '望花区科技局', date: '2026-07-25',
+      body: '望花区科技局 2026 年 7 月印发。配套国家、省、市高企认定奖补，依托法人专题库精准匹配企业资质。\n\n**配套标准**：首次认定配套奖励 15 万元，复审通过配套 3 万元。与省级、市级奖补叠加享受。\n\n**匹配机制**：法人专题库已汇入企业研发投入、知识产权、资质台账数据，自动判定是否符合配套条件，命中后推送申报入口。\n\n**受理**：每年 3 月、9 月集中受理，需提供省科技厅认定文件、企业营业执照、研发投入佐证。配套资金一次性拨付。' },
+    803: { title: '辽宁省·科技型企业梯度培育计划', source: '辽宁省科技厅', date: '2026-06-28',
+      body: '辽宁省科技厅 2026 年计划。建立「科技型中小企业->高新技术企业->科技领军企业」梯度培育体系。\n\n**高企资助**：首次通过高企认定资助 10-20 万元，按认定档次分档拨付。\n\n**拨付方式**：认定当年拨付 60%，复审通过拨付 40%。需纳入省科技型企业梯度培育库。\n\n**配套**：鼓励各市、区出台配套奖补，形成三级叠加支持格局。望花区已出台配套实施细则。' },
+    802: { title: '财政部·研发费用加计扣除操作指引', source: '国家税务总局', date: '2026-07-05',
+      body: '财政部、税务总局指引。研发费用加计扣除是激励企业研发投入的核心税收优惠。\n\n**扣除比例**：研发费用按 100% 加计扣除，形成无形资产按 200% 摊销。\n\n**归集要求**：需按研发项目归集人员人工、直接投入、折旧摊销、无形资产摊销等费用，留存研发辅助账备查。\n\n**数据联动**：法人专题库已汇入研发投入数据，可一键导出加计扣除辅助账草稿，降低归集成本。', policy_id: 802 },
+    804: { title: '科技部·高新技术企业认定管理办法', source: '科技部、财政部、税务总局', date: '2026-03',
+      body: '科技部、财政部、税务总局联合办法。高新技术企业认定与税收优惠的核心依据。\n\n**核心条件**：① 注册满一年 ② 知识产权获得授权 ③ 研发费用占比不低于 3-5% ④ 高新收入占比不低于 60% ⑤ 科技人员占比不低于 10%。\n\n**税收优惠**：减按 15% 税率征收企业所得税（法定 25%）。\n\n**资格管理**：三年有效期，到期需复审。资格失效当年起不再享受优惠。法人专题库已关联税务登记数据，自动校验资格有效性。' },
+    814: { title: '工信部·优质中小企业梯度培育管理办法', source: '工业和信息化部', date: '2026-02',
+      body: '工信部办法。建立「创新型中小企业->专精特新中小企业->专精特新小巨人」三级梯度培育体系。\n\n**小巨人奖补**：专精特新「小巨人」每户一次性奖补 30-50 万元，优先支持制造业关键领域及基础零部件、基础材料等方向。\n\n**认定条件**：主营业务收入占比 70% 以上，近两年研发占比 3% 以上，拥有 2 项以上Ⅰ类知识产权。\n\n**评审**：每年评审一次，省级认定后由省工信厅推荐申报国家级。' },
+    813: { title: '辽宁省·专精特新中小企业培育方案', source: '辽宁省工信厅', date: '2026-07-20',
+      body: '辽宁省工信厅 2026 年方案。省级专精特新培育与配套支持。\n\n**省级奖励**：省级专精特新认定奖励 10 万元，配套数字化转型服务券 5 万元。\n\n**梯度路径**：需先入库辽宁省创新型中小企业，再申报省级专精特新，最终冲击国家级小巨人。\n\n**服务券用途**：可用于购买云服务、工业软件、数字化诊断等。法人专题库经营数据将作为培育对象筛选依据。' },
+    812: { title: '辽宁省·专精特新企业贷款贴息政策', source: '辽宁省工信厅、财政厅', date: '2026-06-15',
+      body: '辽宁省工信厅、财政厅联合政策。专精特新企业融资支持。\n\n**贴息标准**：专精特新企业贷款贴息 2%，单户每年最高 50 万元。\n\n**适用范围**：需为生产经营性贷款，合作银行清单见省工信厅公告。\n\n**数据核算**：法人专题库经营数据（营收、纳税、研发投入）将作为贴息额度核算依据，缓解工信局经营数据采集难问题。' },
+    815: { title: '抚顺市·专精特新配套支持办法', source: '抚顺市工信局', date: '2026-04',
+      body: '抚顺市工信局办法。市级专精特新配套奖励。\n\n**配套标准**：市级专精特新认定奖励 5 万元，国家级小巨人额外奖励 20 万元。\n\n**叠加享受**：与省级资助、国家级奖补叠加享受，形成三级支持。\n\n**培育机制**：市工信局定期从法人专题库筛选拟培育对象，主动推送申报指引，破解企业「不知晓、不会报」痛点。' },
+    821: { title: '望花区·石化大学成果对接办法', source: '望花区科技局', date: '2026-07-15',
+      body: '望花区科技局 2026 年办法。打通石化大学科研成果库与企业需求库，提升本地转化率。\n\n**匹配机制**：建立石化大学成果库与企业需求库双向匹配，命中后自动推送申报入口与政策清单。\n\n**奖补标准**：匹配成功并就地转化奖补 10 万元，中试放大额外补贴 20 万元。\n\n**申报材料**：技术合同、转化佐证、中试投入凭证。优先支持石化、新材料、精细化工等区域主导产业方向。' },
+    823: { title: '辽宁省·科技成果转化资助办法', source: '辽宁省科技厅', date: '2026-03',
+      body: '辽宁省科技厅办法。科技成果就地转化资助。\n\n**资助标准**：就地转化项目按技术合同额 10% 资助，单项目最高 50 万元。\n\n**前置条件**：需在省技术合同登记机构完成登记，就地转化（区内落地）优先。\n\n**数据联动**：法人专题库可关联企业承接能力画像，辅助判断成果与企业需求匹配度，提升转化对接效率。' },
+    822: { title: '抚顺市·产学研合作专项资助', source: '抚顺市科技局', date: '2026-06-22',
+      body: '抚顺市科技局专项。校企合作研发资助。\n\n**资助标准**：校企合作研发项目按实际投入 30% 资助，单项目最高 30 万元，石化大学项目优先。\n\n**申报条件**：需与高校签订合作协议，提供研发方案与资金投入凭证。\n\n**优先方向**：石化大学牵头的项目优先纳入，重点支持精细化工、新材料、绿色石化等方向。' },
+    824: { title: '国家·促进科技成果转化法', source: '全国人大常委会', date: '2025-11',
+      body: '全国人大常委会法律。科技成果转化的根本法律依据。\n\n**税收优惠**：技术转让、技术开发免征增值税，技术转让所得 500 万元以内免征企业所得税，超过部分减半征收。\n\n**赋权改革**：鼓励高校、科研机构赋权科研人员职务成果所有权或长期使用权，提升转化积极性。\n\n**技术转移**：强化技术转移机构与技术经理人作用，石化大学可探索「先赋权后转化」模式。' },
+  };
+
+  async function openPolicyModal(r) {
+    const modal = $('policy-modal');
+    $('pm-title').textContent = r.title || '';
+    $('pm-meta').textContent = `政策库 #${r.id}${r.region ? ' · ' + r.region : ''}`;
+    $('pm-source').textContent = r.src || '';
+    $('pm-link').href = r.url || '#';
+    $('pm-body').innerHTML = '<div class="text-gray-400">加载原文中…</div>';
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    // 优先服务器真实 markdown
+    let body = '';
+    try {
+      const resp = await fetch(`/policy-radar/markdown/${r.id}`);
+      if (resp.ok) {
+        const md = await resp.text();
+        // 剥 YAML frontmatter，取正文
+        body = md.replace(/^---[\s\S]*?---\s*/, '');
+      }
+    } catch (_) { body = ''; }
+
+    // 服务器 md 太短（仅 frontmatter 无正文）→ 示例库兜底
+    if (!body || body.replace(/[#\s>\-|]/g, '').length < 60) {
+      const demo = DEMO_CONTENT[r.id];
+      if (demo) {
+        body = `> 注：服务器原文较简，以下为该政策的要点摘要。\n\n${demo.body}`;
+        if (!r.title && demo.title) $('pm-title').textContent = demo.title;
+        if (!r.src && demo.source) $('pm-source').textContent = demo.source;
+      } else if (!body) {
+        body = '> 该政策在服务器仅存元数据，暂无完整正文。\n\n建议点击下方「查看原文链接」访问原始发布页面。';
+      }
+    }
+    $('pm-body').innerHTML = renderMarkdown(body);
+  }
+
+  // 极简 markdown 渲染（标题/加粗/列表/引用/分隔线）
+  function renderMarkdown(md) {
+    const esc = escHtml(md);
+    return esc
+      .replace(/^&gt; ?(.+)$/gm, '<blockquote class="border-l-2 border-brand-300 pl-3 text-gray-500 my-2">$1</blockquote>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong class="text-ink font-semibold">$1</strong>')
+      .replace(/^### (.+)$/gm, '<h3 class="text-sm font-semibold text-ink mt-3 mb-1">$1</h3>')
+      .replace(/^## (.+)$/gm, '<h3 class="text-sm font-semibold text-ink mt-3 mb-1">$1</h3>')
+      .replace(/^# (.+)$/gm, '<h3 class="text-base font-semibold text-ink mt-3 mb-1">$1</h3>')
+      .replace(/^---$/gm, '<hr class="border-line my-3">')
+      .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
+      .replace(/\n\n/g, '</p><p class="my-1.5">')
+      .replace(/^(?!<)/, '<p class="my-1.5">') + '</p>';
+  }
+
+  // 模态关闭
+  document.querySelectorAll('[data-modal-close]').forEach(el => {
+    el.addEventListener('click', () => {
+      $('policy-modal').classList.add('hidden');
+      document.body.style.overflow = '';
+    });
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !$('policy-modal').classList.contains('hidden')) {
+      $('policy-modal').classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  });
+
+  // ============ Agent 工作流动画 ============
+  async function runWorkflow(data) {
+    const steps = [
+      { sel: 1, text: data.workflow.intent, status: '理解意图中…' },
+      { sel: 2, text: data.workflow.kb, status: '检索政策库…' },
+      { sel: 3, text: data.workflow.web, status: '联网搜索…' },
+      { sel: 4, text: data.workflow.merge, status: '整合证据…' },
+    ];
+    document.querySelectorAll('.step-node').forEach(n => { n.classList.remove('active','done'); n.querySelector('.step-badge').style.background=''; });
+    $('wf-intent').textContent=''; $('wf-kb').textContent=''; $('wf-web').textContent=''; $('wf-merge').textContent='';
+    for (const s of steps) {
+      $('wf-status').textContent = s.status;
+      const node = document.querySelector(`.step-node[data-step="${s.sel}"]`);
+      node.classList.add('active');
+      await sleep(420);
+      const target = { 1:'wf-intent', 2:'wf-kb', 3:'wf-web', 4:'wf-merge' }[s.sel];
+      $(target).textContent = s.text;
+      node.classList.add('done');
+      node.querySelector('.step-badge').style.background = '#15803d';
+      await sleep(120);
+    }
+    $('wf-status').innerHTML = '<span class="text-green-600">完成</span>';
+  }
+
+  // ============ 渲染结果 ============
+  function renderResult(data) {
+    const ring = $('score-ring'), circ = 226;
+    ring.style.strokeDashoffset = circ;
+    $('score-val').textContent = '0';
+    resultArea.classList.remove('hidden');
+    setTimeout(() => {
+      ring.style.strokeDashoffset = circ - (circ * data.score / 100);
+      animateNum($('score-val'), 0, data.score, 700);
+    }, 80);
+    $('verdict-text').innerHTML = simpleMd(data.verdict);
+    $('ref-count').textContent = data.refs.length;
+
+    renderGraph(data.graph);
+    renderKeyInfo(data);
+    $('bonus-count').textContent = data.bonuses.length + ' 条';
+    $('bonuses-list').innerHTML = data.bonuses.length ? data.bonuses.map(renderBonus).join('') : '<div class="px-4 py-8 text-center text-sm text-gray-400">未识别到政策红利</div>';
+    $('risk-count').textContent = data.risks.length + ' 条';
+    $('risks-list').innerHTML = data.risks.length ? data.risks.map(renderRisk).join('') : '<div class="px-4 py-8 text-center text-sm text-gray-400">未识别到明显风险</div>';
+    $('refs-list').innerHTML = data.refs.length ? data.refs.map(renderRef).join('') : '<div class="col-span-full px-4 py-8 text-center text-sm text-gray-400">本次未引用具体政策（LLM 未挂载真实 policy_id）</div>';
+    const followups = buildFollowups(qInput.value.trim());
+    $('followups').innerHTML = followups.map(f => `<button class="followup-btn px-3 py-1.5 rounded border border-brand-200 bg-white text-sm text-brand-600 hover:bg-brand-50 transition-colors">${escHtml(f)}</button>`).join('');
+    document.querySelectorAll('.followup-btn').forEach(b => b.addEventListener('click', () => { qInput.value = b.textContent; askBtn.click(); }));
+    document.querySelectorAll('.bonus-card').forEach(card => {
+      card.querySelector('.expand-btn')?.addEventListener('click', () => card.classList.toggle('expanded'));
+    });
+    document.querySelectorAll('.view-src-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const b = data.bonuses[+btn.dataset.bonusIdx];
+        if (b && b.policy_id) openPolicyModal({ id: b.policy_id, title: b.name, src: b.source, url: b.url || null, region: '' });
+      });
+    });
+    bindRefClicks(data.refs);
+    highlightTimeline(data.refs);
+  }
+
+  function buildFollowups(q) {
+    if (/高企|高新技术/.test(q)) return ['研发费用辅助账怎么建？', '复审需要哪些材料？', '有什么主要风险？'];
+    if (/专精特新|小巨人/.test(q)) return ['小巨人认定需要什么条件？', '贷款贴息怎么申请？', '有什么主要风险？'];
+    if (/成果转化|石化大学|科研转化/.test(q)) return ['中试基地怎么建？', '技术合同去哪登记？', '有什么主要风险？'];
+    return ['申报需要准备哪些材料？', '资金多久能到位？', '有什么主要风险？'];
+  }
+
+  // 库内引用卡片：点击弹模态加载真实政策原文
+  function bindRefClicks(refs) {
+    document.querySelectorAll('.ref-card[data-ref-idx]').forEach(el => {
+      el.addEventListener('click', () => {
+        const r = refs[+el.dataset.refIdx];
+        if (r && r.id) openPolicyModal(r);
+      });
+    });
+  }
+
+  // ============ 知识图谱（SVG，从真实 refs 构造）============
+  function renderGraph(g) {
+    const svg = $('graph-svg');
+    const cx = 450, cy = 210;
+    // 把库 refs + 联网 bonus 合并成节点（每侧最多 4 个，避免图谱拥挤）
+    const libNodes = (g.refs || []).slice(0, 4).map((r, i) => ({
+      id: 'lib' + i, label: r.title || '政策', kind: '库',
+      level: r.region || '本地', pid: r.id, ref: r,
+    }));
+    const webNodes = (g.webBonuses || []).slice(0, 4).map((b, i) => ({
+      id: 'web' + i, label: b.policy_name, kind: '网', level: '联网',
+      pid: null, url: b.source_url, ref: { kind: '网', id: null, title: b.policy_name, src: b.source, url: b.source_url },
+    }));
+
+    // 左右分列布局：库节点在左列(x=170)、联网节点在右列(x=730)，垂直均分，避免圆周重叠
+    const colY = (i, count) => count <= 1 ? cy : 50 + i * (320 / (count - 1));
+    const placed = [];
+    libNodes.forEach((n, i) => placed.push({ ...n, x: 170, y: colY(i, libNodes.length) }));
+    webNodes.forEach((n, i) => placed.push({ ...n, x: 730, y: colY(i, webNodes.length) }));
+
+    let html = `<defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#cbd5e1"/></marker></defs>`;
+    placed.forEach(n => {
+      html += `<line x1="${n.x}" y1="${n.y}" x2="${cx}" y2="${cy}" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="${n.kind==='网'?'5,4':'none'}" marker-end="url(#arr)"/>`;
+    });
+    html += `<g class="graph-node" data-node="center">
+      <rect class="node-rect" x="${cx-110}" y="${cy-42}" width="220" height="84" rx="8" fill="#102a4a" stroke="#1d4e89" stroke-width="2"/>
+      <text x="${cx}" y="${cy-8}" text-anchor="middle" fill="#fff" font-size="16" font-weight="600">${escSvg(g.center.label)}</text>
+      <text x="${cx}" y="${cy+16}" text-anchor="middle" fill="#93c5fd" font-size="11">${escSvg(g.center.sub)}</text>
+    </g>`;
+    placed.forEach(n => {
+      const isWeb = n.kind === '网';
+      const fill = isWeb ? '#fbf5e8' : '#f3f6fa';
+      const stroke = isWeb ? '#c8821a' : '#1d4e89';
+      const tagColor = isWeb ? '#a86d15' : '#1d4e89';
+      const label = (n.label || '').length > 16 ? (n.label.slice(0, 16) + '…') : (n.label || '');
+      html += `<g class="graph-node" data-node="${n.id}">
+        <rect class="node-rect" x="${n.x-100}" y="${n.y-30}" width="200" height="60" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>
+        <rect x="${n.x-100}" y="${n.y-30}" width="200" height="18" rx="6" fill="${tagColor}" opacity="0.10"/>
+        <text x="${n.x-90}" y="${n.y-17}" fill="${tagColor}" font-size="10" font-weight="600">${isWeb?'联网 · 实时':'政策库 · '+escSvg(n.level||'本地')}</text>
+        <text x="${n.x}" y="${n.y+8}" text-anchor="middle" fill="#1a1f29" font-size="11" font-weight="500">${escSvg(label)}</text>
+      </g>`;
+    });
+    svg.innerHTML = html;
+    svg.querySelectorAll('.graph-node').forEach(el => {
+      el.addEventListener('click', () => {
+        svg.querySelectorAll('.graph-node').forEach(e => e.classList.remove('selected'));
+        el.classList.add('selected');
+        const id = el.dataset.node;
+        const detail = $('node-detail');
+        if (id === 'center') {
+          detail.classList.remove('hidden');
+          detail.innerHTML = `<div class="font-semibold text-ink mb-1">● ${escHtml(g.center.label)}</div><div class="text-gray-600">${escHtml(g.center.sub)}</div>`;
+          return;
+        }
+        const node = placed.find(n => n.id === id);
+        if (!node) return;
+        detail.classList.remove('hidden');
+        const r = node.ref;
+        const tag = r.kind === '网'
+          ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent-100 text-accent-600">联网 · 实时</span>`
+          : `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-brand-100 text-brand-600">政策库 ${r.id?'#'+r.id:''}</span>`;
+        const cta = r.kind === '库' && r.id
+          ? `<button class="mt-2 text-xs text-brand-600 hover:underline" id="graph-view-src">查看政策原文 -></button>`
+          : (r.url ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener" class="mt-2 inline-block text-xs text-accent-600 hover:underline">打开来源 ↗</a>` : '');
+        detail.innerHTML = `<div class="flex items-center gap-2 mb-1.5">${tag}<span class="font-semibold text-ink">${escHtml(r.title)}</span></div>
+          <div class="text-gray-600 leading-relaxed mb-1">${escHtml(r.src || '')}</div>${cta}`;
+        if (r.kind === '库' && r.id) {
+          $('graph-view-src')?.addEventListener('click', () => openPolicyModal(r));
+        }
+        detail.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      });
+    });
+  }
+
+  // ============ 关键信息抽取（从后端结果派生）============
+  function renderKeyInfo(data) {
+    const bonusCount = (data.bonuses || []).length;
+    const policyCount = data.policy_count || 0;
+    const items = [
+      { label: '命中政策', value: policyCount + ' 条', pct: Math.min(100, policyCount * 8), hint: '本次检索到的相关政策总量' },
+      { label: '可申领红利', value: bonusCount + ' 条', pct: Math.min(100, bonusCount * 15), hint: `从命中政策中筛选出可申领的红利（${policyCount} 选 ${bonusCount}）` },
+      { label: '可行性评分', value: (data.score || 0) + ' 分', pct: data.score || 0, hint: '综合政策匹配度评分' },
+    ];
+    $('key-info').innerHTML = items.map(it => `<div title="${escHtml(it.hint)}">
+      <div class="text-xs text-gray-500 mb-1.5">${escHtml(it.label)}</div>
+      <div class="text-lg font-semibold tabular text-ink mb-2">${escHtml(it.value)}</div>
+      <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div class="progress-fill h-full bg-brand-500 rounded-full" style="width:0" data-pct="${it.pct}"></div>
+      </div>
+      <div class="text-xs text-gray-400 mt-2">${escHtml(it.hint)}</div>
+    </div>`).join('');
+    setTimeout(() => { $('key-info').querySelectorAll('.progress-fill').forEach(b => b.style.width = b.dataset.pct + '%'); }, 120);
+  }
+
+  // ============ 红利卡片 ============
+  function renderBonus(b, i) {
+    const pStyle = { '立即':'bg-red-50 text-red-700 border-red-200', '中期':'bg-amber-50 text-amber-700 border-amber-200', '长期':'bg-slate-50 text-slate-700 border-slate-200' }[b.priority] || 'bg-gray-50 text-gray-700 border-gray-200';
+    const kStyle = b.kind==='网' ? 'bg-accent-50 text-accent-600 border-accent-200' : 'bg-brand-50 text-brand-600 border-brand-200';
+    let dots = '';
+    for (let j=0;j<5;j++) dots += `<span style="background:${j<b.match?'#15803d':'#e3e6eb'}"></span>`;
+    const viewSrc = (b.kind !== '网' && b.policy_id)
+      ? `<button class="view-src-btn text-xs text-brand-600 hover:underline mt-2" data-bonus-idx="${i}">查看政策原文 -></button>`
+      : (b.url ? `<a href="${escHtml(b.url)}" target="_blank" rel="noopener" class="text-xs text-accent-600 hover:underline mt-2 inline-block">打开来源 ↗</a>` : '');
+    return `<div class="bonus-card px-4 py-3.5">
+      <div class="flex items-start gap-2.5">
+        <span class="shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border ${pStyle}">${escHtml(b.priority)}</span>
+        <div class="flex-1 min-w-0">
+          <div class="font-medium text-sm text-ink mb-1.5">${escHtml(b.name)}</div>
+          <div class="flex items-center gap-2 mb-2 flex-wrap">
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-medium border ${kStyle}">${b.kind==='网'?'联网':'政策库'}</span>
+            <span class="text-xs text-gray-400">${escHtml(b.source)}</span>
+            <span class="text-xs text-gray-400">·</span>
+            <span class="text-xs text-gray-500">匹配度</span>
+            <span class="dot-row">${dots}</span>
+          </div>
+          <div class="text-xs text-gray-700 leading-relaxed mb-2">${simpleMd(b.content)}</div>
+          <div class="text-xs text-brand-700 bg-brand-50 px-2.5 py-1.5 rounded">建议行动：${escHtml(b.action)}</div>
+          ${viewSrc}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ============ 风险 ============
+  function renderRisk(r, i) {
+    const lDot = { '高':'bg-red-500', '中':'bg-amber-500', '低':'bg-green-500' }[r.level] || 'bg-gray-400';
+    const lStyle = { '高':'bg-red-50 text-red-700 border-red-200', '中':'bg-amber-50 text-amber-700 border-amber-200', '低':'bg-green-50 text-green-700 border-green-200' }[r.level] || 'bg-gray-50 text-gray-700 border-gray-200';
+    return `<div class="px-4 py-3.5">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2 h-2 rounded-full ${lDot}"></span>
+        <span class="px-1.5 py-0.5 rounded text-[10px] font-medium border ${lStyle}">${escHtml(r.level)} 风险</span>
+        <span class="font-medium text-sm text-ink">${escHtml(r.type)}</span>
+      </div>
+      <div class="text-xs text-gray-700 leading-relaxed mb-2">${escHtml(r.desc)}</div>
+      <div class="text-xs text-gray-600 bg-canvas px-2.5 py-1.5 rounded">应对建议：${escHtml(r.sugg)}</div>
+    </div>`;
+  }
+
+  // ============ 引用原文 ============
+  function renderRef(r, i) {
+    const kStyle = r.kind==='网' ? 'border-accent-200 bg-accent-50/40' : 'border-brand-200 bg-brand-50/40';
+    const tag = r.kind==='网' ? `<span class="text-accent-600">联网 · 实时</span>` : `<span class="text-brand-600">政策库 ${r.id?'#'+r.id:''}</span>`;
+    const hint = r.kind === '库' && r.id
+      ? '<span class="text-[10px] text-brand-500 mt-1.5 inline-block">点击查看原文 →</span>'
+      : (r.kind==='网' ? '<span class="text-[10px] text-accent-500 mt-1.5 inline-block">打开来源 ↗</span>' : '');
+    const head = `<div class="text-[10px] mb-1.5 font-medium">${tag}</div>
+      <div class="text-xs font-medium text-ink leading-snug mb-2 line-clamp-2">${escHtml(r.title)}</div>
+      <div class="flex items-center justify-between text-[10px] text-gray-400">
+        <span>${escHtml(r.src)}</span><span class="tabular">${escHtml(r.date)}</span>
+      </div>${hint}`;
+    if (r.kind === '库' && r.id) {
+      return `<div class="ref-card block p-3.5 rounded border ${kStyle} transition-colors cursor-pointer" data-ref-idx="${i}">${head}</div>`;
+    }
+    return `<a href="${r.url||'#'}" target="_blank" rel="noopener" class="ref-card block p-3.5 rounded border ${kStyle} transition-colors">${head}</a>`;
+  }
+
+  // ============ 驾驶舱：饼图（donut）============
+  function renderPie() {
+    const svg = $('pie-svg');
+    const cx = 80, cy = 80, r = 56, sw = 16;
+    const C = 2 * Math.PI * r;
+    const total = OVERVIEW.topics.reduce((s, t) => s + t.count, 0);
+    let acc = 0;
+    let segs = '';
+    OVERVIEW.topics.forEach((t, i) => {
+      const frac = t.count / total;
+      const len = frac * C;
+      const offset = -acc * C;
+      segs += `<circle class="donut-seg" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${t.color}" stroke-width="${sw}" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${offset}" transform="rotate(-90 ${cx} ${cy})" data-topic="${i}"/>`;
+      acc += frac;
+    });
+    svg.innerHTML = `${segs}
+      <text x="${cx}" y="${cy-2}" text-anchor="middle" fill="#1a1f29" font-size="20" font-weight="600" class="tabular">${OVERVIEW.kpi.total}</text>
+      <text x="${cx}" y="${cy+14}" text-anchor="middle" fill="#9ca3af" font-size="9">总数</text>`;
+    $('pie-legend').innerHTML = OVERVIEW.topics.map((t, i) => {
+      const pct = Math.round(t.count / total * 100);
+      return `<div class="flex items-center justify-between gap-2" data-legend="${i}">
+        <span class="flex items-center min-w-0"><span class="w-2.5 h-2.5 rounded-sm mr-2 shrink-0" style="background:${t.color}"></span><span class="text-gray-600 truncate">${escHtml(t.name)}</span></span>
+        <span class="text-gray-400 tabular shrink-0">${pct}%</span>
+      </div>`;
+    }).join('');
+    svg.querySelectorAll('.donut-seg').forEach(seg => {
+      seg.addEventListener('mouseenter', () => {
+        svg.querySelectorAll('.donut-seg').forEach(s => s.classList.add('dim'));
+        seg.classList.remove('dim');
+      });
+      seg.addEventListener('mouseleave', () => svg.querySelectorAll('.donut-seg').forEach(s => s.classList.remove('dim')));
+    });
+  }
+
+  // ============ 驾驶舱：部门柱图（横向 bar）============
+  function renderBar() {
+    const max = Math.max(...OVERVIEW.departments.map(d => d.count));
+    $('bar-list').innerHTML = OVERVIEW.departments.map(d => {
+      const pct = Math.round(d.count / max * 100);
+      return `<div class="grid grid-cols-[60px_1fr_28px] items-center gap-2.5">
+        <span class="text-xs text-gray-600 truncate">${escHtml(d.name)}</span>
+        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div class="bar-fill h-full bg-brand-500 rounded-full" style="width:0" data-pct="${pct}"></div>
+        </div>
+        <span class="text-xs text-gray-500 tabular text-right">${d.count}</span>
+      </div>`;
+    }).join('');
+    setTimeout(() => { $('bar-list').querySelectorAll('.bar-fill').forEach(b => b.style.width = b.dataset.pct + '%'); }, 120);
+  }
+
+  // ============ 驾驶舱：时间轴 ============
+  function renderTimeline() {
+    const tl = $('timeline');
+    let html = `<div class="absolute left-[5px] top-1 bottom-1 w-px bg-line"></div>`;
+    OVERVIEW.timeline.forEach(item => {
+      const isWeb = item.kind === '网';
+      const dotColor = isWeb ? 'bg-accent-500' : 'bg-brand-500';
+      const tag = isWeb ? '<span class="text-accent-600">联网</span>' : `<span class="text-brand-600">#${item.id}</span>`;
+      html += `<div class="tl-item relative mb-2.5 pl-3 py-1.5" data-id="${item.id ?? ''}" data-kind="${item.kind}">
+        <span class="absolute -left-[13px] top-2.5 w-2.5 h-2.5 rounded-full ${dotColor} ring-2 ring-white"></span>
+        <div class="flex items-center gap-2 mb-0.5">
+          <span class="text-[11px] text-gray-400 tabular">${item.date}</span>
+          <span class="text-[10px]">${tag}</span>
+        </div>
+        <div class="tl-title text-xs text-ink leading-snug">${escHtml(item.title)}</div>
+        <div class="text-[10px] text-gray-400 mt-0.5">${escHtml(item.src)}</div>
+      </div>`;
+    });
+    tl.innerHTML = html;
+  }
+
+  // ============ 时间轴联动高亮（Agent 查询 refs 命中）============
+  function highlightTimeline(refs) {
+    const hitIds = new Set(refs.filter(r => r.kind === '库' && r.id).map(r => String(r.id)));
+    const hitWeb = refs.some(r => r.kind === '网');
+    document.querySelectorAll('.tl-item').forEach(el => {
+      el.classList.remove('hit', 'web-hit');
+      const id = el.dataset.id;
+      const kind = el.dataset.kind;
+      if (kind === '库' && id && hitIds.has(id)) el.classList.add('hit');
+      else if (kind === '网' && hitWeb) el.classList.add('web-hit');
+    });
+    const hits = hitIds.size + (hitWeb ? 1 : 0);
+    $('tl-hint').textContent = hits ? `本次命中 ${hits} 条` : '命中高亮';
+  }
+
+  // ============ 驾驶舱 KPI 数字动画 ============
+  function renderKpi() {
+    animateNum($('kpi-total'), 0, OVERVIEW.kpi.total, 700);
+    animateNum($('kpi-new'), 0, OVERVIEW.kpi.new_this_month, 700);
+    animateNum($('kpi-dept'), 0, OVERVIEW.kpi.departments, 700);
+    animateNum($('kpi-web'), 0, OVERVIEW.kpi.web_supplement, 700);
+  }
+
+  // ============ 工具 ============
+  function escHtml(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function escSvg(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function simpleMd(s){ return escHtml(s).replace(/\*\*(.+?)\*\*/g,'<strong class="text-ink font-semibold">$1</strong>').replace(/\n/g,'<br>'); }
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+  function animateNum(el, from, to, dur){ const start=performance.now(); function tick(t){ const p=Math.min((t-start)/dur,1); el.textContent=Math.round(from+(to-from)*p); if(p<1) requestAnimationFrame(tick);} requestAnimationFrame(tick); }
+
+  // ============ 初始化驾驶舱 ============
+  renderKpi();
+  renderPie();
+  renderBar();
+  renderTimeline();
+  </script>
+</body>
+</html>
