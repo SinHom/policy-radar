@@ -1,0 +1,25 @@
+{
+  "source_id": "city_fushun_gov",
+  "name": "抚顺市人民政府",
+  "category": "市级",
+  "region": "抚顺",
+  "department": "市政府",
+  "list_url": "https://www.fushun.gov.cn/zwgk/002026/moreinfo.html",
+  "list_selectors": {
+    "item": ".ewb-info-item, .sec-right-item, li.ewb-info-item.clearfix, li.module-list.clearfix",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": ".ewb-date::text, .sec-right-time::text"
+  },
+  "detail_selectors": {
+    "title": ".ewb-article h3",
+    "content": ".ewb-article-info, .ewb-article-bd",
+    "date": ".ewb-article-sources p"
+  },
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 5,
+  "request_interval_max": 10,
+  "max_pages": 3,
+  "notes": "政府文件主入口是 JS 渲染,先抓静态的政策解读+通知公告作兜底"
+}

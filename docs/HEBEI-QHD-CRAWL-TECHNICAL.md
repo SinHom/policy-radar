@@ -538,9 +538,54 @@ ORDER BY cnt DESC;
 
 ---
 
-**最后更新**: 2026-07-09
+## 抚顺市抓取对比参考（2026-07-21 增）
+
+**结论**: 抚顺站对比秦皇岛**无 WAF / 无封禁**（本地 + 服务器都通），11 源 spider 首批 6 源成功入库 99 条。
+
+| 维度 | 秦皇岛 (qhd) | 抚顺 (fushun) |
+|---|---|---|
+| 主机位置 | 河北秦皇岛 | 辽宁抚顺 |
+| WAF/封禁 | **严重**（sub-sites 14 OK / 5 DNS-fail / 3 TCP 封禁 / 6 :81 端口挡）| **几乎无**（11 源全可达）|
+| 抓取 403 率 | 高（部分子域 UA 拦截）| 极低（仅 2 源 403 WAF）|
+| CMS 模板 | webBuilder（`.TRS_Editor`、`#UCAP-CONTENT` 等老模板）| 国务院政务公开平台（`#TDContent`、`.ewb-article-bd`）|
+| list item class | 多种（site-dependent）| **统一 `.ewb-info-item`**（11 站同模板）|
+| render_js | 多数 false，少数 true（qhd 主站 JS 渲染）| **全部 false**（HTML 直接含列表）|
+| 详情页结构 | 不统一 | **统一**：`#TDContent` / `.ewb-article-bd` |
+| URL 模式 | 多种（`front_pcsec.do?tid=`、`/home/list/?code=`）| **统一**：`/{栏目段}/{YYYYMMDD}/{uuid}.html` |
+| 列表外链 | 少 | **30-50%** 是微信公众号外链（mp.weixin.qq.com）|
+| PDF 直链 | 少 | **多**（财政局/人社局/市场监管局部分项就是 .pdf 直链）|
+| 抓取经验 | 单站单测 selector | 批量同模板，selector 高度复用 |
+| 部署成果 | 36 源（v0.3）| 11 源 + 99 条入库（2026-07-21）|
+
+**选择器统一范式（抚顺 11 源通用）**:
+```json
+{
+  "list_selectors": {
+    "item": ".ewb-info-item, .sec-right-item, li.ewb-info-item.clearfix, li.module-list.clearfix",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": ".ewb-date::text, .sec-right-time::text"
+  },
+  "detail_selectors": {
+    "title": "h3, .ewb-article-hd h3",
+    "content": "#TDContent, .ewb-article-bd, .post-content",
+    "date": "meta[name=PubDate], .post-mark"
+  },
+  "render_js": false
+}
+```
+
+**5 源 0 抓取待二期**：minzheng/wenhua(403 WAF)、shangwu(超时)、weisheng(URL 重测)、shichangjiandu(PDF 附件)。详见 `CRAWLER-FIX-TODO.md` 抚顺段。
+
+**总结**：抚顺抓取比秦皇岛**简单一档**，无 WAF + 统一 CMS，未来类似地级市（用同 CMS 模板的）都可直接套这套配置。详见 `../政府站-验证矩阵.md` Round 6。
+
+---
+
+**最后更新**: 2026-07-21
 **维护**: Fangyi / Claude Code
 **相关文档**:
 - `docs/SERVER-CONNECTION.md` - 服务器连接
 - `docs/PRODUCTION-CHECKLIST.md` - 上线路线
 - `docs/DEPLOY.md` - 部署
+- `../政府站-验证矩阵.md` Round 6 - 抚顺站点详细验证
+- `CRAWLER-FIX-TODO.md` 抚顺段 - 5 源 0 抓取待修

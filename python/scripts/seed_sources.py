@@ -68,6 +68,8 @@ async def seed() -> int:
         sid = meta["source_id"]
         spider_config = meta["spider_config"]
         url = meta["url"]
+        region = spider_config.get("region")
+        department = spider_config.get("department")
         disable = getattr(seed, "_disable_ids", set())
         enabled = sid not in disable
 
@@ -78,6 +80,8 @@ async def seed() -> int:
                 existing.name = meta["name"]
                 existing.category = meta["category"]
                 existing.url = url
+                existing.region = region
+                existing.department = department
                 existing.spider_config = spider_config
                 logger.info("Updated: %s", sid)
             else:
@@ -86,6 +90,8 @@ async def seed() -> int:
                     name=meta["name"],
                     url=url,
                     category=meta["category"],
+                    region=region,
+                    department=department,
                     spider_config=spider_config,
                     frequency=spider_config.get("frequency", "daily"),
                     enabled=enabled,

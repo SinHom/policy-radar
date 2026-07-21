@@ -166,6 +166,9 @@ def create_app() -> FastAPI:
     # 2026-07-20: 政策顾问独立页面 API（公开，无需鉴权）
     from python.app.api.advisor import router as advisor_router
     app.include_router(advisor_router, tags=["advisor"])
+    # 2026-07-21: 抚顺市政策顾问独立 API（与秦皇岛 advisor 独立：独立政策库检索/LLM prompt/联网）
+    from python.app.api.advisor_fushun import router as advisor_fushun_router
+    app.include_router(advisor_fushun_router, tags=["advisor-fushun"])
     # web_router 放最后,作为 SPA fallback
     app.include_router(web_router, tags=["web"])
     return app

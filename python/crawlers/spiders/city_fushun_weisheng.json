@@ -1,0 +1,25 @@
+{
+  "source_id": "city_fushun_weisheng",
+  "name": "抚顺市卫健局",
+  "category": "市级",
+  "region": "抚顺",
+  "department": "卫健局",
+  "list_url": "https://fswjw.fushun.gov.cn/014/014003/moreinfo.html",
+  "list_selectors": {
+    "item": ".ewb-info-item, .sec-right-item, li.ewb-info-item.clearfix, li.module-list.clearfix",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": ".ewb-date::text, .sec-right-time::text"
+  },
+  "detail_selectors": {
+    "title": "h3, .ewb-article-hd h3",
+    "content": "#TDContent, .ewb-article-bd",
+    "date": "meta[name=PubDate]"
+  },
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 2,
+  "notes": "URL 模式 /014/014003/(与其他局不同);PDF 调研对象(健康档案)"
+}

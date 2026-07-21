@@ -1,0 +1,25 @@
+{
+  "source_id": "city_fushun_caizheng",
+  "name": "抚顺市财政局",
+  "category": "市级",
+  "region": "抚顺",
+  "department": "财政局",
+  "list_url": "https://fsczj.fushun.gov.cn/zwxx/003006/moreinfo.html",
+  "list_selectors": {
+    "item": ".ewb-info-item, .sec-right-item, li.ewb-info-item.clearfix, li.module-list.clearfix",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": ".ewb-date::text, .sec-right-time::text"
+  },
+  "detail_selectors": {
+    "title": ".ewb-article-hd h3",
+    "content": "#TDContent",
+    "date": "meta[name=PubDate]"
+  },
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 3,
+  "notes": "列表含 .pdf/.doc 直链,详情页#TDContent 可能为空"
+}

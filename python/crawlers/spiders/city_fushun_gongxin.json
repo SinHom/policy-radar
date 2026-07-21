@@ -1,0 +1,25 @@
+{
+  "source_id": "city_fushun_gongxin",
+  "name": "抚顺市工信局",
+  "category": "市级",
+  "region": "抚顺",
+  "department": "工信局",
+  "list_url": "https://gxj.fushun.gov.cn/yfxz/007001/moreinfo.html",
+  "list_selectors": {
+    "item": ".ewb-info-item, .sec-right-item, li.ewb-info-item.clearfix, li.module-list.clearfix",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": ".ewb-date::text, .sec-right-time::text"
+  },
+  "detail_selectors": {
+    "title": ".ewb-article-hd h3",
+    "content": "#TDContent, .ewb-article-bd",
+    "date": "meta[name=PubDate]"
+  },
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 3,
+  "notes": "政策法规列表本地原创 ~30%,其余为工信部/省工信厅外链"
+}

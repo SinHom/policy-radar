@@ -48,6 +48,16 @@ async def advisor_page() -> HTMLResponse:
     return HTMLResponse(content=advisor_html.read_text(encoding='utf-8'))
 
 
+# 抚顺望花区法人政策驾驶舱（2026-07-21）：同功能，地区/数据改抚顺望花区
+@router.get('/advisor-fushun', response_class=HTMLResponse)
+async def advisor_fushun_page() -> HTMLResponse:
+    """抚顺望花区法人政策驾驶舱页面，不走 Vue SPA。"""
+    html = WEB_DIR / 'advisor-fushun.html'
+    if not html.exists():
+        raise HTTPException(status_code=404, detail='advisor-fushun.html not found')
+    return HTMLResponse(content=html.read_text(encoding='utf-8'))
+
+
 @router.get("/{full_path:path}", response_class=HTMLResponse)
 async def spa_fallback(full_path: str) -> HTMLResponse:
     """SPA fallback:所有未匹配的 path 返回 dist/index.html。

@@ -1,0 +1,25 @@
+{
+  "source_id": "city_fushun_keji",
+  "name": "抚顺市科技局",
+  "category": "市级",
+  "region": "抚顺",
+  "department": "科技局",
+  "list_url": "https://fskjj.fushun.gov.cn/zcfg/003002/moreinfo.html",
+  "list_selectors": {
+    "item": ".ewb-info-item, .sec-right-item, li.ewb-info-item.clearfix, li.module-list.clearfix",
+    "title": "a::text",
+    "href": "a::attr(href)",
+    "date": ".ewb-date::text, .sec-right-time::text"
+  },
+  "detail_selectors": {
+    "title": "h3, .ewb-article-hd h3",
+    "content": "#TDContent, .post-content, .ewb-article-bd",
+    "date": "meta[name=PubDate], .post-mark"
+  },
+  "render_js": false,
+  "frequency": "daily",
+  "request_interval_min": 4,
+  "request_interval_max": 6,
+  "max_pages": 4,
+  "notes": "列表项约 30% 是微信公众号外链,引擎已有 list_skip_re 过滤非本站;法规栏目 003002"
+}
