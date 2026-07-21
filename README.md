@@ -1,20 +1,21 @@
 # 政策雷达 (Policy Radar) · MCP Server
 
-> **v0.2.0** · 13 个 MCP Tools · 10 张表 · ~40 REST 端点
+> **v0.3 + Phase A/B + 抚顺 spider(11 源/8 部门 145 条)** · 13 个 MCP Tools · 10 张表 · ~40 REST 端点 + 2 个政策顾问驾驶舱
 > 让任何 AI 工具（Claude / Cursor / 飞书 / 企微 / 小龙虾）通过 MCP 协议接入政策雷达
-> 注：版本号来源不一致 — `python/app/main.py` 报 v0.1.0、`frontend/admin.html` 报 v0.3.0，以本文档为准待统一
 
 ---
 
 ## 核心能力
 
-- 🕷️ **政策爬虫**：97 个源 seed 进 DB，有数据 60 个，500 条政策（98% 正文覆盖）；含通知公告/政策解读/公示三类子源；Playwright + httpx；详见 `docs/CRAWLER-FIX-TODO.md`
-- 🖼️ **正文图片抓取 + VLM caption**：正文 `<img>` 保留进 `raw_content`（非纯文本），相对 src 补全为绝对 URL；MiniMax-VL-01 给每张图生成中文 caption 写入 `![caption](url)`，灌入 WeKnora 后图片内容可向量检索。详见 `docs/HEBEI-QHD-CRAWL-TECHNICAL.md`「正文图片抓取」
+- 🕷️ **政策爬虫**：~150 源有数据，~900+ 条政策（含抚顺 145 条）；含通知公告/政策解读/公示三类子源；Playwright + httpx；详见 `docs/CRAWLER-FIX-TODO.md`
+- 🖼️ **正文图片抓取 + VLM caption**：正文 `<img>` 保留进 `raw_content`（非纯文本）；MiniMax-VL-01 给每张图生成中文 caption 写入 alt text，灌入 WeKnora 后图片内容可向量检索
 - 🤖 **AI 摘要**：MiniMax M3，自动提取政策类型/截止/金额/条件/关键词
 - 🎯 **匹配引擎**：规则预筛（类型+地区+关键词）+ 可选 LLM 深度评分
 - 🔔 **推送通道**：Webhook 推送（飞书/企微/通用 JSON），HMAC-SHA256 签名
 - 🛠️ **MCP Server**：13 个 Tool，stdio（给 Claude Desktop）+ SSE（给远程 AI 工具）
 - 📊 **管理后台**：Vue 3 SPA（7 tab：Dashboard/Subscriptions/Policies/Sources/PushLogs/LLMConfig/AuditLogs）
+- 📡 **RSSHub 订阅源**：4 端点（`/policy-radar/feed/article/markdown/opml`），支持 region/dept/tag 筛选
+- 🏛️ **政策顾问驾驶舱**：`/advisor`（秦皇岛·文旅）+ `/advisor-fushun`（抚顺·惠企/科技），独立 RAG+LLM+联网
 - 🔁 **抗失败**：3 次指数退避重试 + 死信表 + scheduler 周期重发
 - 📈 **可观测性**：JSON 结构化日志 + Prometheus 指标 + 健康检查
 
@@ -94,6 +95,8 @@ start http://localhost:8000/admin         # Vue 3 管理后台
 | `/api/llm/usage`, `/api/config/llm` | LLM 统计 + 配置（admin） |
 | `/api/audit/logs`, `/api/audit/stats` | 审计日志（admin） |
 | `/api/push-logs`, `/api/dashboard/funnel`, `/api/dashboard/companies`, `/api/push-history` | 运营分析 |
+| `/advisor` | 政策顾问驾驶舱（秦皇岛·文旅，GET 返回 HTML，POST `/advisor/analyze`） |
+| `/advisor-fushun` | 政策顾问驾驶舱（抚顺·惠企/科技，GET 返回 HTML，POST `/advisor-fushun/analyze`） |
 
 ---
 
@@ -194,11 +197,13 @@ expected = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest
 ```
 python/
 ├── app/            FastAPI 业务层（main / api / web / logging_config）
-├── ai/             LLM 层（MiniMax M3 客户端 + 摘要）
-├── crawlers/       爬虫引擎
+│   ├── api/        REST 端点（含 advisor.py + advisor_fushun.py 政策顾问后端）
+│   └── web/        静态页面（含 advisor.html + advisor-fushun.html 驾驶舱）
+├── ai/             LLM 层（MiniMax M3 客户端 + 摘要 + VLM caption）
+├── crawlers/       爬虫引擎（含 11 抚顺 spider + tagger.py 标签分类器）
 ├── mcp_server/     MCP Server（13 Tool + matcher + scheduler + webhook）
 ├── models/         SQLAlchemy ORM（10 张表）
 ├── mock/           iLink mock
 ├── wechat/         真实 iLink 适配器
-└── scripts/        seed_* / e2e / stdio_smoke / verify_hmac
+└── scripts/        种子/回填/导出/统计脚本（含 fushun_stats.py）
 ```

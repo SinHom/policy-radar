@@ -48,6 +48,24 @@ v0.2 提到的 37 个零数据源，在 v0.3 中有部分已修复（通过新�
 - 262 个零数据源逐个定制 CSS selector（工作量 ~50 小时）
 - 或全部切到 RSSHub 模式（`rsshub_repo/` 已有 200+ 路由）
 
+---
+
+## 抚顺市级 spider 抓取待修（2026-07-21 上线后）
+
+11 个 city_fushun_*.json 已入库。首次批量抓取 99 条（6 源），后续 cron 累积至 **145 条**（8 源：商务局20/发改委20/财政局19/市政府19/人社局19/科技局17/工信局16/市场监管局15），**3 源 0 抓取**需二期修（商务局、市场监管局在后续 cron 中已恢复正常抓取）。
+
+| spider | 失败原因 | 修复方向 |
+|---|---|---|
+| `city_fushun_minzheng` (民政局) | 列表页 403 Forbidden，WAF 拦截 crawler UA | 换 User-Agent + 完整浏览器指纹头，或改用 Playwright `render_js=true` 模拟真人 |
+| `city_fushun_wenhua` (文旅局) | 同上 403 Forbidden | 同上 |
+| `city_fushun_weisheng` (卫健局) | URL `/014/014003/moreinfo.html` 列表 0 项（路径需重新探测） | 用 browser-act 实地探测正确栏目 URL（已知子站 `/014/` 段存在，其他段可能才是政策栏目） |
+
+> 注：`city_fushun_shangwu`（商务局，现 20 条）和 `city_fushun_shichangjiandu`（市场监管局，现 15 条）在首次抓取时 0 数据，后续 cron 已恢复正常抓取，从待修清单移出。
+
+**通用经验**：抚顺站点对比秦皇岛**无 WAF**，但反爬 UA 检测更严；二期修复优先把 3 源改用 `render_js=true`（Playwright），预计投入产出比最高。
+
+详见 [[policy-radar-state]] 抚顺段 + `政府站-验证矩阵.md` Round 6。
+
 ## 关键脚本（v0.3）
 
 | 脚本 | 用途 |
