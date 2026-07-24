@@ -364,7 +364,7 @@ class AdvisorAnalyzeResponse(BaseModel):
 
 @router.post("/advisor-fushun/analyze", response_model=AdvisorAnalyzeResponse)
 async def analyze_scenario(req: AdvisorAnalyzeRequest):
-    """抚顺市政策顾问：RAG 政策库 + 联网搜索 + LLM 结构化分析（独立于秦皇岛 /advisor/analyze）。"""
+    """抚顺市政策顾问：RAG 政策库 + 联网搜索 + LLM 结构化分析（独立于秦皇岛 /advisor-qhd/analyze）。"""
     if not req.scenario or len(req.scenario.strip()) < 10:
         raise HTTPException(status_code=400, detail="项目描述至少需要 10 个字")
 

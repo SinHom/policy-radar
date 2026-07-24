@@ -43,6 +43,10 @@ nano .env
 
 > **VLM（正文图片 caption）**：复用同一个 `MINIMAX_API_KEY`。spider 抓到正文配图时调 MiniMax-VL-01 生成中文 caption 注入 markdown。`MINIMAX_VLM_MODEL` 默认 `MiniMax-VL-01`（已在 `.env.example`）。未配 `MINIMAX_API_KEY` 时 caption 流程静默降级（保留原图无 caption，不影响抓取）。详见 `docs/HEBEI-QHD-CRAWL-TECHNICAL.md`「正文图片抓取」。
 
+> **改 `.env` / 轮换 API key**：编辑 `.env` 后必须 `docker compose up -d`（**不是** `docker restart`）才重读 env_file；`restart` 不重读 env，旧 key 仍生效。轮换流程：`sed -i 's|^MINIMAX_API_KEY=.*|MINIMAX_API_KEY=<new>|' .env`（服务器+本地都改，key 只在 shell 变量不进文件内容）-> `docker compose up -d app` -> 验证 `curl -X POST .../advisor-qhd/analyze` 跑一次真实 LLM 调用确认 key 有效。**安全红线**：key 永不在对话/commit/memory 明文出现；曾在对话暴露的 key 应去控制台废弃重生。
+>
+> ⚠ **已知泄漏（待修）**：`.env.production` 未被 `.gitignore` 覆盖且**已被 git 跟踪**，真实 MINIMAX_API_KEY 已进 PUBLIC 仓库 `SinHom/policy-radar` 历史。修前**勿再编辑 `.env.production`**；新 key 只写 `.env`（已 gitignore）。修复需 `git rm --cached .env.production` + 补 `.gitignore`（`.env*` + `!.env.example`）+ BFG/filter-repo 清历史 + force push，且先在 MiniMax 控制台废弃已泄漏 key。
+
 ### 4. 启动
 
 ```bash

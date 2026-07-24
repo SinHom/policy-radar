@@ -618,7 +618,7 @@
   qInput.addEventListener('keydown', (e) => { if ((e.ctrlKey||e.metaKey) && e.key==='Enter') askBtn.click(); });
 
   // ============ Agent 调用（真实后端 /advisor-fushun/analyze）============
-  // 抚顺版独立后端：独立政策库检索 + 独立 LLM prompt + 独立联网，不与秦皇岛 /advisor/analyze 共用
+  // 抚顺版独立后端：独立政策库检索 + 独立 LLM prompt + 独立联网，不与秦皇岛 /advisor-qhd/analyze 共用
   async function fetchAdvisor(query) {
     const r = await fetch('/advisor-fushun/analyze', {
       method: 'POST',

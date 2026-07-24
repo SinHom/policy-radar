@@ -15,7 +15,7 @@
 - 🛠️ **MCP Server**：13 个 Tool，stdio（给 Claude Desktop）+ SSE（给远程 AI 工具）
 - 📊 **管理后台**：Vue 3 SPA（7 tab：Dashboard/Subscriptions/Policies/Sources/PushLogs/LLMConfig/AuditLogs）
 - 📡 **RSSHub 订阅源**：4 端点（`/policy-radar/feed/article/markdown/opml`），支持 region/dept/tag 筛选
-- 🏛️ **政策顾问驾驶舱**：`/advisor`（秦皇岛·文旅）+ `/advisor-fushun`（抚顺·惠企/科技），独立 RAG+LLM+联网
+- 🏛️ **政策顾问驾驶舱**：`/advisor-qhd`（秦皇岛·文旅，旧 `/advisor` 301 跳转）+ `/advisor-fushun`（抚顺·惠企/科技），独立 RAG+LLM+联网
 - 🔁 **抗失败**：3 次指数退避重试 + 死信表 + scheduler 周期重发
 - 📈 **可观测性**：JSON 结构化日志 + Prometheus 指标 + 健康检查
 
@@ -95,7 +95,7 @@ start http://localhost:8000/admin         # Vue 3 管理后台
 | `/api/llm/usage`, `/api/config/llm` | LLM 统计 + 配置（admin） |
 | `/api/audit/logs`, `/api/audit/stats` | 审计日志（admin） |
 | `/api/push-logs`, `/api/dashboard/funnel`, `/api/dashboard/companies`, `/api/push-history` | 运营分析 |
-| `/advisor` | 政策顾问驾驶舱（秦皇岛·文旅，GET 返回 HTML，POST `/advisor/analyze`） |
+| `/advisor-qhd` | 政策顾问驾驶舱（秦皇岛·文旅，GET 返回 HTML，POST `/advisor-qhd/analyze`；旧 `/advisor` 301 跳转） |
 | `/advisor-fushun` | 政策顾问驾驶舱（抚顺·惠企/科技，GET 返回 HTML，POST `/advisor-fushun/analyze`） |
 
 ---

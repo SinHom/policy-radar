@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 router = APIRouter()
@@ -38,14 +38,20 @@ async def index() -> HTMLResponse:
 # SPA fallback:vue-router history 模式需要的 fallback。
 # 不匹配 /static 或 /assets 的路径都返回 index.html,前端 router 接管。
 # 必须在所有具体路由之后声明。
-# 政策顾问独立页面（2026-07-20）
-@router.get('/advisor', response_class=HTMLResponse)
-async def advisor_page() -> HTMLResponse:
-    """独立的政策顾问页面，不走 Vue SPA。"""
+# 政策顾问独立页面 - 秦皇岛驾驶舱（2026-07-20，2026-07-23 路由 /advisor -> /advisor-qhd 与抚顺版对称）
+@router.get('/advisor-qhd', response_class=HTMLResponse)
+async def advisor_qhd_page() -> HTMLResponse:
+    """秦皇岛文旅政策驾驶舱页面，不走 Vue SPA。"""
     advisor_html = WEB_DIR / 'advisor.html'
     if not advisor_html.exists():
         raise HTTPException(status_code=404, detail='advisor.html not found')
     return HTMLResponse(content=advisor_html.read_text(encoding='utf-8'))
+
+
+# 旧路径 /advisor -> /advisor-qhd 永久重定向（2026-07-23 路由改名后保留旧流量）
+@router.get('/advisor', response_class=HTMLResponse)
+async def advisor_legacy_redirect() -> RedirectResponse:
+    return RedirectResponse(url='/advisor-qhd', status_code=301)
 
 
 # 抚顺望花区法人政策驾驶舱（2026-07-21）：同功能，地区/数据改抚顺望花区

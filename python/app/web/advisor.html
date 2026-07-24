@@ -614,9 +614,9 @@
 
   qInput.addEventListener('keydown', (e) => { if ((e.ctrlKey||e.metaKey) && e.key==='Enter') askBtn.click(); });
 
-  // ============ Agent 调用（真实后端 /advisor/analyze）============
+  // ============ Agent 调用（真实后端 /advisor-qhd/analyze）============
   async function fetchAdvisor(query) {
-    const r = await fetch('/advisor/analyze', {
+    const r = await fetch('/advisor-qhd/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ scenario: query, use_web: true }),

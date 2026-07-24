@@ -163,9 +163,9 @@ def create_app() -> FastAPI:
     # 2026-07-09 新增: 政策雷达 RSS / Markdown 输出 (必须在 web_router 之前,否则被 SPA catch-all 拦截)
     from python.app.api.policy_radar import router as policy_radar_router
     app.include_router(policy_radar_router, tags=["policy-radar-rss"])
-    # 2026-07-20: 政策顾问独立页面 API（公开，无需鉴权）
+    # 2026-07-20: 政策顾问独立页面 API（公开，无需鉴权）- 秦皇岛驾驶舱，路由 /advisor-qhd
     from python.app.api.advisor import router as advisor_router
-    app.include_router(advisor_router, tags=["advisor"])
+    app.include_router(advisor_router, tags=["advisor-qhd"])
     # 2026-07-21: 抚顺市政策顾问独立 API（与秦皇岛 advisor 独立：独立政策库检索/LLM prompt/联网）
     from python.app.api.advisor_fushun import router as advisor_fushun_router
     app.include_router(advisor_fushun_router, tags=["advisor-fushun"])

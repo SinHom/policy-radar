@@ -10,7 +10,9 @@ services:
       - ./data:/app/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/sources').raise_for_status()"]
+      # /health 不需要鉴权（/api/sources 带端点级鉴权会 401，导致恒 unhealthy）
+      # 校验 status==ok：health() 在 DB 异常时仍返回 HTTP 200 + status:error，必须解析 body
+      test: ["CMD", "python", "-c", "import httpx,sys; r=httpx.get('http://localhost:8000/health', timeout=4); r.raise_for_status(); sys.exit(0 if r.json().get('status')=='ok' else 1)"]
       interval: 30s
       timeout: 5s
       retries: 3

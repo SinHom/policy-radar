@@ -1,6 +1,6 @@
 # 政策雷达 (Policy Radar) — Claude 阅读入口
 
-> **状态：🟢 活跃** | 最后更新：2026-07-21 | 版本 v0.3 + Phase A/B + 抚顺 spider(11 源 8 部门 136 条入库，已清 9 垃圾) + 政策顾问驾驶舱页 `/advisor` + **`/advisor-fushun`(2026-07-21 整套独立后端：独立 LLM prompt + 独立 RAG region + 独立联网)**
+> **状态：🟢 活跃** | 最后更新：2026-07-23 | 版本 v0.3 + Phase A/B + 抚顺 spider(11 源 8 部门 136 条入库，已清 9 垃圾) + 政策顾问驾驶舱页 `/advisor-qhd`(2026-07-23 由 `/advisor` 改名，旧路径 301 重定向) + **`/advisor-fushun`(2026-07-21 整套独立后端：独立 LLM prompt + 独立 RAG region + 独立联网)** | healthcheck 修复(2026-07-23：`/api/sources` 端点级鉴权 401 致恒 unhealthy -> 改打 `/health` 校验 `status==ok`)
 > 13 MCP Tools · ~40 REST 端点 · 10 张表 · 143 政策源（v0.3 132 + 抚顺 11，有数据 64，新增 136 条抚顺本地政策）
 >
 > **注**：Phase A/B 中若干 qhd 子域名 spider (`city_qhd_cl/gn/jtj/sfj` 等) 在生产服务器抓取超时（gov 站 WAF/DNS 限制，详见 [[policy-radar-ssh-and-waf]]）。已知问题，list_skip_re 过滤部分列表 URL；具体 spider 实际抓取效果需等 5am cron 跑一轮后看日志。
@@ -214,12 +214,12 @@ Windows 本地同步：Task Scheduler `PolicyRadar-DailySync` 每天 06:00 触�
 
 **MVP 触发页面范围控制**：只做"4 个按钮 + 1 个列表 + 推送日志面板"，不要扩到搜索/筛选/分页（第二期再加）。
 
-### 政策顾问驾驶舱页 `/advisor`（2026-07-20）
+### 政策顾问驾驶舱页 `/advisor-qhd`（2026-07-20，2026-07-23 路由 `/advisor` -> `/advisor-qhd` 改名）
 
-独立页面，**不走 Vue SPA**。`python/app/web/routes.py:42` `GET /advisor` 直接返回 `python/app/web/advisor.html`（SPA fallback 之前拦截）。左驾驶舱（KPI + 主题饼图 + 部门柱图 + 时间轴）+ 右 Agent 问答 + 详情（图谱/关键信息/红利风险/引用/追问），时间轴随查询命中高亮。
+独立页面，**不走 Vue SPA**。`python/app/web/routes.py` `GET /advisor-qhd` 直接返回 `python/app/web/advisor.html`（SPA fallback 之前拦截）；旧 `GET /advisor` 301 重定向到 `/advisor-qhd`（保留旧流量）。左驾驶舱（KPI + 主题饼图 + 部门柱图 + 时间轴）+ 右 Agent 问答 + 详情（图谱/关键信息/红利风险/引用/追问），时间轴随查询命中高亮。
 
 - **风格**（政务，非 SaaS）：主色政务蓝 `#1d4e89`、冷中性背景 `#f5f6f8`、Noto Sans SC 单字族 + weight 层次、1.5px stroke 内联 SVG 图标（`ICONS` 对象，非 emoji）、`rounded-lg/md`、无玻璃态/无渐变/无 hover-lift/无装饰 fade-in。区别于上面 demo.html 的 `#3b82f6` + hover-lift 旧风。
-- **数据层 ✅ 已接线**（`POST /advisor/analyze`，main.py 注册 advisor_router）：前端 `fetchAdvisor()` 真实对接，MiniMax M3 生成 verdict/bonuses/risks，bonuses 挂真实 policy_id。驾驶舱 KPI/饼图/柱图/时间轴仍用页内 `OVERVIEW` 静态 demo（按需求保留 mock）。政策原文双源查看：引用卡片/图谱节点点击 -> `openPolicyModal()` -> 优先 `GET /policy-radar/markdown/{id}`（服务器真实抓取），md 不全走页内 `DEMO_CONTENT` 兜底。**不能复用 `python/app/api/dashboard.py`**（推送漏斗 + require_admin，语义/鉴权不符）。
+- **数据层 ✅ 已接线**（`POST /advisor-qhd/analyze`，main.py 注册 advisor_router）：前端 `fetchAdvisor()` 真实对接，MiniMax M3 生成 verdict/bonuses/risks，bonuses 挂真实 policy_id。驾驶舱 KPI/饼图/柱图/时间轴仍用页内 `OVERVIEW` 静态 demo（按需求保留 mock）。政策原文双源查看：引用卡片/图谱节点点击 -> `openPolicyModal()` -> 优先 `GET /policy-radar/markdown/{id}`（服务器真实抓取），md 不全走页内 `DEMO_CONTENT` 兜底。**不能复用 `python/app/api/dashboard.py`**（推送漏斗 + require_admin，语义/鉴权不符）。
 - **联网搜索**：MiniMax 官方 Web Search API `POST {base}/v1/coding_plan/search`（body `{"q":query}`，响应 `organic[].link/title/snippet`），复用 MINIMAX_API_KEY。端点从 `minimax-coding-plan-mcp` 包源码挖出（官方文档没写）。**勿走三条弯路**：① tinyfish CLI（服务器没装，永远空）② M3 `plugins web_search` 插件（`/v1/chat/completions` 端点不生效，模型自称未联网）③ duckduckgo-search（大陆服务器返回 Microsoft 垃圾）。
 - **后端关键坑**（advisor.py）：`_extract_keywords` 领域词全词扫描（`in` 长词优先，不可用 `re.findall(r"[一-龥]{2,6}")` 贪婪匹配--会把「老旧小区」拆进「秦皇岛老旧小」）；`_search_policies` 加 `joinedload(Policy.source)`（避免 session 关闭后访问 `p.source` 触发 DetachedInstanceError）+ title 命中关键词数排序优先于 published_at（防泛词「改造」63 条淹没精准词）；`_parse_advisor_json` 从固定起始 key `{"feasibility_score"` 定位跳过 M3 reasoning 思考链；max_tokens=3000 防联网后输出变长截断 JSON 触发重试。
 - **部署**（非 rebuild）：本地 Edit -> `scp` 到 `radar:/tmp/` -> `docker cp` 进 `policy-radar-app:/app/python/...` -> `docker restart` -> 宿主 `sudo cp /tmp/* /opt/policy-radar/...` 同步防 rebuild 回退。LLM 单次 30-44s 是 M3 reasoning 固有耗时（`enable_thinking:False` 实测反而更慢，勿用）。
@@ -227,7 +227,7 @@ Windows 本地同步：Task Scheduler `PolicyRadar-DailySync` 每天 06:00 触�
 
 ### 政策顾问驾驶舱页 `/advisor-fushun`（2026-07-21）
 
-独立页面（与 `/advisor` 平行），**不走 Vue SPA**。`python/app/web/routes.py` `GET /advisor-fushun` 直接返回 `python/app/web/advisor-fushun.html`。左驾驶舱 + 右 Agent 问答布局与 `/advisor` 一致，主题切到「抚顺市科技局/工信局惠企政策」（高企认定/专精特新/石化大学成果转化）。
+独立页面（与 `/advisor-qhd` 平行），**不走 Vue SPA**。`python/app/web/routes.py` `GET /advisor-fushun` 直接返回 `python/app/web/advisor-fushun.html`。左驾驶舱 + 右 Agent 问答布局与 `/advisor-qhd` 一致，主题切到「抚顺市科技局/工信局惠企政策」（高企认定/专精特新/石化大学成果转化）。
 
 - **整套独立后端**（用户明确要求"一整套"）：`python/app/api/advisor_fushun.py` = `advisor.py` 克隆，**与秦皇岛 advisor 完全独立、互不影响**。改 4 处：
   1. `ADVISOR_SYSTEM_PROMPT` 角色「抚顺市政策顾问」+ 覆盖范围（企业培育/科技创新/成果转化/数字化转型/人才引育）+ 示例来源「辽宁省科技厅」

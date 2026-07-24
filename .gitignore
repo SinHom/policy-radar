@@ -14,10 +14,10 @@ venv/
 env/
 ENV/
 
-# 环境变量（含真实 API Key）
-.env
-.env.local
-.env.*.local
+# 环境变量（含真实 API Key）—— 所有 .env* 一律忽略，只放行 .env.example 模板
+# 2026-07-23: 补 .env.production + .env.bak*（此前 .env.production 被跟踪致 key 泄漏 GitHub）
+.env*
+!.env.example
 
 # 运行时数据
 data/*.db

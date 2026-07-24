@@ -359,7 +359,7 @@ class AdvisorAnalyzeResponse(BaseModel):
 
 # === 端点 ===
 
-@router.post("/advisor/analyze", response_model=AdvisorAnalyzeResponse)
+@router.post("/advisor-qhd/analyze", response_model=AdvisorAnalyzeResponse)
 async def analyze_scenario(req: AdvisorAnalyzeRequest):
     """秦皇岛文旅项目政策顾问：RAG 政策库 + 联网搜索 + LLM 结构化分析。"""
     if not req.scenario or len(req.scenario.strip()) < 10:
